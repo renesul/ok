@@ -42,7 +42,9 @@ type AgentLoop struct {
 	state          *state.Manager
 	contextBuilder *ContextBuilder
 	tools          *tools.ToolRegistry
-	mcpManager     *mcp.Manager // MCP server manager for resource cleanup
+	mcpManager     *mcp.Manager     // MCP server manager for resource cleanup
+	mcpConfig      *config.Config   // Config for lazy MCP initialization
+	mcpInitOnce    sync.Once        // Ensures MCP is initialized only once
 	running        atomic.Bool
 	summarizing    sync.Map // Tracks which sessions are currently being summarized
 	channelManager *channels.Manager
@@ -129,15 +131,9 @@ func NewAgentLoop(cfg *config.Config, msgBus *bus.MessageBus, provider providers
 
 	restrict := cfg.Agents.Defaults.RestrictToWorkspace
 
-	// Initialize MCP Manager and load servers
+	// Create MCP Manager (actual server loading deferred to Run())
+	// This ensures MCP connections use the agent's lifecycle context
 	mcpManager := mcp.NewManager()
-	ctx := context.Background()
-	if err := mcpManager.LoadFromConfig(ctx, cfg); err != nil {
-		logger.WarnCF("agent", "Failed to load MCP servers, MCP tools will not be available",
-			map[string]interface{}{
-				"error": err.Error(),
-			})
-	}
 
 	// Create tool registry for main agent
 	toolsRegistry := createToolRegistry(workspace, restrict, cfg, msgBus, mcpManager)
@@ -177,12 +173,24 @@ func NewAgentLoop(cfg *config.Config, msgBus *bus.MessageBus, provider providers
 		contextBuilder: contextBuilder,
 		tools:          toolsRegistry,
 		mcpManager:     mcpManager,
+		mcpConfig:      cfg, // Store config for lazy initialization in Run()
 		summarizing:    sync.Map{},
 	}
 }
 
 func (al *AgentLoop) Run(ctx context.Context) error {
 	al.running.Store(true)
+
+	// Initialize MCP servers using the agent's lifecycle context
+	// This ensures MCP connections are cancelled when the agent stops
+	al.mcpInitOnce.Do(func() {
+		if err := al.mcpManager.LoadFromConfig(ctx, al.mcpConfig); err != nil {
+			logger.WarnCF("agent", "Failed to load MCP servers, MCP tools will not be available",
+				map[string]interface{}{
+					"error": err.Error(),
+				})
+		}
+	})
 
 	for al.running.Load() {
 		select {
