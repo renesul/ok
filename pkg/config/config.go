@@ -333,7 +333,7 @@ type MCPServerConfig struct {
 	// Env are environment variables to set for the server process (stdio only)
 	Env map[string]string `json:"env,omitempty"`
 	// EnvFile is the path to a file containing environment variables (stdio only)
-	EnvFile string `json:"envFile,omitempty"`
+	EnvFile string `json:"env_file,omitempty"`
 	// Type is "stdio", "sse", or "http" (default: stdio if command is set, sse if url is set)
 	Type string `json:"type,omitempty"`
 	// URL is used for SSE/HTTP transport
