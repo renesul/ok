@@ -162,8 +162,12 @@ func (al *AgentLoop) Run(ctx context.Context) error {
 
 			// Register MCP tools for all agents
 			servers := mcpManager.GetServers()
-			toolCount := 0
+			uniqueTools := 0
+			totalRegistrations := 0
+			agentCount := len(al.registry.ListAgentIDs())
+
 			for serverName, conn := range servers {
+				uniqueTools += len(conn.Tools)
 				for _, tool := range conn.Tools {
 					for _, agentID := range al.registry.ListAgentIDs() {
 						agent, ok := al.registry.GetAgent(agentID)
@@ -172,7 +176,7 @@ func (al *AgentLoop) Run(ctx context.Context) error {
 						}
 						mcpTool := tools.NewMCPTool(mcpManager, serverName, tool)
 						agent.Tools.Register(mcpTool)
-						toolCount++
+						totalRegistrations++
 						logger.DebugCF("agent", "Registered MCP tool",
 							map[string]interface{}{
 								"agent_id": agentID,
@@ -185,8 +189,10 @@ func (al *AgentLoop) Run(ctx context.Context) error {
 			}
 			logger.InfoCF("agent", "MCP tools registered successfully",
 				map[string]interface{}{
-					"server_count": len(servers),
-					"tool_count":   toolCount,
+					"server_count":        len(servers),
+					"unique_tools":        uniqueTools,
+					"total_registrations": totalRegistrations,
+					"agent_count":         agentCount,
 				})
 		}
 	}
