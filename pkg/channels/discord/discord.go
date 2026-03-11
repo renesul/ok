@@ -14,13 +14,13 @@ import (
 	"github.com/bwmarrin/discordgo"
 	"github.com/gorilla/websocket"
 
-	"github.com/sipeed/picoclaw/pkg/bus"
-	"github.com/sipeed/picoclaw/pkg/channels"
-	"github.com/sipeed/picoclaw/pkg/config"
-	"github.com/sipeed/picoclaw/pkg/identity"
-	"github.com/sipeed/picoclaw/pkg/logger"
-	"github.com/sipeed/picoclaw/pkg/media"
-	"github.com/sipeed/picoclaw/pkg/utils"
+	"github.com/renesul/ok/pkg/bus"
+	"github.com/renesul/ok/pkg/channels"
+	"github.com/renesul/ok/pkg/config"
+	"github.com/renesul/ok/pkg/identity"
+	"github.com/renesul/ok/pkg/logger"
+	"github.com/renesul/ok/pkg/media"
+	"github.com/renesul/ok/pkg/utils"
 )
 
 const (

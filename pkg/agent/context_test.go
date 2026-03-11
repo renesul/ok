@@ -1,9 +1,10 @@
 package agent
 
 import (
+	"strings"
 	"testing"
 
-	"github.com/sipeed/picoclaw/pkg/providers"
+	"github.com/renesul/ok/pkg/providers"
 )
 
 func msg(role, content string) providers.Message {
@@ -280,4 +281,182 @@ func TestSanitizeHistoryForProvider_PartialToolResultsInMiddle(t *testing.T) {
 		t.Fatalf("expected 9 messages, got %d: %+v", len(result), roles(result))
 	}
 	assertRoles(t, result, "user", "assistant", "tool", "assistant", "user", "user", "assistant", "tool", "assistant")
+}
+
+// --- compactToolHistory tests ---
+
+func assistantWithNamedTools(toolCalls ...providers.ToolCall) providers.Message {
+	return providers.Message{Role: "assistant", Content: "", ToolCalls: toolCalls}
+}
+
+func namedToolCall(id, name, args string) providers.ToolCall {
+	return providers.ToolCall{
+		ID:   id,
+		Name: name,
+		Function: &providers.FunctionCall{
+			Name:      name,
+			Arguments: args,
+		},
+	}
+}
+
+func toolResultWithContent(id, content string) providers.Message {
+	return providers.Message{Role: "tool", Content: content, ToolCallID: id}
+}
+
+func TestCompactToolHistory_ShortHistory(t *testing.T) {
+	// History shorter than keepRecentMessages → no compaction
+	history := []providers.Message{
+		msg("user", "hello"),
+		msg("assistant", "hi"),
+	}
+	result := compactToolHistory(history)
+	if len(result) != 2 {
+		t.Fatalf("expected 2, got %d", len(result))
+	}
+}
+
+func TestCompactToolHistory_CompactsOldToolPairs(t *testing.T) {
+	// Build history with old tool pairs + recent messages
+	history := make([]providers.Message, 0, 20)
+
+	// Old tool pair (will be compacted)
+	history = append(history,
+		msg("user", "list files"),
+		assistantWithNamedTools(namedToolCall("t1", "shell_exec", `{"command":"ls -la"}`)),
+		toolResultWithContent("t1", "total 42\n-rw-r--r-- 1 user group  1234 file.txt\n-rw-r--r-- 1 user group  5678 data.csv"),
+	)
+
+	// Another old tool pair
+	history = append(history,
+		msg("user", "read file"),
+		assistantWithNamedTools(namedToolCall("t2", "read_file", `{"path":"/tmp/test.txt"}`)),
+		toolResultWithContent("t2", "This is a very long file content that goes on and on..."),
+	)
+
+	// Recent messages (keepRecentMessages = 10, so add 10)
+	for i := 0; i < 10; i++ {
+		if i%2 == 0 {
+			history = append(history, msg("user", "recent message"))
+		} else {
+			history = append(history, msg("assistant", "recent reply"))
+		}
+	}
+
+	result := compactToolHistory(history)
+
+	// Old tool pairs should be compacted:
+	// - user("list files") stays
+	// - assistant+tool_call + tool_result → single assistant "[tool: shell_exec...]"
+	// - user("read file") stays
+	// - assistant+tool_call + tool_result → single assistant "[tool: read_file...]"
+	// Then 10 recent messages
+	// Total: 2 user + 2 compacted assistant + 10 recent = 14
+	if len(result) != 14 {
+		t.Fatalf("expected 14 messages, got %d", len(result))
+	}
+
+	// Check that compacted messages contain tool info
+	if result[1].Role != "assistant" {
+		t.Fatalf("expected compacted assistant, got %s", result[1].Role)
+	}
+	if !strings.Contains(result[1].Content, "shell_exec") {
+		t.Fatalf("expected shell_exec in compacted content, got: %s", result[1].Content)
+	}
+	if !strings.Contains(result[1].Content, "[tool:") {
+		t.Fatalf("expected [tool: prefix in compacted content, got: %s", result[1].Content)
+	}
+
+	// Tool result messages should be gone
+	for _, m := range result[:4] {
+		if m.Role == "tool" {
+			t.Fatal("expected no tool messages in compacted region")
+		}
+	}
+}
+
+func TestCompactToolHistory_PreservesRecentToolPairs(t *testing.T) {
+	// Recent tool pairs within keepRecentMessages should NOT be compacted
+	history := make([]providers.Message, 0, 10)
+
+	// These are ALL recent (< keepRecentMessages total)
+	history = append(history,
+		msg("user", "q1"),
+		msg("assistant", "a1"),
+		msg("user", "run something"),
+		assistantWithNamedTools(namedToolCall("t1", "shell_exec", `{"command":"pwd"}`)),
+		toolResultWithContent("t1", "/home/user"),
+		msg("assistant", "done"),
+		msg("user", "q2"),
+		msg("assistant", "a2"),
+	)
+
+	result := compactToolHistory(history)
+	// All 8 messages should be preserved (< keepRecentMessages)
+	if len(result) != 8 {
+		t.Fatalf("expected 8 messages, got %d", len(result))
+	}
+	assertRoles(t, result, "user", "assistant", "user", "assistant", "tool", "assistant", "user", "assistant")
+}
+
+func TestCompactToolHistory_PlainMessagesNotAffected(t *testing.T) {
+	// Old non-tool messages should pass through unchanged
+	history := make([]providers.Message, 0, 15)
+
+	// Old plain messages
+	for i := 0; i < 6; i++ {
+		if i%2 == 0 {
+			history = append(history, msg("user", "old question"))
+		} else {
+			history = append(history, msg("assistant", "old answer"))
+		}
+	}
+	// Recent messages
+	for i := 0; i < 10; i++ {
+		if i%2 == 0 {
+			history = append(history, msg("user", "recent"))
+		} else {
+			history = append(history, msg("assistant", "reply"))
+		}
+	}
+
+	result := compactToolHistory(history)
+	// No tool pairs → all messages preserved
+	if len(result) != 16 {
+		t.Fatalf("expected 16 messages, got %d", len(result))
+	}
+}
+
+func TestCompactToolHistory_MultipleToolCallsInOneMessage(t *testing.T) {
+	history := make([]providers.Message, 0, 15)
+
+	// Old assistant with 2 tool calls
+	history = append(history,
+		msg("user", "do two things"),
+		assistantWithNamedTools(
+			namedToolCall("t1", "shell_exec", `{"command":"ls"}`),
+			namedToolCall("t2", "read_file", `{"path":"x.txt"}`),
+		),
+		toolResultWithContent("t1", "file1.txt"),
+		toolResultWithContent("t2", "file contents here"),
+	)
+
+	// Recent messages
+	for i := 0; i < 10; i++ {
+		history = append(history, msg("user", "msg"))
+	}
+
+	result := compactToolHistory(history)
+
+	// Old region: user + compacted assistant (2 tool calls merged) = 2
+	// Recent: 10
+	if len(result) != 12 {
+		t.Fatalf("expected 12, got %d", len(result))
+	}
+
+	// Compacted message should mention both tools
+	compactedMsg := result[1]
+	if !strings.Contains(compactedMsg.Content, "shell_exec") || !strings.Contains(compactedMsg.Content, "read_file") {
+		t.Fatalf("expected both tool names, got: %s", compactedMsg.Content)
+	}
 }

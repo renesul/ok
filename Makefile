@@ -1,7 +1,7 @@
 .PHONY: all build install uninstall clean help test
 
 # Build variables
-BINARY_NAME=picoclaw
+BINARY_NAME=ok
 BUILD_DIR=build
 CMD_DIR=cmd/$(BINARY_NAME)
 MAIN_GO=$(CMD_DIR)/main.go
@@ -11,34 +11,12 @@ VERSION?=$(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
 GIT_COMMIT=$(shell git rev-parse --short=8 HEAD 2>/dev/null || echo "dev")
 BUILD_TIME=$(shell date +%FT%T%z)
 GO_VERSION=$(shell $(GO) version | awk '{print $$3}')
-INTERNAL=github.com/sipeed/picoclaw/cmd/picoclaw/internal
+INTERNAL=github.com/renesul/ok/cmd/ok/internal
 LDFLAGS=-ldflags "-X $(INTERNAL).version=$(VERSION) -X $(INTERNAL).gitCommit=$(GIT_COMMIT) -X $(INTERNAL).buildTime=$(BUILD_TIME) -X $(INTERNAL).goVersion=$(GO_VERSION) -s -w"
 
 # Go variables
 GO?=CGO_ENABLED=0 go
 GOFLAGS?=-v -tags stdjson
-
-# Patch MIPS LE ELF e_flags (offset 36) for NaN2008-only kernels (e.g. Ingenic X2600).
-#
-# Bytes (octal): \004 \024 \000 \160  →  little-endian 0x70001404
-#   0x70000000  EF_MIPS_ARCH_32R2   MIPS32 Release 2
-#   0x00001000  EF_MIPS_ABI_O32     O32 ABI
-#   0x00000400  EF_MIPS_NAN2008     IEEE 754-2008 NaN encoding
-#   0x00000004  EF_MIPS_CPIC        PIC calling sequence
-#
-# Go's GOMIPS=softfloat emits no FP instructions, so the NaN mode is irrelevant
-# at runtime — this is purely an ELF metadata fix to satisfy the kernel's check.
-# patchelf cannot modify e_flags; dd at a fixed offset is the most portable way.
-#
-# Ref: https://codebrowser.dev/linux/linux/arch/mips/include/asm/elf.h.html
-define PATCH_MIPS_FLAGS
-	@if [ -f "$(1)" ]; then \
-		printf '\004\024\000\160' | dd of=$(1) bs=1 seek=36 count=4 conv=notrunc 2>/dev/null || \
-		{ echo "Error: failed to patch MIPS e_flags for $(1)"; exit 1; }; \
-	else \
-		echo "Error: $(1) not found, cannot patch MIPS e_flags"; exit 1; \
-	fi
-endef
 
 # Golangci-lint
 GOLANGCI_LINT?=golangci-lint
@@ -50,8 +28,8 @@ INSTALL_MAN_DIR=$(INSTALL_PREFIX)/share/man/man1
 INSTALL_TMP_SUFFIX=.new
 
 # Workspace and Skills
-PICOCLAW_HOME?=$(HOME)/.picoclaw
-WORKSPACE_DIR?=$(PICOCLAW_HOME)/workspace
+OK_HOME?=$(HOME)/.ok
+WORKSPACE_DIR?=$(OK_HOME)/workspace
 WORKSPACE_SKILLS_DIR=$(WORKSPACE_DIR)/skills
 BUILTIN_SKILLS_DIR=$(CURDIR)/skills
 
@@ -60,38 +38,18 @@ UNAME_S:=$(shell uname -s)
 UNAME_M:=$(shell uname -m)
 
 # Platform-specific settings
-ifeq ($(UNAME_S),Linux)
-	PLATFORM=linux
-	ifeq ($(UNAME_M),x86_64)
-		ARCH=amd64
-	else ifeq ($(UNAME_M),aarch64)
-		ARCH=arm64
-	else ifeq ($(UNAME_M),armv81)
-		ARCH=arm64
-	else ifeq ($(UNAME_M),loongarch64)
-		ARCH=loong64
-	else ifeq ($(UNAME_M),riscv64)
-		ARCH=riscv64
-	else ifeq ($(UNAME_M),mipsel)
-		ARCH=mipsle
-	else
-		ARCH=$(UNAME_M)
-	endif
-else ifeq ($(UNAME_S),Darwin)
-	PLATFORM=darwin
-	ifeq ($(UNAME_M),x86_64)
-		ARCH=amd64
-	else ifeq ($(UNAME_M),arm64)
-		ARCH=arm64
-	else
-		ARCH=$(UNAME_M)
-	endif
+PLATFORM=linux
+ifeq ($(UNAME_M),x86_64)
+	ARCH=amd64
+else ifeq ($(UNAME_M),aarch64)
+	ARCH=arm64
+else ifeq ($(UNAME_M),armv81)
+	ARCH=arm64
 else
-	PLATFORM=$(UNAME_S)
 	ARCH=$(UNAME_M)
 endif
 
-BINARY_PATH=$(BUILD_DIR)/$(BINARY_NAME)-$(PLATFORM)-$(ARCH)
+BINARY_PATH=$(BUILD_DIR)/$(BINARY_NAME)
 
 # Default target
 all: build
@@ -103,86 +61,31 @@ generate:
 	@$(GO) generate ./...
 	@echo "Run generate complete"
 
-## build: Build the picoclaw binary for current platform
+## build: Build ok for current platform
 build: generate
 	@echo "Building $(BINARY_NAME) for $(PLATFORM)/$(ARCH)..."
 	@mkdir -p $(BUILD_DIR)
 	@$(GO) build $(GOFLAGS) $(LDFLAGS) -o $(BINARY_PATH) ./$(CMD_DIR)
 	@echo "Build complete: $(BINARY_PATH)"
-	@ln -sf $(BINARY_NAME)-$(PLATFORM)-$(ARCH) $(BUILD_DIR)/$(BINARY_NAME)
 
-## build-whatsapp-native: Build with WhatsApp native (whatsmeow) support; larger binary
-build-whatsapp-native: generate
-## @echo "Building $(BINARY_NAME) with WhatsApp native for $(PLATFORM)/$(ARCH)..."
-	@echo "Building for multiple platforms..."
-	@mkdir -p $(BUILD_DIR)
-	GOOS=linux GOARCH=amd64 $(GO) build -tags whatsapp_native $(LDFLAGS) -o $(BUILD_DIR)/$(BINARY_NAME)-linux-amd64 ./$(CMD_DIR)
-	GOOS=linux GOARCH=arm GOARM=7 $(GO) build -tags whatsapp_native $(LDFLAGS) -o $(BUILD_DIR)/$(BINARY_NAME)-linux-arm ./$(CMD_DIR)
-	GOOS=linux GOARCH=arm64 $(GO) build -tags whatsapp_native $(LDFLAGS) -o $(BUILD_DIR)/$(BINARY_NAME)-linux-arm64 ./$(CMD_DIR)
-	GOOS=linux GOARCH=loong64 $(GO) build -tags whatsapp_native $(LDFLAGS) -o $(BUILD_DIR)/$(BINARY_NAME)-linux-loong64 ./$(CMD_DIR)
-	GOOS=linux GOARCH=riscv64 $(GO) build -tags whatsapp_native $(LDFLAGS) -o $(BUILD_DIR)/$(BINARY_NAME)-linux-riscv64 ./$(CMD_DIR)
-	GOOS=linux GOARCH=mipsle GOMIPS=softfloat $(GO) build -tags whatsapp_native $(LDFLAGS) -o $(BUILD_DIR)/$(BINARY_NAME)-linux-mipsle ./$(CMD_DIR)
-	$(call PATCH_MIPS_FLAGS,$(BUILD_DIR)/$(BINARY_NAME)-linux-mipsle)
-	GOOS=darwin GOARCH=arm64 $(GO) build -tags whatsapp_native $(LDFLAGS) -o $(BUILD_DIR)/$(BINARY_NAME)-darwin-arm64 ./$(CMD_DIR)
-	GOOS=windows GOARCH=amd64 $(GO) build -tags whatsapp_native $(LDFLAGS) -o $(BUILD_DIR)/$(BINARY_NAME)-windows-amd64.exe ./$(CMD_DIR)
-## @$(GO) build $(GOFLAGS) -tags whatsapp_native $(LDFLAGS) -o $(BINARY_PATH) ./$(CMD_DIR)
-	@echo "Build complete"
-##	@ln -sf $(BINARY_NAME)-$(PLATFORM)-$(ARCH) $(BUILD_DIR)/$(BINARY_NAME)
-
-## build-linux-arm: Build for Linux ARMv7 (e.g. Raspberry Pi Zero 2 W 32-bit)
-build-linux-arm: generate
-	@echo "Building for linux/arm (GOARM=7)..."
-	@mkdir -p $(BUILD_DIR)
-	GOOS=linux GOARCH=arm GOARM=7 $(GO) build $(LDFLAGS) -o $(BUILD_DIR)/$(BINARY_NAME)-linux-arm ./$(CMD_DIR)
-	@echo "Build complete: $(BUILD_DIR)/$(BINARY_NAME)-linux-arm"
-
-## build-linux-arm64: Build for Linux ARM64 (e.g. Raspberry Pi Zero 2 W 64-bit)
-build-linux-arm64: generate
-	@echo "Building for linux/arm64..."
-	@mkdir -p $(BUILD_DIR)
-	GOOS=linux GOARCH=arm64 $(GO) build $(LDFLAGS) -o $(BUILD_DIR)/$(BINARY_NAME)-linux-arm64 ./$(CMD_DIR)
-	@echo "Build complete: $(BUILD_DIR)/$(BINARY_NAME)-linux-arm64"
-
-## build-linux-mipsle: Build for Linux MIPS32 LE
-build-linux-mipsle: generate
-	@echo "Building for linux/mipsle (softfloat)..."
-	@mkdir -p $(BUILD_DIR)
-	GOOS=linux GOARCH=mipsle GOMIPS=softfloat $(GO) build $(LDFLAGS) -o $(BUILD_DIR)/$(BINARY_NAME)-linux-mipsle ./$(CMD_DIR)
-	$(call PATCH_MIPS_FLAGS,$(BUILD_DIR)/$(BINARY_NAME)-linux-mipsle)
-	@echo "Build complete: $(BUILD_DIR)/$(BINARY_NAME)-linux-mipsle"
-
-## build-pi-zero: Build for Raspberry Pi Zero 2 W (32-bit and 64-bit)
-build-pi-zero: build-linux-arm build-linux-arm64
-	@echo "Pi Zero 2 W builds: $(BUILD_DIR)/$(BINARY_NAME)-linux-arm (32-bit), $(BUILD_DIR)/$(BINARY_NAME)-linux-arm64 (64-bit)"
-
-## build-all: Build picoclaw for all platforms
+## build-all: Build ok for all supported platforms (linux amd64/arm64)
 build-all: generate
-	@echo "Building for multiple platforms..."
+	@echo "Building for all platforms..."
 	@mkdir -p $(BUILD_DIR)
 	GOOS=linux GOARCH=amd64 $(GO) build $(LDFLAGS) -o $(BUILD_DIR)/$(BINARY_NAME)-linux-amd64 ./$(CMD_DIR)
-	GOOS=linux GOARCH=arm GOARM=7 $(GO) build $(LDFLAGS) -o $(BUILD_DIR)/$(BINARY_NAME)-linux-arm ./$(CMD_DIR)
 	GOOS=linux GOARCH=arm64 $(GO) build $(LDFLAGS) -o $(BUILD_DIR)/$(BINARY_NAME)-linux-arm64 ./$(CMD_DIR)
-	GOOS=linux GOARCH=loong64 $(GO) build $(LDFLAGS) -o $(BUILD_DIR)/$(BINARY_NAME)-linux-loong64 ./$(CMD_DIR)
-	GOOS=linux GOARCH=riscv64 $(GO) build $(LDFLAGS) -o $(BUILD_DIR)/$(BINARY_NAME)-linux-riscv64 ./$(CMD_DIR)
-	GOOS=linux GOARCH=mipsle GOMIPS=softfloat $(GO) build $(LDFLAGS) -o $(BUILD_DIR)/$(BINARY_NAME)-linux-mipsle ./$(CMD_DIR)
-	$(call PATCH_MIPS_FLAGS,$(BUILD_DIR)/$(BINARY_NAME)-linux-mipsle)
-	GOOS=linux GOARCH=arm GOARM=7 $(GO) build $(LDFLAGS) -o $(BUILD_DIR)/$(BINARY_NAME)-linux-armv7 ./$(CMD_DIR)
-	GOOS=darwin GOARCH=arm64 $(GO) build $(LDFLAGS) -o $(BUILD_DIR)/$(BINARY_NAME)-darwin-arm64 ./$(CMD_DIR)
-	GOOS=windows GOARCH=amd64 $(GO) build $(LDFLAGS) -o $(BUILD_DIR)/$(BINARY_NAME)-windows-amd64.exe ./$(CMD_DIR)
 	@echo "All builds complete"
 
-## install: Install picoclaw to system and copy builtin skills
+## install: Install ok to system
 install: build
 	@echo "Installing $(BINARY_NAME)..."
 	@mkdir -p $(INSTALL_BIN_DIR)
-	# Copy binary with temporary suffix to ensure atomic update
-	@cp $(BUILD_DIR)/$(BINARY_NAME) $(INSTALL_BIN_DIR)/$(BINARY_NAME)$(INSTALL_TMP_SUFFIX)
+	@cp $(BINARY_PATH) $(INSTALL_BIN_DIR)/$(BINARY_NAME)$(INSTALL_TMP_SUFFIX)
 	@chmod +x $(INSTALL_BIN_DIR)/$(BINARY_NAME)$(INSTALL_TMP_SUFFIX)
 	@mv -f $(INSTALL_BIN_DIR)/$(BINARY_NAME)$(INSTALL_TMP_SUFFIX) $(INSTALL_BIN_DIR)/$(BINARY_NAME)
-	@echo "Installed binary to $(INSTALL_BIN_DIR)/$(BINARY_NAME)"
-	@echo "Installation complete!"
+	@echo "Installed to $(INSTALL_BIN_DIR)/$(BINARY_NAME)"
 
-## uninstall: Remove picoclaw from system
+## uninstall: Remove ok from system
 uninstall:
 	@echo "Uninstalling $(BINARY_NAME)..."
 	@rm -f $(INSTALL_BIN_DIR)/$(BINARY_NAME)
@@ -190,11 +93,11 @@ uninstall:
 	@echo "Note: Only the executable file has been deleted."
 	@echo "If you need to delete all configurations (config.json, workspace, etc.), run 'make uninstall-all'"
 
-## uninstall-all: Remove picoclaw and all data
+## uninstall-all: Remove ok and all data
 uninstall-all:
 	@echo "Removing workspace and skills..."
-	@rm -rf $(PICOCLAW_HOME)
-	@echo "Removed workspace: $(PICOCLAW_HOME)"
+	@rm -rf $(OK_HOME)
+	@echo "Removed workspace: $(OK_HOME)"
 	@echo "Complete uninstallation done!"
 
 ## clean: Remove build artifacts
@@ -236,51 +139,29 @@ update-deps:
 ## check: Run vet, fmt, and verify dependencies
 check: deps fmt vet test
 
-## run: Build and run picoclaw
+## run: Build and run ok
 run: build
 	@$(BUILD_DIR)/$(BINARY_NAME) $(ARGS)
 
-## docker-build: Build Docker image (minimal Alpine-based)
+## docker-build: Build Docker image
 docker-build:
-	@echo "Building minimal Docker image (Alpine-based)..."
-	docker compose -f docker/docker-compose.yml build picoclaw-agent picoclaw-gateway
+	docker build -t ok .
 
-## docker-build-full: Build Docker image with full MCP support (Node.js 24)
-docker-build-full:
-	@echo "Building full-featured Docker image (Node.js 24)..."
-	docker compose -f docker/docker-compose.full.yml build picoclaw-agent picoclaw-gateway
-
-## docker-test: Test MCP tools in Docker container
-docker-test:
-	@echo "Testing MCP tools in Docker..."
-	@chmod +x scripts/test-docker-mcp.sh
-	@./scripts/test-docker-mcp.sh
-
-## docker-run: Run picoclaw gateway in Docker (Alpine-based)
+## docker-run: Run ok gateway in Docker
 docker-run:
-	docker compose -f docker/docker-compose.yml --profile gateway up
+	docker run --rm -v ~/.ok:/home/ok/.ok ok
 
-## docker-run-full: Run picoclaw gateway in Docker (full-featured)
-docker-run-full:
-	docker compose -f docker/docker-compose.full.yml --profile gateway up
-
-## docker-run-agent: Run picoclaw agent in Docker (interactive, Alpine-based)
+## docker-run-agent: Run ok agent in Docker (interactive)
 docker-run-agent:
-	docker compose -f docker/docker-compose.yml run --rm picoclaw-agent
+	docker run --rm -it -v ~/.ok:/home/ok/.ok ok agent
 
-## docker-run-agent-full: Run picoclaw agent in Docker (interactive, full-featured)
-docker-run-agent-full:
-	docker compose -f docker/docker-compose.full.yml run --rm picoclaw-agent
-
-## docker-clean: Clean Docker images and volumes
+## docker-clean: Remove Docker image
 docker-clean:
-	docker compose -f docker/docker-compose.yml down -v
-	docker compose -f docker/docker-compose.full.yml down -v
-	docker rmi picoclaw:latest picoclaw:full 2>/dev/null || true
+	docker rmi ok 2>/dev/null || true
 
 ## help: Show this help message
 help:
-	@echo "picoclaw Makefile"
+	@echo "ok Makefile"
 	@echo ""
 	@echo "Usage:"
 	@echo "  make [target]"
@@ -294,11 +175,10 @@ help:
 	@echo "  make uninstall          # Remove from /usr/local/bin"
 	@echo "  make install-skills     # Install skills to workspace"
 	@echo "  make docker-build       # Build minimal Docker image"
-	@echo "  make docker-test        # Test MCP tools in Docker"
 	@echo ""
 	@echo "Environment Variables:"
 	@echo "  INSTALL_PREFIX          # Installation prefix (default: ~/.local)"
-	@echo "  WORKSPACE_DIR           # Workspace directory (default: ~/.picoclaw/workspace)"
+	@echo "  WORKSPACE_DIR           # Workspace directory (default: ~/.ok/workspace)"
 	@echo "  VERSION                 # Version string (default: git describe)"
 	@echo ""
 	@echo "Current Configuration:"

@@ -6,11 +6,13 @@ import (
 	"fmt"
 	"log"
 	"strings"
+	"time"
 
 	"github.com/anthropics/anthropic-sdk-go"
 	"github.com/anthropics/anthropic-sdk-go/option"
 
-	"github.com/sipeed/picoclaw/pkg/providers/protocoltypes"
+	"github.com/renesul/ok/pkg/logger"
+	"github.com/renesul/ok/pkg/providers/protocoltypes"
 )
 
 type (
@@ -94,17 +96,47 @@ func (p *Provider) Chat(
 		return nil, err
 	}
 
+	callStart := time.Now()
+	logger.InfoCF("llm", "LLM request", map[string]any{
+		"model":          model,
+		"messages_count": len(messages),
+		"tools_count":    len(tools),
+		"provider":       "anthropic",
+		"api_base":       p.baseURL,
+	})
+
 	// OAuth/setup-tokens require streaming; API keys use non-streaming.
+	var out *LLMResponse
 	if p.tokenSource != nil {
-		return p.chatStreaming(ctx, params, opts)
+		out, err = p.chatStreaming(ctx, params, opts)
+	} else {
+		var resp *anthropic.Message
+		resp, err = p.client.Messages.New(ctx, params, opts...)
+		if err == nil {
+			out = parseResponse(resp)
+		}
 	}
 
-	resp, err := p.client.Messages.New(ctx, params, opts...)
 	if err != nil {
 		return nil, fmt.Errorf("claude API call: %w", err)
 	}
 
-	return parseResponse(resp), nil
+	latency := time.Since(callStart)
+	logFields := map[string]any{
+		"model":         model,
+		"latency_ms":    latency.Milliseconds(),
+		"content_chars": len(out.Content),
+		"tool_calls":    len(out.ToolCalls),
+		"finish_reason": out.FinishReason,
+	}
+	if out.Usage != nil {
+		logFields["prompt_tokens"] = out.Usage.PromptTokens
+		logFields["completion_tokens"] = out.Usage.CompletionTokens
+		logFields["total_tokens"] = out.Usage.TotalTokens
+	}
+	logger.InfoCF("llm", "LLM response", logFields)
+
+	return out, nil
 }
 
 func (p *Provider) chatStreaming(

@@ -1,8 +1,8 @@
-// PicoClaw - Ultra-lightweight personal AI agent
+// OK - Lightweight personal AI agent
 // Inspired by and based on nanobot: https://github.com/HKUDS/nanobot
 // License: MIT
 //
-// Copyright (c) 2026 PicoClaw contributors
+// Copyright (c) 2026 OK contributors
 
 package channels
 
@@ -17,12 +17,12 @@ import (
 
 	"golang.org/x/time/rate"
 
-	"github.com/sipeed/picoclaw/pkg/bus"
-	"github.com/sipeed/picoclaw/pkg/config"
-	"github.com/sipeed/picoclaw/pkg/constants"
-	"github.com/sipeed/picoclaw/pkg/health"
-	"github.com/sipeed/picoclaw/pkg/logger"
-	"github.com/sipeed/picoclaw/pkg/media"
+	"github.com/renesul/ok/pkg/bus"
+	"github.com/renesul/ok/pkg/config"
+	"github.com/renesul/ok/pkg/constants"
+	"github.com/renesul/ok/pkg/health"
+	"github.com/renesul/ok/pkg/logger"
+	"github.com/renesul/ok/pkg/media"
 )
 
 const (
@@ -61,9 +61,6 @@ var channelRateConfig = map[string]float64{
 	"telegram": 20,
 	"discord":  1,
 	"slack":    1,
-	"matrix":   2,
-	"line":     10,
-	"irc":      2,
 }
 
 type channelWorker struct {
@@ -213,72 +210,22 @@ func (m *Manager) initChannels() error {
 	}
 
 	if m.config.Channels.WhatsApp.Enabled {
-		waCfg := m.config.Channels.WhatsApp
-		if waCfg.UseNative {
-			m.initChannel("whatsapp_native", "WhatsApp Native")
-		} else if waCfg.BridgeURL != "" {
-			m.initChannel("whatsapp", "WhatsApp")
-		}
-	}
-
-	if m.config.Channels.Feishu.Enabled {
-		m.initChannel("feishu", "Feishu")
+		m.initChannel("whatsapp", "WhatsApp")
 	}
 
 	if m.config.Channels.Discord.Enabled && m.config.Channels.Discord.Token != "" {
 		m.initChannel("discord", "Discord")
 	}
 
-	if m.config.Channels.MaixCam.Enabled {
-		m.initChannel("maixcam", "MaixCam")
-	}
-
-	if m.config.Channels.QQ.Enabled {
-		m.initChannel("qq", "QQ")
-	}
-
-	if m.config.Channels.DingTalk.Enabled && m.config.Channels.DingTalk.ClientID != "" {
-		m.initChannel("dingtalk", "DingTalk")
-	}
-
 	if m.config.Channels.Slack.Enabled && m.config.Channels.Slack.BotToken != "" {
 		m.initChannel("slack", "Slack")
 	}
 
-	if m.config.Channels.Matrix.Enabled &&
-		m.config.Channels.Matrix.Homeserver != "" &&
-		m.config.Channels.Matrix.UserID != "" &&
-		m.config.Channels.Matrix.AccessToken != "" {
-		m.initChannel("matrix", "Matrix")
-	}
-
-	if m.config.Channels.LINE.Enabled && m.config.Channels.LINE.ChannelAccessToken != "" {
-		m.initChannel("line", "LINE")
-	}
-
-	if m.config.Channels.OneBot.Enabled && m.config.Channels.OneBot.WSUrl != "" {
-		m.initChannel("onebot", "OneBot")
-	}
-
-	if m.config.Channels.WeCom.Enabled && m.config.Channels.WeCom.Token != "" {
-		m.initChannel("wecom", "WeCom")
-	}
-
-	if m.config.Channels.WeComAIBot.Enabled && m.config.Channels.WeComAIBot.Token != "" {
-		m.initChannel("wecom_aibot", "WeCom AI Bot")
-	}
-
-	if m.config.Channels.WeComApp.Enabled && m.config.Channels.WeComApp.CorpID != "" {
-		m.initChannel("wecom_app", "WeCom App")
-	}
-
-	if m.config.Channels.Pico.Enabled && m.config.Channels.Pico.Token != "" {
-		m.initChannel("pico", "Pico")
-	}
-
-	if m.config.Channels.IRC.Enabled && m.config.Channels.IRC.Server != "" {
-		m.initChannel("irc", "IRC")
-	}
+	// Built-in web chat — always active, no config needed
+	chat := NewChatChannel(m.bus)
+	chat.SetPlaceholderRecorder(m)
+	chat.SetOwner(chat)
+	m.channels["chat"] = chat
 
 	logger.InfoCF("channels", "Channel initialization completed", map[string]any{
 		"enabled_channels": len(m.channels),
@@ -766,6 +713,18 @@ func (m *Manager) GetChannel(name string) (Channel, bool) {
 	defer m.mu.RUnlock()
 	channel, ok := m.channels[name]
 	return channel, ok
+}
+
+// GetChatChannel returns the built-in web chat channel, or nil if not found.
+func (m *Manager) GetChatChannel() *ChatChannel {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	ch, ok := m.channels["chat"]
+	if !ok {
+		return nil
+	}
+	cc, _ := ch.(*ChatChannel)
+	return cc
 }
 
 func (m *Manager) GetStatus() map[string]any {

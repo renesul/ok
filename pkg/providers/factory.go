@@ -4,8 +4,9 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/sipeed/picoclaw/pkg/auth"
-	"github.com/sipeed/picoclaw/pkg/config"
+	"github.com/renesul/ok/pkg/auth"
+	"github.com/renesul/ok/pkg/config"
+	"github.com/renesul/ok/pkg/logger"
 )
 
 const defaultAnthropicAPIBase = "https://api.anthropic.com/v1"
@@ -360,5 +361,6 @@ func resolveProviderSelection(cfg *config.Config) (providerSelection, error) {
 		}
 	}
 
+	logger.InfoCF("provider", "Provider resolved", map[string]any{"model": sel.model, "api_base": sel.apiBase})
 	return sel, nil
 }

@@ -7,13 +7,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"net/url"
 	"strings"
 	"time"
 
-	"github.com/sipeed/picoclaw/pkg/providers/protocoltypes"
+	"github.com/renesul/ok/pkg/logger"
+	"github.com/renesul/ok/pkg/providers/protocoltypes"
 )
 
 type (
@@ -66,7 +66,7 @@ func NewProvider(apiKey, apiBase, proxy string, opts ...Option) *Provider {
 				Proxy: http.ProxyURL(parsed),
 			}
 		} else {
-			log.Printf("openai_compat: invalid proxy URL %q: %v", proxy, err)
+			logger.WarnCF("provider.openai_compat", "Invalid proxy URL, ignoring", map[string]any{"proxy": proxy, "error": err.Error()})
 		}
 	}
 
@@ -168,6 +168,14 @@ func (p *Provider) Chat(
 		return nil, fmt.Errorf("failed to marshal request: %w", err)
 	}
 
+	callStart := time.Now()
+	logger.InfoCF("llm", "LLM request", map[string]any{
+		"model":          model,
+		"messages_count": len(messages),
+		"tools_count":    len(tools),
+		"api_base":       p.apiBase,
+	})
+
 	req, err := http.NewRequestWithContext(ctx, "POST", p.apiBase+"/chat/completions", bytes.NewReader(jsonData))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %w", err)
@@ -216,6 +224,21 @@ func (p *Provider) Chat(
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse JSON response: %w", err)
 	}
+
+	latency := time.Since(callStart)
+	logFields := map[string]any{
+		"model":          model,
+		"latency_ms":     latency.Milliseconds(),
+		"content_chars":  len(out.Content),
+		"tool_calls":     len(out.ToolCalls),
+		"finish_reason":  out.FinishReason,
+	}
+	if out.Usage != nil {
+		logFields["prompt_tokens"] = out.Usage.PromptTokens
+		logFields["completion_tokens"] = out.Usage.CompletionTokens
+		logFields["total_tokens"] = out.Usage.TotalTokens
+	}
+	logger.InfoCF("llm", "LLM response", logFields)
 
 	return out, nil
 }
@@ -325,7 +348,7 @@ func parseResponse(body io.Reader) (*LLMResponse, error) {
 			name = tc.Function.Name
 			if tc.Function.Arguments != "" {
 				if err := json.Unmarshal([]byte(tc.Function.Arguments), &arguments); err != nil {
-					log.Printf("openai_compat: failed to decode tool call arguments for %q: %v", name, err)
+					logger.WarnCF("provider.openai_compat", "Failed to decode tool call arguments", map[string]any{"tool": name, "error": err.Error()})
 					arguments["raw"] = tc.Function.Arguments
 				}
 			}

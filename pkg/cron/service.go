@@ -5,14 +5,14 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"log"
 	"os"
 	"sync"
 	"time"
 
 	"github.com/adhocore/gronx"
 
-	"github.com/sipeed/picoclaw/pkg/fileutil"
+	"github.com/renesul/ok/pkg/fileutil"
+	"github.com/renesul/ok/pkg/logger"
 )
 
 type CronSchedule struct {
@@ -100,6 +100,9 @@ func (cs *CronService) Start() error {
 	cs.running = true
 	go cs.runLoop(cs.stopChan)
 
+	logger.InfoCF("cron", "Cron service started", map[string]any{
+		"jobs": len(cs.store.Jobs),
+	})
 	return nil
 }
 
@@ -163,7 +166,7 @@ func (cs *CronService) checkJobs() {
 	}
 
 	if err := cs.saveStoreUnsafe(); err != nil {
-		log.Printf("[cron] failed to save store: %v", err)
+		logger.ErrorCF("cron", "Failed to save store", map[string]any{"error": err.Error()})
 	}
 
 	cs.mu.Unlock()
@@ -190,13 +193,16 @@ func (cs *CronService) executeJobByID(jobID string) {
 	cs.mu.RUnlock()
 
 	if callbackJob == nil {
-		log.Printf("[cron] job %s not found, skipping", jobID)
+		logger.WarnCF("cron", "Job not found, skipping", map[string]any{"job_id": jobID})
 		return
 	}
 
-	// Log job execution start
-	log.Printf("[cron] ▶ executing job '%s' (id: %s, schedule: %s, channel: %s)",
-		callbackJob.Name, jobID, callbackJob.Schedule.Kind, callbackJob.Payload.Channel)
+	logger.InfoCF("cron", "Executing job", map[string]any{
+		"job_id":   jobID,
+		"name":     callbackJob.Name,
+		"schedule": callbackJob.Schedule.Kind,
+		"channel":  callbackJob.Payload.Channel,
+	})
 
 	var err error
 	if cs.onJob != nil {
@@ -217,7 +223,7 @@ func (cs *CronService) executeJobByID(jobID string) {
 		}
 	}
 	if job == nil {
-		log.Printf("[cron] job %s disappeared before state update", jobID)
+		logger.WarnCF("cron", "Job disappeared before state update", map[string]any{"job_id": jobID})
 		return
 	}
 
@@ -227,7 +233,12 @@ func (cs *CronService) executeJobByID(jobID string) {
 	if err != nil {
 		job.State.LastStatus = "error"
 		job.State.LastError = err.Error()
-		log.Printf("[cron] ✗ job '%s' failed after %dms: %v", job.Name, execDuration, err)
+		logger.ErrorCF("cron", "Job failed", map[string]any{
+			"job_id":      jobID,
+			"name":        job.Name,
+			"duration_ms": execDuration,
+			"error":       err.Error(),
+		})
 	} else {
 		job.State.LastStatus = "ok"
 		job.State.LastError = ""
@@ -255,11 +266,16 @@ func (cs *CronService) executeJobByID(jobID string) {
 	}
 
 	if err == nil {
-		log.Printf("[cron] ✓ job '%s' completed in %dms, next run: %s", job.Name, execDuration, nextRunStr)
+		logger.InfoCF("cron", "Job completed", map[string]any{
+			"job_id":      jobID,
+			"name":        job.Name,
+			"duration_ms": execDuration,
+			"next_run":    nextRunStr,
+		})
 	}
 
 	if err := cs.saveStoreUnsafe(); err != nil {
-		log.Printf("[cron] failed to save store: %v", err)
+		logger.ErrorCF("cron", "Failed to save store", map[string]any{"error": err.Error()})
 	}
 }
 
@@ -288,7 +304,7 @@ func (cs *CronService) computeNextRun(schedule *CronSchedule, nowMS int64) *int6
 		now := time.UnixMilli(nowMS)
 		nextTime, err := gronx.NextTickAfter(schedule.Expr, now, false)
 		if err != nil {
-			log.Printf("[cron] failed to compute next run for expr '%s': %v", schedule.Expr, err)
+			logger.ErrorCF("cron", "Failed to compute next run", map[string]any{"expr": schedule.Expr, "error": err.Error()})
 			return nil
 		}
 
@@ -437,7 +453,7 @@ func (cs *CronService) removeJobUnsafe(jobID string) bool {
 
 	if removed {
 		if err := cs.saveStoreUnsafe(); err != nil {
-			log.Printf("[cron] failed to save store after remove: %v", err)
+			logger.ErrorCF("cron", "Failed to save store after remove", map[string]any{"error": err.Error()})
 		}
 	}
 
@@ -461,7 +477,7 @@ func (cs *CronService) EnableJob(jobID string, enabled bool) *CronJob {
 			}
 
 			if err := cs.saveStoreUnsafe(); err != nil {
-				log.Printf("[cron] failed to save store after enable: %v", err)
+				logger.ErrorCF("cron", "Failed to save store after enable", map[string]any{"error": err.Error()})
 			}
 			return job
 		}

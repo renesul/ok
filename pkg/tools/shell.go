@@ -13,7 +13,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/sipeed/picoclaw/pkg/config"
+	"github.com/renesul/ok/pkg/config"
+	"github.com/renesul/ok/pkg/logger"
 )
 
 type ExecTool struct {
@@ -62,7 +63,6 @@ var (
 		regexp.MustCompile(`\bkill\b`),
 		regexp.MustCompile(`\bcurl\b.*\|\s*(sh|bash)`),
 		regexp.MustCompile(`\bwget\b.*\|\s*(sh|bash)`),
-		regexp.MustCompile(`\bnpm\s+install\s+-g\b`),
 		regexp.MustCompile(`\bpip\s+install\s+--user\b`),
 		regexp.MustCompile(`\bapt\s+(install|remove|purge)\b`),
 		regexp.MustCompile(`\byum\s+(install|remove)\b`),
@@ -107,7 +107,7 @@ func NewExecToolWithConfig(workingDir string, restrict bool, config *config.Conf
 		if enableDenyPatterns {
 			denyPatterns = append(denyPatterns, defaultDenyPatterns...)
 			if len(execConfig.CustomDenyPatterns) > 0 {
-				fmt.Printf("Using custom deny patterns: %v\n", execConfig.CustomDenyPatterns)
+				logger.DebugCF("exec", "Using custom deny patterns", map[string]any{"patterns": execConfig.CustomDenyPatterns})
 				for _, pattern := range execConfig.CustomDenyPatterns {
 					re, err := regexp.Compile(pattern)
 					if err != nil {
@@ -118,7 +118,7 @@ func NewExecToolWithConfig(workingDir string, restrict bool, config *config.Conf
 			}
 		} else {
 			// If deny patterns are disabled, we won't add any patterns, allowing all commands.
-			fmt.Println("Warning: deny patterns are disabled. All commands will be allowed.")
+			logger.WarnC("exec", "Deny patterns disabled, all commands allowed")
 		}
 		for _, pattern := range execConfig.CustomAllowPatterns {
 			re, err := regexp.Compile(pattern)

@@ -10,13 +10,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/sipeed/picoclaw/pkg/bus"
-	"github.com/sipeed/picoclaw/pkg/channels"
-	"github.com/sipeed/picoclaw/pkg/config"
-	"github.com/sipeed/picoclaw/pkg/media"
-	"github.com/sipeed/picoclaw/pkg/providers"
-	"github.com/sipeed/picoclaw/pkg/routing"
-	"github.com/sipeed/picoclaw/pkg/tools"
+	"github.com/renesul/ok/pkg/bus"
+	"github.com/renesul/ok/pkg/channels"
+	"github.com/renesul/ok/pkg/config"
+	"github.com/renesul/ok/pkg/media"
+	"github.com/renesul/ok/pkg/providers"
+	"github.com/renesul/ok/pkg/routing"
+	"github.com/renesul/ok/pkg/tools"
 )
 
 type fakeChannel struct{ id string }
@@ -796,16 +796,8 @@ func TestTargetReasoningChannelID_AllChannels(t *testing.T) {
 	for name, id := range map[string]string{
 		"whatsapp":  "rid-whatsapp",
 		"telegram":  "rid-telegram",
-		"feishu":    "rid-feishu",
 		"discord":   "rid-discord",
-		"maixcam":   "rid-maixcam",
-		"qq":        "rid-qq",
-		"dingtalk":  "rid-dingtalk",
 		"slack":     "rid-slack",
-		"line":      "rid-line",
-		"onebot":    "rid-onebot",
-		"wecom":     "rid-wecom",
-		"wecom_app": "rid-wecom-app",
 	} {
 		chManager.RegisterChannel(name, &fakeChannel{id: id})
 	}
@@ -816,16 +808,8 @@ func TestTargetReasoningChannelID_AllChannels(t *testing.T) {
 	}{
 		{channel: "whatsapp", wantID: "rid-whatsapp"},
 		{channel: "telegram", wantID: "rid-telegram"},
-		{channel: "feishu", wantID: "rid-feishu"},
 		{channel: "discord", wantID: "rid-discord"},
-		{channel: "maixcam", wantID: "rid-maixcam"},
-		{channel: "qq", wantID: "rid-qq"},
-		{channel: "dingtalk", wantID: "rid-dingtalk"},
 		{channel: "slack", wantID: "rid-slack"},
-		{channel: "line", wantID: "rid-line"},
-		{channel: "onebot", wantID: "rid-onebot"},
-		{channel: "wecom", wantID: "rid-wecom"},
-		{channel: "wecom_app", wantID: "rid-wecom-app"},
 		{channel: "unknown", wantID: ""},
 	}
 

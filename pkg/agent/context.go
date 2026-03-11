@@ -1,6 +1,7 @@
 package agent
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io/fs"
@@ -12,15 +13,18 @@ import (
 	"sync"
 	"time"
 
-	"github.com/sipeed/picoclaw/pkg/logger"
-	"github.com/sipeed/picoclaw/pkg/providers"
-	"github.com/sipeed/picoclaw/pkg/skills"
+	"github.com/renesul/ok/pkg/logger"
+	"github.com/renesul/ok/pkg/providers"
+	"github.com/renesul/ok/pkg/rag"
+	"github.com/renesul/ok/pkg/skills"
 )
 
 type ContextBuilder struct {
 	workspace    string
 	skillsLoader *skills.SkillsLoader
 	memory       *MemoryStore
+	retriever    *rag.Retriever    // optional RAG retriever for semantic memory
+	ragCache     *RAGContextCache // caches formatted RAG context blocks
 
 	// Cache for system prompt to avoid rebuilding on every call.
 	// This fixes issue #607: repeated reprocessing of the entire context.
@@ -42,20 +46,20 @@ type ContextBuilder struct {
 }
 
 func getGlobalConfigDir() string {
-	if home := os.Getenv("PICOCLAW_HOME"); home != "" {
+	if home := os.Getenv("OK_HOME"); home != "" {
 		return home
 	}
 	home, err := os.UserHomeDir()
 	if err != nil {
 		return ""
 	}
-	return filepath.Join(home, ".picoclaw")
+	return filepath.Join(home, ".ok")
 }
 
 func NewContextBuilder(workspace string) *ContextBuilder {
 	// builtin skills: skills directory in current project
 	// Use the skills/ directory under the current working directory
-	builtinSkillsDir := strings.TrimSpace(os.Getenv("PICOCLAW_BUILTIN_SKILLS"))
+	builtinSkillsDir := strings.TrimSpace(os.Getenv("OK_BUILTIN_SKILLS"))
 	if builtinSkillsDir == "" {
 		wd, _ := os.Getwd()
 		builtinSkillsDir = filepath.Join(wd, "skills")
@@ -66,15 +70,16 @@ func NewContextBuilder(workspace string) *ContextBuilder {
 		workspace:    workspace,
 		skillsLoader: skills.NewSkillsLoader(workspace, globalSkillsDir, builtinSkillsDir),
 		memory:       NewMemoryStore(workspace),
+		ragCache:     NewRAGContextCache(30, 2*time.Minute),
 	}
 }
 
 func (cb *ContextBuilder) getIdentity() string {
 	workspacePath, _ := filepath.Abs(filepath.Join(cb.workspace))
 
-	return fmt.Sprintf(`# picoclaw 🦞
+	return fmt.Sprintf(`# ok ✓
 
-You are picoclaw, a helpful AI assistant.
+You are ok, a helpful AI assistant.
 
 ## Workspace
 Your workspace is at: %s
@@ -486,6 +491,15 @@ func (cb *ContextBuilder) BuildMessages(
 		contentBlocks = append(contentBlocks, providers.ContentBlock{Type: "text", Text: summaryText})
 	}
 
+	// RAG: retrieve relevant past interactions for the current message
+	if cb.retriever != nil && strings.TrimSpace(currentMessage) != "" {
+		ragCtx := cb.retrieveRAGContext(currentMessage)
+		if ragCtx != "" {
+			stringParts = append(stringParts, ragCtx)
+			contentBlocks = append(contentBlocks, providers.ContentBlock{Type: "text", Text: ragCtx})
+		}
+	}
+
 	fullSystemPrompt := strings.Join(stringParts, "\n\n---\n\n")
 
 	// Log system prompt summary for debugging (debug mode only).
@@ -515,6 +529,7 @@ func (cb *ContextBuilder) BuildMessages(
 		})
 
 	history = sanitizeHistoryForProvider(history)
+	history = compactToolHistory(history)
 
 	// Single system message containing all context — compatible with all providers.
 	// SystemParts enables cache-aware adapters to set per-block cache_control;
@@ -661,30 +676,140 @@ func sanitizeHistoryForProvider(history []providers.Message) []providers.Message
 	return final
 }
 
-func (cb *ContextBuilder) AddToolResult(
-	messages []providers.Message,
-	toolCallID, toolName, result string,
-) []providers.Message {
-	messages = append(messages, providers.Message{
-		Role:       "tool",
-		Content:    result,
-		ToolCallID: toolCallID,
-	})
-	return messages
+// SetRetriever sets the RAG retriever for semantic memory search.
+func (cb *ContextBuilder) SetRetriever(r *rag.Retriever) {
+	cb.retriever = r
 }
 
-func (cb *ContextBuilder) AddAssistantMessage(
-	messages []providers.Message,
-	content string,
-	toolCalls []map[string]any,
-) []providers.Message {
-	msg := providers.Message{
-		Role:    "assistant",
-		Content: content,
+// retrieveRAGContext searches past interactions and formats them as context.
+// Checks the RAG context cache first to avoid redundant embedding API calls.
+func (cb *ContextBuilder) retrieveRAGContext(query string) string {
+	// Check RAG context cache first
+	if cb.ragCache != nil {
+		if cached, ok := cb.ragCache.Get(query); ok {
+			logger.DebugCF("rag", "RAG context cache hit", map[string]any{"query_len": len(query)})
+			return cached
+		}
 	}
-	// Always add assistant message, whether or not it has tool calls
-	messages = append(messages, msg)
-	return messages
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	results, err := cb.retriever.Search(ctx, query)
+	if err != nil {
+		logger.WarnCF("rag", "RAG search failed", map[string]any{"error": err.Error()})
+		return ""
+	}
+
+	formatted := rag.FormatContext(results)
+
+	// Cache the result
+	if cb.ragCache != nil && formatted != "" {
+		cb.ragCache.Put(query, formatted)
+	}
+
+	return formatted
+}
+
+// compactToolHistory replaces old tool call pairs with compact summaries to save
+// tokens. The last keepRecentMessages messages are kept intact for continuity;
+// older assistant(tool_calls)+tool(result) groups are collapsed into a single
+// assistant message like: "[tool: shell_exec({command:"ls"}) → 1245 chars]".
+//
+// This runs at read-time (BuildMessages) so the session file is never modified.
+const keepRecentMessages = 10
+
+func compactToolHistory(history []providers.Message) []providers.Message {
+	if len(history) <= keepRecentMessages {
+		return history
+	}
+
+	// Split into old (compactable) and recent (kept verbatim).
+	cutoff := len(history) - keepRecentMessages
+	old := history[:cutoff]
+	recent := history[cutoff:]
+
+	compacted := make([]providers.Message, 0, len(history))
+	savedChars := 0
+
+	for i := 0; i < len(old); i++ {
+		msg := old[i]
+
+		// Not an assistant message with tool calls → keep as-is
+		if msg.Role != "assistant" || len(msg.ToolCalls) == 0 {
+			compacted = append(compacted, msg)
+			continue
+		}
+
+		// Collect the tool result messages that follow this assistant message
+		toolResults := make(map[string]string) // toolCallID → content
+		j := i + 1
+		for j < len(old) && old[j].Role == "tool" {
+			toolResults[old[j].ToolCallID] = old[j].Content
+			j++
+		}
+
+		// Build compact summary
+		var sb strings.Builder
+		for _, tc := range msg.ToolCalls {
+			if sb.Len() > 0 {
+				sb.WriteString("\n")
+			}
+
+			// Compact tool call args
+			args := ""
+			if tc.Function != nil && tc.Function.Arguments != "" {
+				args = tc.Function.Arguments
+				if len(args) > 80 {
+					args = args[:80] + "..."
+				}
+			}
+
+			// Compact tool result
+			result := toolResults[tc.ID]
+			resultLen := len(result)
+			resultPreview := ""
+			if resultLen > 0 {
+				preview := result
+				if len(preview) > 100 {
+					preview = preview[:100] + "..."
+				}
+				// Escape newlines for single-line display
+				preview = strings.ReplaceAll(preview, "\n", " ")
+				resultPreview = fmt.Sprintf(" → %s (%d chars)", preview, resultLen)
+			}
+
+			fmt.Fprintf(&sb, "[tool: %s(%s)%s]", tc.Name, args, resultPreview)
+		}
+
+		// Count savings
+		origChars := len(msg.Content)
+		for _, r := range toolResults {
+			origChars += len(r)
+		}
+		savedChars += origChars - sb.Len()
+
+		// Replace with single compacted assistant message (no tool calls)
+		compacted = append(compacted, providers.Message{
+			Role:    "assistant",
+			Content: sb.String(),
+		})
+
+		// Skip the tool result messages we already consumed
+		i = j - 1
+	}
+
+	if savedChars > 0 {
+		logger.DebugCF("agent", "Tool history compacted", map[string]any{
+			"old_messages":  len(old),
+			"compacted_to":  len(compacted),
+			"chars_saved":   savedChars,
+			"recent_kept":   len(recent),
+		})
+	}
+
+	compacted = append(compacted, recent...)
+	return compacted
 }
 
 // GetSkillsInfo returns information about loaded skills.

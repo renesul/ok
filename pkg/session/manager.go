@@ -8,7 +8,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/sipeed/picoclaw/pkg/providers"
+	"github.com/renesul/ok/pkg/logger"
+	"github.com/renesul/ok/pkg/providers"
 )
 
 type Session struct {
@@ -34,29 +35,10 @@ func NewSessionManager(storage string) *SessionManager {
 	if storage != "" {
 		os.MkdirAll(storage, 0o755)
 		sm.loadSessions()
+		logger.InfoCF("session", "Session manager initialized", map[string]any{"storage": storage})
 	}
 
 	return sm
-}
-
-func (sm *SessionManager) GetOrCreate(key string) *Session {
-	sm.mu.Lock()
-	defer sm.mu.Unlock()
-
-	session, ok := sm.sessions[key]
-	if ok {
-		return session
-	}
-
-	session = &Session{
-		Key:      key,
-		Messages: []providers.Message{},
-		Created:  time.Now(),
-		Updated:  time.Now(),
-	}
-	sm.sessions[key] = session
-
-	return session
 }
 
 func (sm *SessionManager) AddMessage(sessionKey, role, content string) {
@@ -84,6 +66,11 @@ func (sm *SessionManager) AddFullMessage(sessionKey string, msg providers.Messag
 
 	session.Messages = append(session.Messages, msg)
 	session.Updated = time.Now()
+	logger.InfoCF("session", "Message added", map[string]any{
+		"key":      sessionKey,
+		"role":     msg.Role,
+		"messages": len(session.Messages),
+	})
 }
 
 func (sm *SessionManager) GetHistory(key string) []providers.Message {
@@ -141,8 +128,10 @@ func (sm *SessionManager) TruncateHistory(key string, keepLast int) {
 		return
 	}
 
-	session.Messages = session.Messages[len(session.Messages)-keepLast:]
+	from := len(session.Messages)
+	session.Messages = session.Messages[from-keepLast:]
 	session.Updated = time.Now()
+	logger.InfoCF("session", "History truncated", map[string]any{"key": key, "from": from, "to": keepLast})
 }
 
 // sanitizeFilename converts a session key into a cross-platform safe filename.
@@ -193,12 +182,14 @@ func (sm *SessionManager) Save(key string) error {
 
 	data, err := json.MarshalIndent(snapshot, "", "  ")
 	if err != nil {
+		logger.ErrorCF("session", "Failed to marshal session", map[string]any{"key": key, "error": err.Error()})
 		return err
 	}
 
 	sessionPath := filepath.Join(sm.storage, filename+".json")
 	tmpFile, err := os.CreateTemp(sm.storage, "session-*.tmp")
 	if err != nil {
+		logger.ErrorCF("session", "Failed to create temp file", map[string]any{"key": key, "error": err.Error()})
 		return err
 	}
 
@@ -230,12 +221,14 @@ func (sm *SessionManager) Save(key string) error {
 		return err
 	}
 	cleanup = false
+	logger.InfoCF("session", "Session saved", map[string]any{"key": key, "messages": len(snapshot.Messages)})
 	return nil
 }
 
 func (sm *SessionManager) loadSessions() error {
 	files, err := os.ReadDir(sm.storage)
 	if err != nil {
+		logger.WarnCF("session", "Failed to read session directory", map[string]any{"error": err.Error()})
 		return err
 	}
 
@@ -251,17 +244,20 @@ func (sm *SessionManager) loadSessions() error {
 		sessionPath := filepath.Join(sm.storage, file.Name())
 		data, err := os.ReadFile(sessionPath)
 		if err != nil {
+			logger.WarnCF("session", "Failed to read session file", map[string]any{"file": file.Name(), "error": err.Error()})
 			continue
 		}
 
 		var session Session
 		if err := json.Unmarshal(data, &session); err != nil {
+			logger.WarnCF("session", "Failed to parse session file", map[string]any{"file": file.Name(), "error": err.Error()})
 			continue
 		}
 
 		sm.sessions[session.Key] = &session
 	}
 
+	logger.InfoCF("session", "Sessions loaded", map[string]any{"count": len(sm.sessions)})
 	return nil
 }
 

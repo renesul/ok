@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 )
 
@@ -82,8 +81,8 @@ func TestLoadOpenClawConfig(t *testing.T) {
 	}
 
 	workspace := cfg.GetDefaultWorkspace()
-	if workspace != "~/.picoclaw/workspace" {
-		t.Errorf("expected workspace '~/.picoclaw/workspace', got '%s'", workspace)
+	if workspace != "~/.ok/workspace" {
+		t.Errorf("expected workspace '~/.ok/workspace', got '%s'", workspace)
 	}
 
 	agents := cfg.GetAgents()
@@ -160,7 +159,7 @@ func TestGetProviderConfig(t *testing.T) {
 	}
 }
 
-func TestConvertToPicoClaw(t *testing.T) {
+func TestConvertToOK(t *testing.T) {
 	tmpDir := t.TempDir()
 	configPath := filepath.Join(tmpDir, "openclaw.json")
 
@@ -198,12 +197,6 @@ func TestConvertToPicoClaw(t *testing.T) {
 				"enabled": true,
 				"bridgeUrl": "http://localhost:3000"
 			},
-			"feishu": {
-				"enabled": true,
-				"appId": "app-id",
-				"appSecret": "app-secret",
-				"allowFrom": ["user3"]
-			},
 			"signal": {
 				"enabled": true
 			}
@@ -237,7 +230,7 @@ func TestConvertToPicoClaw(t *testing.T) {
 		t.Fatalf("failed to load config: %v", err)
 	}
 
-	picoCfg, warnings, err := cfg.ConvertToPicoClaw("")
+	picoCfg, warnings, err := cfg.ConvertToOK("")
 	if err != nil {
 		t.Fatalf("failed to convert config: %v", err)
 	}
@@ -245,8 +238,8 @@ func TestConvertToPicoClaw(t *testing.T) {
 	if picoCfg.Agents.Defaults.ModelName != "claude-sonnet-4-20250514" {
 		t.Errorf("expected model 'claude-sonnet-4-20250514', got '%s'", picoCfg.Agents.Defaults.ModelName)
 	}
-	if picoCfg.Agents.Defaults.Workspace != "~/.picoclaw/workspace" {
-		t.Errorf("expected workspace '~/.picoclaw/workspace', got '%s'", picoCfg.Agents.Defaults.Workspace)
+	if picoCfg.Agents.Defaults.Workspace != "~/.ok/workspace" {
+		t.Errorf("expected workspace '~/.ok/workspace', got '%s'", picoCfg.Agents.Defaults.Workspace)
 	}
 
 	if len(picoCfg.Agents.List) != 2 {
@@ -266,12 +259,8 @@ func TestConvertToPicoClaw(t *testing.T) {
 		t.Errorf("expected telegram token 'test-token', got '%s'", picoCfg.Channels.Telegram.Token)
 	}
 
-	if picoCfg.Channels.WhatsApp.BridgeURL != "http://localhost:3000" {
-		t.Errorf("expected whatsapp bridge URL 'http://localhost:3000', got '%s'", picoCfg.Channels.WhatsApp.BridgeURL)
-	}
-
-	if picoCfg.Channels.Feishu.AppID != "app-id" {
-		t.Errorf("expected feishu app ID 'app-id', got '%s'", picoCfg.Channels.Feishu.AppID)
+	if !picoCfg.Channels.WhatsApp.Enabled {
+		t.Error("whatsapp should be enabled")
 	}
 
 	if len(picoCfg.ModelList) != 1 {
@@ -290,7 +279,7 @@ func TestConvertToPicoClaw(t *testing.T) {
 	}
 }
 
-func TestConvertToPicoClawWithQQAndDingTalk(t *testing.T) {
+func TestConvertToOKWithQQAndMaixCam(t *testing.T) {
 	tmpDir := t.TempDir()
 	configPath := filepath.Join(tmpDir, "openclaw.json")
 
@@ -307,11 +296,6 @@ func TestConvertToPicoClawWithQQAndDingTalk(t *testing.T) {
 				"enabled": true,
 				"appId": "qq-app-id",
 				"appSecret": "qq-app-secret"
-			},
-			"dingtalk": {
-				"enabled": true,
-				"appId": "ding-app-id",
-				"appSecret": "ding-app-secret"
 			},
 			"maixcam": {
 				"enabled": true,
@@ -336,7 +320,7 @@ func TestConvertToPicoClawWithQQAndDingTalk(t *testing.T) {
 		t.Fatalf("failed to load config: %v", err)
 	}
 
-	picoCfg, _, err := cfg.ConvertToPicoClaw("")
+	picoCfg, _, err := cfg.ConvertToOK("")
 	if err != nil {
 		t.Fatalf("failed to convert config: %v", err)
 	}
@@ -348,12 +332,6 @@ func TestConvertToPicoClawWithQQAndDingTalk(t *testing.T) {
 		t.Errorf("expected qq app ID 'qq-app-id', got '%s'", picoCfg.Channels.QQ.AppID)
 	}
 
-	if !picoCfg.Channels.DingTalk.Enabled {
-		t.Error("dingtalk should be enabled")
-	}
-	if picoCfg.Channels.DingTalk.ClientID != "ding-app-id" {
-		t.Errorf("expected dingtalk client ID 'ding-app-id', got '%s'", picoCfg.Channels.DingTalk.ClientID)
-	}
 
 	if !picoCfg.Channels.MaixCam.Enabled {
 		t.Error("maixcam should be enabled")
@@ -376,95 +354,7 @@ func TestConvertToPicoClawWithQQAndDingTalk(t *testing.T) {
 	}
 }
 
-func TestConvertToPicoClawWithMatrix(t *testing.T) {
-	tmpDir := t.TempDir()
-	configPath := filepath.Join(tmpDir, "openclaw.json")
 
-	testConfig := `{
-		"channels": {
-			"matrix": {
-				"enabled": true,
-				"homeserver": "https://matrix.example.com",
-				"userId": "@bot:matrix.example.com",
-				"accessToken": "syt_test_token",
-				"allowFrom": ["@alice:matrix.example.com"]
-			}
-		}
-	}`
-
-	err := os.WriteFile(configPath, []byte(testConfig), 0o644)
-	if err != nil {
-		t.Fatalf("failed to write test config: %v", err)
-	}
-
-	cfg, err := LoadOpenClawConfig(configPath)
-	if err != nil {
-		t.Fatalf("failed to load config: %v", err)
-	}
-
-	picoCfg, warnings, err := cfg.ConvertToPicoClaw("")
-	if err != nil {
-		t.Fatalf("failed to convert config: %v", err)
-	}
-
-	if !picoCfg.Channels.Matrix.Enabled {
-		t.Error("matrix should be enabled")
-	}
-	if picoCfg.Channels.Matrix.Homeserver != "https://matrix.example.com" {
-		t.Errorf("expected matrix homeserver, got %q", picoCfg.Channels.Matrix.Homeserver)
-	}
-	if picoCfg.Channels.Matrix.UserID != "@bot:matrix.example.com" {
-		t.Errorf("expected matrix user_id, got %q", picoCfg.Channels.Matrix.UserID)
-	}
-	if picoCfg.Channels.Matrix.AccessToken != "syt_test_token" {
-		t.Errorf("expected matrix access_token, got %q", picoCfg.Channels.Matrix.AccessToken)
-	}
-	if len(picoCfg.Channels.Matrix.AllowFrom) != 1 ||
-		picoCfg.Channels.Matrix.AllowFrom[0] != "@alice:matrix.example.com" {
-		t.Errorf("unexpected matrix allow_from: %#v", picoCfg.Channels.Matrix.AllowFrom)
-	}
-
-	for _, w := range warnings {
-		if strings.Contains(w, "Channel 'matrix'") {
-			t.Fatalf("matrix should no longer be reported as unsupported, warning=%q", w)
-		}
-	}
-}
-
-func TestConvertToPicoClawWithMatrixDisabled(t *testing.T) {
-	tmpDir := t.TempDir()
-	configPath := filepath.Join(tmpDir, "openclaw.json")
-
-	testConfig := `{
-		"channels": {
-			"matrix": {
-				"enabled": false,
-				"homeserver": "https://matrix.example.com",
-				"userId": "@bot:matrix.example.com",
-				"accessToken": "syt_test_token"
-			}
-		}
-	}`
-
-	err := os.WriteFile(configPath, []byte(testConfig), 0o644)
-	if err != nil {
-		t.Fatalf("failed to write test config: %v", err)
-	}
-
-	cfg, err := LoadOpenClawConfig(configPath)
-	if err != nil {
-		t.Fatalf("failed to load config: %v", err)
-	}
-
-	picoCfg, _, err := cfg.ConvertToPicoClaw("")
-	if err != nil {
-		t.Fatalf("failed to convert config: %v", err)
-	}
-
-	if picoCfg.Channels.Matrix.Enabled {
-		t.Error("matrix should respect enabled=false from source config")
-	}
-}
 
 func TestOpenClawAgentModel(t *testing.T) {
 	model := &OpenClawAgentModel{
@@ -515,9 +405,6 @@ func TestChannelEnabled(t *testing.T) {
 	}
 	if !cfg.IsChannelEnabled("slack") {
 		t.Error("slack should be enabled (explicitly set)")
-	}
-	if !cfg.IsChannelEnabled("matrix") {
-		t.Error("matrix should be enabled (nil config defaults to enabled)")
 	}
 	if cfg.IsChannelEnabled("line") {
 		t.Error("line should return false (not in switch cases)")
@@ -620,12 +507,12 @@ func TestLoadOpenClawConfigFromDir(t *testing.T) {
 }
 
 func TestToStandardConfig(t *testing.T) {
-	picoCfg := &PicoClawConfig{
+	picoCfg := &OKConfig{
 		Agents: AgentsConfig{
 			Defaults: AgentDefaults{
 				Provider:  "anthropic",
 				ModelName: "claude-sonnet-4-20250514",
-				Workspace: "~/.picoclaw/workspace",
+				Workspace: "~/.ok/workspace",
 			},
 			List: []AgentConfig{
 				{
@@ -649,8 +536,7 @@ func TestToStandardConfig(t *testing.T) {
 				AllowFrom: []string{"user1"},
 			},
 			WhatsApp: WhatsAppConfig{
-				Enabled:   true,
-				BridgeURL: "http://localhost:3000",
+				Enabled: true,
 			},
 		},
 		Gateway: GatewayConfig{
@@ -667,8 +553,8 @@ func TestToStandardConfig(t *testing.T) {
 	if stdCfg.Agents.Defaults.ModelName != "claude-sonnet-4-20250514" {
 		t.Errorf("expected model name 'claude-sonnet-4-20250514', got '%s'", stdCfg.Agents.Defaults.ModelName)
 	}
-	if stdCfg.Agents.Defaults.Workspace != "~/.picoclaw/workspace" {
-		t.Errorf("expected workspace '~/.picoclaw/workspace', got '%s'", stdCfg.Agents.Defaults.Workspace)
+	if stdCfg.Agents.Defaults.Workspace != "~/.ok/workspace" {
+		t.Errorf("expected workspace '~/.ok/workspace', got '%s'", stdCfg.Agents.Defaults.Workspace)
 	}
 
 	if len(stdCfg.Agents.List) != 1 {

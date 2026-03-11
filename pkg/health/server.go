@@ -4,38 +4,30 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"maps"
 	"net/http"
+	"strconv"
 	"sync"
 	"time"
+
+	"github.com/renesul/ok/pkg/logger"
 )
 
 type Server struct {
 	server    *http.Server
 	mu        sync.RWMutex
 	ready     bool
-	checks    map[string]Check
 	startTime time.Time
 }
 
-type Check struct {
-	Name      string    `json:"name"`
-	Status    string    `json:"status"`
-	Message   string    `json:"message,omitempty"`
-	Timestamp time.Time `json:"timestamp"`
-}
-
 type StatusResponse struct {
-	Status string           `json:"status"`
-	Uptime string           `json:"uptime"`
-	Checks map[string]Check `json:"checks,omitempty"`
+	Status string `json:"status"`
+	Uptime string `json:"uptime,omitempty"`
 }
 
 func NewServer(host string, port int) *Server {
 	mux := http.NewServeMux()
 	s := &Server{
 		ready:     false,
-		checks:    make(map[string]Check),
 		startTime: time.Now(),
 	}
 
@@ -85,25 +77,6 @@ func (s *Server) Stop(ctx context.Context) error {
 	return s.server.Shutdown(ctx)
 }
 
-func (s *Server) SetReady(ready bool) {
-	s.mu.Lock()
-	s.ready = ready
-	s.mu.Unlock()
-}
-
-func (s *Server) RegisterCheck(name string, checkFn func() (bool, string)) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	status, msg := checkFn()
-	s.checks[name] = Check{
-		Name:      name,
-		Status:    statusString(status),
-		Message:   msg,
-		Timestamp: time.Now(),
-	}
-}
-
 func (s *Server) healthHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
@@ -122,28 +95,12 @@ func (s *Server) readyHandler(w http.ResponseWriter, r *http.Request) {
 
 	s.mu.RLock()
 	ready := s.ready
-	checks := make(map[string]Check)
-	maps.Copy(checks, s.checks)
 	s.mu.RUnlock()
 
 	if !ready {
 		w.WriteHeader(http.StatusServiceUnavailable)
-		json.NewEncoder(w).Encode(StatusResponse{
-			Status: "not ready",
-			Checks: checks,
-		})
+		json.NewEncoder(w).Encode(StatusResponse{Status: "not ready"})
 		return
-	}
-
-	for _, check := range checks {
-		if check.Status == "fail" {
-			w.WriteHeader(http.StatusServiceUnavailable)
-			json.NewEncoder(w).Encode(StatusResponse{
-				Status: "not ready",
-				Checks: checks,
-			})
-			return
-		}
 	}
 
 	w.WriteHeader(http.StatusOK)
@@ -151,20 +108,32 @@ func (s *Server) readyHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(StatusResponse{
 		Status: "ready",
 		Uptime: uptime.String(),
-		Checks: checks,
 	})
 }
 
-// RegisterOnMux registers /health and /ready handlers onto the given mux.
+// RegisterOnMux registers /health, /ready and /logs handlers onto the given mux.
 // This allows the health endpoints to be served by a shared HTTP server.
 func (s *Server) RegisterOnMux(mux *http.ServeMux) {
 	mux.HandleFunc("/health", s.healthHandler)
 	mux.HandleFunc("/ready", s.readyHandler)
+	mux.HandleFunc("/logs", logsHandler)
 }
 
-func statusString(ok bool) string {
-	if ok {
-		return "ok"
+// logsHandler returns recent log entries from the in-process ring buffer.
+// Query param: offset (monotonic index from previous response).
+func logsHandler(w http.ResponseWriter, r *http.Request) {
+	offset := 0
+	if v := r.URL.Query().Get("offset"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil {
+			offset = n
+		}
 	}
-	return "fail"
+
+	entries, total := logger.RecentEntries(offset)
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]any{
+		"logs":      entries,
+		"log_total": total,
+	})
 }

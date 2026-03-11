@@ -7,7 +7,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/sipeed/picoclaw/pkg/providers"
+	"github.com/renesul/ok/pkg/providers"
 )
 
 func newTestStore(t *testing.T) *JSONLStore {

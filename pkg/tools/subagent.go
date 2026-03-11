@@ -6,7 +6,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/sipeed/picoclaw/pkg/providers"
+	"github.com/renesul/ok/pkg/logger"
+	"github.com/renesul/ok/pkg/providers"
 )
 
 type SubagentTask struct {
@@ -101,6 +102,7 @@ func (sm *SubagentManager) Spawn(
 
 	// Start task in background with context cancellation support
 	go sm.runTask(ctx, subagentTask, callback)
+	logger.InfoCF("subagent", "Subagent spawned", map[string]any{"task_id": taskID, "label": label})
 
 	if label != "" {
 		return fmt.Sprintf("Spawned subagent '%s' for task: %s", label, task), nil
@@ -186,6 +188,7 @@ After completing the task, provide a clear summary of what was done.`
 			task.Status = "canceled"
 			task.Result = "Task canceled during execution"
 		}
+		logger.ErrorCF("subagent", "Subagent task failed", map[string]any{"task_id": task.ID})
 		result = &ToolResult{
 			ForLLM:  task.Result,
 			ForUser: "",
@@ -197,6 +200,7 @@ After completing the task, provide a clear summary of what was done.`
 	} else {
 		task.Status = "completed"
 		task.Result = loopResult.Content
+		logger.InfoCF("subagent", "Subagent completed", map[string]any{"task_id": task.ID, "iterations": loopResult.Iterations})
 		result = &ToolResult{
 			ForLLM: fmt.Sprintf(
 				"Subagent '%s' completed (iterations: %d): %s",

@@ -7,8 +7,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/sipeed/picoclaw/pkg/logger"
-	"github.com/sipeed/picoclaw/pkg/providers"
+	"github.com/renesul/ok/pkg/logger"
+	"github.com/renesul/ok/pkg/providers"
 )
 
 type ToolRegistry struct {
@@ -189,17 +189,3 @@ func (r *ToolRegistry) Count() int {
 	return len(r.tools)
 }
 
-// GetSummaries returns human-readable summaries of all registered tools.
-// Returns a slice of "name - description" strings.
-func (r *ToolRegistry) GetSummaries() []string {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
-
-	sorted := r.sortedToolNames()
-	summaries := make([]string, 0, len(sorted))
-	for _, name := range sorted {
-		tool := r.tools[name]
-		summaries = append(summaries, fmt.Sprintf("- `%s` - %s", tool.Name(), tool.Description()))
-	}
-	return summaries
-}

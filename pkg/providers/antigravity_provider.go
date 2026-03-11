@@ -12,8 +12,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/sipeed/picoclaw/pkg/auth"
-	"github.com/sipeed/picoclaw/pkg/logger"
+	"github.com/renesul/ok/pkg/auth"
+	"github.com/renesul/ok/pkg/logger"
 )
 
 const (
@@ -64,10 +64,13 @@ func (p *AntigravityProvider) Chat(
 	model = strings.TrimPrefix(model, "google-antigravity/")
 	model = strings.TrimPrefix(model, "antigravity/")
 
-	logger.DebugCF("provider.antigravity", "Starting chat", map[string]any{
-		"model":     model,
-		"project":   projectID,
-		"requestId": fmt.Sprintf("agent-%d-%s", time.Now().UnixMilli(), randomString(9)),
+	callStart := time.Now()
+	logger.InfoCF("llm", "LLM request", map[string]any{
+		"model":          model,
+		"messages_count": len(messages),
+		"tools_count":    len(tools),
+		"provider":       "antigravity",
+		"project":        projectID,
 	})
 
 	// Build the inner Gemini-format request
@@ -143,6 +146,21 @@ func (p *AntigravityProvider) Chat(
 			"antigravity: model returned an empty response (this model might be invalid or restricted)",
 		)
 	}
+
+	latency := time.Since(callStart)
+	logFields := map[string]any{
+		"model":         model,
+		"latency_ms":    latency.Milliseconds(),
+		"content_chars": len(llmResp.Content),
+		"tool_calls":    len(llmResp.ToolCalls),
+		"finish_reason": llmResp.FinishReason,
+	}
+	if llmResp.Usage != nil {
+		logFields["prompt_tokens"] = llmResp.Usage.PromptTokens
+		logFields["completion_tokens"] = llmResp.Usage.CompletionTokens
+		logFields["total_tokens"] = llmResp.Usage.TotalTokens
+	}
+	logger.InfoCF("llm", "LLM response", logFields)
 
 	return llmResp, nil
 }
@@ -567,7 +585,7 @@ func createAntigravityTokenSource() func() (string, string, error) {
 		}
 		if cred == nil {
 			return "", "", fmt.Errorf(
-				"no credentials for google-antigravity. Run: picoclaw auth login --provider google-antigravity",
+				"no credentials for google-antigravity. Run: ok auth login --provider google-antigravity",
 			)
 		}
 
@@ -590,7 +608,7 @@ func createAntigravityTokenSource() func() (string, string, error) {
 
 		if cred.IsExpired() {
 			return "", "", fmt.Errorf(
-				"antigravity credentials expired. Run: picoclaw auth login --provider google-antigravity",
+				"antigravity credentials expired. Run: ok auth login --provider google-antigravity",
 			)
 		}
 

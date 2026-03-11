@@ -12,6 +12,8 @@ import (
 	"regexp"
 	"strings"
 	"time"
+
+	"github.com/renesul/ok/pkg/logger"
 )
 
 const (
@@ -124,8 +126,7 @@ func (p *BraveSearchProvider) Search(ctx context.Context, query string, count in
 	}
 
 	if err := json.Unmarshal(body, &searchResp); err != nil {
-		// Log error body for debugging
-		fmt.Printf("Brave API Error Body: %s\n", string(body))
+		logger.ErrorCF("web", "Brave API response parse error", map[string]any{"body_length": len(body)})
 		return "", fmt.Errorf("failed to parse response: %w", err)
 	}
 
@@ -443,7 +444,7 @@ func (p *SearXNGSearchProvider) Search(ctx context.Context, query string, count 
 		result.Results = result.Results[:count]
 	}
 
-	// Format results in standard PicoClaw format
+	// Format results in standard OK format
 	var b strings.Builder
 	b.WriteString(fmt.Sprintf("Results for: %s (via SearXNG)\n", query))
 	for i, r := range result.Results {

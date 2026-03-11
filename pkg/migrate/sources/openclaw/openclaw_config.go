@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/sipeed/picoclaw/pkg/config"
+	"github.com/renesul/ok/pkg/config"
 )
 
 type OpenClawConfig struct {
@@ -118,16 +118,13 @@ type OpenClawChannels struct {
 	Slack       *OpenClawSlackConfig       `json:"slack"`
 	WhatsApp    *OpenClawWhatsAppConfig    `json:"whatsapp"`
 	Signal      *OpenClawSignalConfig      `json:"signal"`
-	Matrix      *OpenClawMatrixConfig      `json:"matrix"`
 	GoogleChat  *OpenClawGoogleChatConfig  `json:"googlechat"`
 	Teams       *OpenClawTeamsConfig       `json:"msteams"`
 	IRC         *OpenClawIrcConfig         `json:"irc"`
 	Mattermost  *OpenClawMattermostConfig  `json:"mattermost"`
-	Feishu      *OpenClawFeishuConfig      `json:"feishu"`
 	IMessage    *OpenClawIMessageConfig    `json:"imessage"`
 	BlueBubbles *OpenClawBlueBubblesConfig `json:"bluebubbles"`
 	QQ          *OpenClawQQConfig          `json:"qq"`
-	DingTalk    *OpenClawDingTalkConfig    `json:"dingtalk"`
 	MaixCam     *OpenClawMaixCamConfig     `json:"maixcam"`
 }
 
@@ -176,16 +173,6 @@ type OpenClawSignalConfig struct {
 	Enabled   *bool    `json:"enabled"`
 }
 
-type OpenClawMatrixConfig struct {
-	Homeserver  *string  `json:"homeserver"`
-	UserID      *string  `json:"userId"`
-	AccessToken *string  `json:"accessToken"`
-	Rooms       []string `json:"rooms"`
-	DmPolicy    *string  `json:"dmPolicy"`
-	AllowFrom   []string `json:"allowFrom"`
-	Enabled     *bool    `json:"enabled"`
-}
-
 type OpenClawGoogleChatConfig struct {
 	ServiceAccountFile *string `json:"serviceAccountFile"`
 	WebhookPath        *string `json:"webhookPath"`
@@ -223,17 +210,6 @@ type OpenClawMattermostConfig struct {
 	Enabled   *bool    `json:"enabled"`
 }
 
-type OpenClawFeishuConfig struct {
-	AppID             *string  `json:"appId"`
-	AppSecret         *string  `json:"appSecret"`
-	Domain            *string  `json:"domain"`
-	DmPolicy          *string  `json:"dmPolicy"`
-	Enabled           *bool    `json:"enabled"`
-	VerificationToken *string  `json:"verificationToken"`
-	EncryptKey        *string  `json:"encryptKey"`
-	AllowFrom         []string `json:"allowFrom"`
-}
-
 type OpenClawIMessageConfig struct {
 	CliPath   *string  `json:"cliPath"`
 	DbPath    *string  `json:"dbPath"`
@@ -258,13 +234,6 @@ type OpenClawQQConfig struct {
 	Enabled   *bool    `json:"enabled"`
 }
 
-type OpenClawDingTalkConfig struct {
-	AppID     *string  `json:"appId"`
-	AppSecret *string  `json:"appSecret"`
-	DmPolicy  *string  `json:"dmPolicy"`
-	AllowFrom []string `json:"allowFrom"`
-	Enabled   *bool    `json:"enabled"`
-}
 
 type OpenClawMaixCamConfig struct {
 	Host      *string  `json:"host"`
@@ -371,12 +340,8 @@ func (c *OpenClawConfig) IsChannelEnabled(name string) bool {
 		return c.Channels.Discord == nil || c.Channels.Discord.Enabled == nil || *c.Channels.Discord.Enabled
 	case "slack":
 		return c.Channels.Slack == nil || c.Channels.Slack.Enabled == nil || *c.Channels.Slack.Enabled
-	case "matrix":
-		return c.Channels.Matrix == nil || c.Channels.Matrix.Enabled == nil || *c.Channels.Matrix.Enabled
 	case "whatsapp":
 		return c.Channels.WhatsApp == nil || c.Channels.WhatsApp.Enabled == nil || *c.Channels.WhatsApp.Enabled
-	case "feishu":
-		return c.Channels.Feishu == nil || c.Channels.Feishu.Enabled == nil || *c.Channels.Feishu.Enabled
 	default:
 		return false
 	}
@@ -399,17 +364,7 @@ func GetChannelAllowFrom(ch any) []string {
 			return nil
 		}
 		return c.AllowFrom
-	case *OpenClawMatrixConfig:
-		if c == nil {
-			return nil
-		}
-		return c.AllowFrom
 	case *OpenClawWhatsAppConfig:
-		if c == nil {
-			return nil
-		}
-		return c.AllowFrom
-	case *OpenClawFeishuConfig:
 		if c == nil {
 			return nil
 		}
@@ -475,8 +430,8 @@ func (c *OpenClawConfig) HasAuthProfiles() bool {
 	return c.Auth != nil && c.Auth.Profiles != nil && len(c.Auth.Profiles) > 0
 }
 
-func (c *OpenClawConfig) ConvertToPicoClaw(sourceHome string) (*PicoClawConfig, []string, error) {
-	cfg := &PicoClawConfig{}
+func (c *OpenClawConfig) ConvertToOK(sourceHome string) (*OKConfig, []string, error) {
+	cfg := &OKConfig{}
 	var warnings []string
 
 	provider, modelName := c.GetDefaultModel()
@@ -527,25 +482,25 @@ func (c *OpenClawConfig) ConvertToPicoClaw(sourceHome string) (*PicoClawConfig, 
 		warnings = append(
 			warnings,
 			fmt.Sprintf(
-				"Skills (%d entries) not automatically migrated - reinstall via picoclaw CLI",
+				"Skills (%d entries) not automatically migrated - reinstall via ok CLI",
 				len(c.Skills.Entries),
 			),
 		)
 	}
 	if c.HasMemory() {
-		warnings = append(warnings, "Memory backend config not migrated - PicoClaw uses SQLite with vector embeddings")
+		warnings = append(warnings, "Memory backend config not migrated - OK uses SQLite with vector embeddings")
 	}
 	if c.HasCron() {
 		warnings = append(
 			warnings,
-			"Cron job scheduling not supported in PicoClaw - consider using external schedulers",
+			"Cron job scheduling not supported in OK - consider using external schedulers",
 		)
 	}
 	if c.HasHooks() {
-		warnings = append(warnings, "Webhook hooks not supported in PicoClaw - use event system instead")
+		warnings = append(warnings, "Webhook hooks not supported in OK - use event system instead")
 	}
 	if c.HasSession() {
-		warnings = append(warnings, "Session scope config differs - PicoClaw uses per-agent sessions by default")
+		warnings = append(warnings, "Session scope config differs - OK uses per-agent sessions by default")
 	}
 	if c.HasAuthProfiles() {
 		warnings = append(
@@ -565,7 +520,7 @@ type ModelConfig struct {
 	Proxy     string `json:"proxy,omitempty"`
 }
 
-type PicoClawConfig struct {
+type OKConfig struct {
 	Agents    AgentsConfig   `json:"agents"`
 	Bindings  []AgentBinding `json:"bindings,omitempty"`
 	Channels  ChannelsConfig `json:"channels"`
@@ -628,19 +583,15 @@ type PeerMatch struct {
 type ChannelsConfig struct {
 	WhatsApp WhatsAppConfig `json:"whatsapp"`
 	Telegram TelegramConfig `json:"telegram"`
-	Feishu   FeishuConfig   `json:"feishu"`
 	Discord  DiscordConfig  `json:"discord"`
 	MaixCam  MaixCamConfig  `json:"maixcam"`
 	QQ       QQConfig       `json:"qq"`
-	DingTalk DingTalkConfig `json:"dingtalk"`
 	Slack    SlackConfig    `json:"slack"`
-	Matrix   MatrixConfig   `json:"matrix"`
 	LINE     LINEConfig     `json:"line"`
 }
 
 type WhatsAppConfig struct {
 	Enabled   bool     `json:"enabled"`
-	BridgeURL string   `json:"bridge_url"`
 	AllowFrom []string `json:"allow_from"`
 }
 
@@ -649,15 +600,6 @@ type TelegramConfig struct {
 	Token     string   `json:"token"`
 	Proxy     string   `json:"proxy"`
 	AllowFrom []string `json:"allow_from"`
-}
-
-type FeishuConfig struct {
-	Enabled           bool     `json:"enabled"`
-	AppID             string   `json:"app_id"`
-	AppSecret         string   `json:"app_secret"`
-	EncryptKey        string   `json:"encrypt_key"`
-	VerificationToken string   `json:"verification_token"`
-	AllowFrom         []string `json:"allow_from"`
 }
 
 type DiscordConfig struct {
@@ -681,26 +623,12 @@ type QQConfig struct {
 	AllowFrom []string `json:"allow_from"`
 }
 
-type DingTalkConfig struct {
-	Enabled      bool     `json:"enabled"`
-	ClientID     string   `json:"client_id"`
-	ClientSecret string   `json:"client_secret"`
-	AllowFrom    []string `json:"allow_from"`
-}
 
 type SlackConfig struct {
 	Enabled   bool     `json:"enabled"`
 	BotToken  string   `json:"bot_token"`
 	AppToken  string   `json:"app_token"`
 	AllowFrom []string `json:"allow_from"`
-}
-
-type MatrixConfig struct {
-	Enabled     bool     `json:"enabled"`
-	Homeserver  string   `json:"homeserver"`
-	UserID      string   `json:"user_id"`
-	AccessToken string   `json:"access_token"`
-	AllowFrom   []string `json:"allow_from"`
 }
 
 type LINEConfig struct {
@@ -814,29 +742,6 @@ func (c *OpenClawConfig) convertChannels(warnings *[]string) ChannelsConfig {
 			Enabled:   enabled,
 			AllowFrom: c.Channels.WhatsApp.AllowFrom,
 		}
-		if c.Channels.WhatsApp.BridgeURL != nil {
-			channels.WhatsApp.BridgeURL = *c.Channels.WhatsApp.BridgeURL
-		}
-	}
-
-	if c.Channels.Feishu != nil {
-		enabled := c.Channels.Feishu.Enabled == nil || *c.Channels.Feishu.Enabled
-		channels.Feishu = FeishuConfig{
-			Enabled:   enabled,
-			AllowFrom: c.Channels.Feishu.AllowFrom,
-		}
-		if c.Channels.Feishu.AppID != nil {
-			channels.Feishu.AppID = *c.Channels.Feishu.AppID
-		}
-		if c.Channels.Feishu.AppSecret != nil {
-			channels.Feishu.AppSecret = *c.Channels.Feishu.AppSecret
-		}
-		if c.Channels.Feishu.EncryptKey != nil {
-			channels.Feishu.EncryptKey = *c.Channels.Feishu.EncryptKey
-		}
-		if c.Channels.Feishu.VerificationToken != nil {
-			channels.Feishu.VerificationToken = *c.Channels.Feishu.VerificationToken
-		}
 	}
 
 	if c.Channels.QQ != nil && supportedChannels["qq"] {
@@ -852,18 +757,6 @@ func (c *OpenClawConfig) convertChannels(warnings *[]string) ChannelsConfig {
 		}
 	}
 
-	if c.Channels.DingTalk != nil && supportedChannels["dingtalk"] {
-		channels.DingTalk = DingTalkConfig{
-			Enabled:   true,
-			AllowFrom: c.Channels.DingTalk.AllowFrom,
-		}
-		if c.Channels.DingTalk.AppID != nil {
-			channels.DingTalk.ClientID = *c.Channels.DingTalk.AppID
-		}
-		if c.Channels.DingTalk.AppSecret != nil {
-			channels.DingTalk.ClientSecret = *c.Channels.DingTalk.AppSecret
-		}
-	}
 
 	if c.Channels.MaixCam != nil && supportedChannels["maixcam"] {
 		channels.MaixCam = MaixCamConfig{
@@ -878,31 +771,14 @@ func (c *OpenClawConfig) convertChannels(warnings *[]string) ChannelsConfig {
 		}
 	}
 
-	if c.Channels.Matrix != nil && supportedChannels["matrix"] {
-		enabled := c.Channels.Matrix.Enabled == nil || *c.Channels.Matrix.Enabled
-		channels.Matrix = MatrixConfig{
-			Enabled:   enabled,
-			AllowFrom: c.Channels.Matrix.AllowFrom,
-		}
-		if c.Channels.Matrix.Homeserver != nil {
-			channels.Matrix.Homeserver = *c.Channels.Matrix.Homeserver
-		}
-		if c.Channels.Matrix.UserID != nil {
-			channels.Matrix.UserID = *c.Channels.Matrix.UserID
-		}
-		if c.Channels.Matrix.AccessToken != nil {
-			channels.Matrix.AccessToken = *c.Channels.Matrix.AccessToken
-		}
-	}
-
 	if c.Channels.Signal != nil {
-		*warnings = append(*warnings, "Channel 'signal': No PicoClaw adapter available")
+		*warnings = append(*warnings, "Channel 'signal': No OK adapter available")
 	}
 	if c.Channels.IRC != nil {
-		*warnings = append(*warnings, "Channel 'irc': No PicoClaw adapter available")
+		*warnings = append(*warnings, "Channel 'irc': No OK adapter available")
 	}
 	if c.Channels.Mattermost != nil {
-		*warnings = append(*warnings, "Channel 'mattermost': No PicoClaw adapter available")
+		*warnings = append(*warnings, "Channel 'mattermost': No OK adapter available")
 	}
 	if c.Channels.IMessage != nil {
 		*warnings = append(*warnings, "Channel 'imessage': macOS-only channel - requires manual setup")
@@ -910,7 +786,7 @@ func (c *OpenClawConfig) convertChannels(warnings *[]string) ChannelsConfig {
 	if c.Channels.BlueBubbles != nil {
 		*warnings = append(
 			*warnings,
-			"Channel 'bluebubbles': No PicoClaw adapter available - consider iMessage instead",
+			"Channel 'bluebubbles': No OK adapter available - consider iMessage instead",
 		)
 	}
 
@@ -965,7 +841,7 @@ func (c *OpenClawConfig) convertAgents(warnings *[]string) []AgentConfig {
 	return agents
 }
 
-func (c *PicoClawConfig) ToStandardConfig() *config.Config {
+func (c *OKConfig) ToStandardConfig() *config.Config {
 	cfg := config.DefaultConfig()
 
 	cfg.Agents.Defaults.Workspace = c.Agents.Defaults.Workspace
@@ -1010,61 +886,22 @@ func (c *PicoClawConfig) ToStandardConfig() *config.Config {
 func (c ChannelsConfig) ToStandardChannels() config.ChannelsConfig {
 	return config.ChannelsConfig{
 		WhatsApp: config.WhatsAppConfig{
-			Enabled:   c.WhatsApp.Enabled,
-			BridgeURL: c.WhatsApp.BridgeURL,
+			Enabled: c.WhatsApp.Enabled,
 		},
 		Telegram: config.TelegramConfig{
 			Enabled: c.Telegram.Enabled,
 			Token:   c.Telegram.Token,
 			Proxy:   c.Telegram.Proxy,
 		},
-		Feishu: config.FeishuConfig{
-			Enabled:           c.Feishu.Enabled,
-			AppID:             c.Feishu.AppID,
-			AppSecret:         c.Feishu.AppSecret,
-			EncryptKey:        c.Feishu.EncryptKey,
-			VerificationToken: c.Feishu.VerificationToken,
-		},
 		Discord: config.DiscordConfig{
 			Enabled:     c.Discord.Enabled,
 			Token:       c.Discord.Token,
 			MentionOnly: c.Discord.MentionOnly,
 		},
-		MaixCam: config.MaixCamConfig{
-			Enabled: c.MaixCam.Enabled,
-			Host:    c.MaixCam.Host,
-			Port:    c.MaixCam.Port,
-		},
-		QQ: config.QQConfig{
-			Enabled:   c.QQ.Enabled,
-			AppID:     c.QQ.AppID,
-			AppSecret: c.QQ.AppSecret,
-		},
-		DingTalk: config.DingTalkConfig{
-			Enabled:      c.DingTalk.Enabled,
-			ClientID:     c.DingTalk.ClientID,
-			ClientSecret: c.DingTalk.ClientSecret,
-		},
 		Slack: config.SlackConfig{
 			Enabled:  c.Slack.Enabled,
 			BotToken: c.Slack.BotToken,
 			AppToken: c.Slack.AppToken,
-		},
-		Matrix: config.MatrixConfig{
-			Enabled:      c.Matrix.Enabled,
-			Homeserver:   c.Matrix.Homeserver,
-			UserID:       c.Matrix.UserID,
-			AccessToken:  c.Matrix.AccessToken,
-			AllowFrom:    c.Matrix.AllowFrom,
-			JoinOnInvite: true,
-		},
-		LINE: config.LINEConfig{
-			Enabled:            c.LINE.Enabled,
-			ChannelSecret:      c.LINE.ChannelSecret,
-			ChannelAccessToken: c.LINE.ChannelAccessToken,
-			WebhookHost:        c.LINE.WebhookHost,
-			WebhookPort:        c.LINE.WebhookPort,
-			WebhookPath:        c.LINE.WebhookPath,
 		},
 	}
 }

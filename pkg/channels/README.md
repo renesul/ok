@@ -1,6 +1,6 @@
-# PicoClaw Channel System: Complete Development Guide
+# OK Channel System: Complete Development Guide
 
-> **Scope**: `pkg/channels/`, `pkg/bus/`, `pkg/media/`, `pkg/identity/`, `cmd/picoclaw/internal/gateway/`
+> **Scope**: `pkg/channels/`, `pkg/bus/`, `pkg/media/`, `pkg/identity/`, `cmd/ok/internal/gateway/`
 
 ---
 
@@ -45,7 +45,6 @@ pkg/channels/
 ├── base.go              # BaseChannel shared abstraction layer
 ├── interfaces.go        # Optional capability interfaces (TypingCapable, MessageEditor, ReactionCapable, PlaceholderCapable, PlaceholderRecorder)
 ├── README.md            # English documentation
-├── README.zh.md         # Chinese documentation
 ├── media.go             # MediaSender optional interface
 ├── webhook.go           # WebhookHandler, HealthChecker optional interfaces
 ├── errors.go            # Sentinel errors (ErrNotRunning, ErrRateLimit, ErrTemporary, ErrSendFailed)
@@ -60,7 +59,7 @@ pkg/channels/
 ├── discord/
 │   ├── init.go
 │   └── discord.go
-├── slack/ line/ onebot/ dingtalk/ feishu/ wecom/ qq/ whatsapp/ whatsapp_native/ maixcam/ pico/
+├── slack/ line/ onebot/ feishu/ wecom/ qq/ whatsapp/ maixcam/
 │   └── ...
 
 pkg/bus/
@@ -145,7 +144,7 @@ After refactoring, these files have been removed and code moved to corresponding
 | _(did not exist)_ | `pkg/channels/interfaces.go` | New optional capability interfaces |
 | _(did not exist)_ | `pkg/channels/media.go` | New MediaSender interface |
 | _(did not exist)_ | `pkg/channels/webhook.go` | New WebhookHandler/HealthChecker |
-| _(did not exist)_ | `pkg/channels/whatsapp_native/` | New WhatsApp native mode (whatsmeow) |
+| _(did not exist)_ | `pkg/channels/whatsapp/` | WhatsApp channel using whatsmeow (native) |
 | _(did not exist)_ | `pkg/channels/split.go` | New message splitting (migrated from utils) |
 | _(did not exist)_ | `pkg/bus/types.go` | New structured message types |
 | _(did not exist)_ | `pkg/media/store.go` | New media file lifecycle management |
@@ -162,19 +161,19 @@ Using Telegram as an example, the main changes are:
 package channels
 
 import (
-    "github.com/sipeed/picoclaw/pkg/bus"
-    "github.com/sipeed/picoclaw/pkg/config"
+    "github.com/renesul/ok/pkg/bus"
+    "github.com/renesul/ok/pkg/config"
 )
 
 // New code (refactored branch)
 package telegram
 
 import (
-    "github.com/sipeed/picoclaw/pkg/bus"
-    "github.com/sipeed/picoclaw/pkg/channels"     // Reference parent package
-    "github.com/sipeed/picoclaw/pkg/config"
-    "github.com/sipeed/picoclaw/pkg/identity"      // New
-    "github.com/sipeed/picoclaw/pkg/media"          // New (if media support needed)
+    "github.com/renesul/ok/pkg/bus"
+    "github.com/renesul/ok/pkg/channels"     // Reference parent package
+    "github.com/renesul/ok/pkg/config"
+    "github.com/renesul/ok/pkg/identity"      // New
+    "github.com/renesul/ok/pkg/media"          // New (if media support needed)
 )
 ```
 
@@ -321,9 +320,9 @@ Create `init.go` for your channel:
 package telegram
 
 import (
-    "github.com/sipeed/picoclaw/pkg/bus"
-    "github.com/sipeed/picoclaw/pkg/channels"
-    "github.com/sipeed/picoclaw/pkg/config"
+    "github.com/renesul/ok/pkg/bus"
+    "github.com/renesul/ok/pkg/channels"
+    "github.com/renesul/ok/pkg/config"
 )
 
 func init() {
@@ -336,11 +335,11 @@ func init() {
 **3h. Import sub-package in Gateway**
 
 ```go
-// cmd/picoclaw/internal/gateway/helpers.go
+// cmd/ok/internal/gateway/helpers.go
 import (
-    _ "github.com/sipeed/picoclaw/pkg/channels/telegram"   // Triggers init() registration
-    _ "github.com/sipeed/picoclaw/pkg/channels/discord"
-    _ "github.com/sipeed/picoclaw/pkg/channels/your_new_channel"  // New addition
+    _ "github.com/renesul/ok/pkg/channels/telegram"   // Triggers init() registration
+    _ "github.com/renesul/ok/pkg/channels/discord"
+    _ "github.com/renesul/ok/pkg/channels/your_new_channel"  // New addition
 )
 ```
 
@@ -421,9 +420,9 @@ To add a new chat platform (e.g., `matrix`), you need to:
 package matrix
 
 import (
-    "github.com/sipeed/picoclaw/pkg/bus"
-    "github.com/sipeed/picoclaw/pkg/channels"
-    "github.com/sipeed/picoclaw/pkg/config"
+    "github.com/renesul/ok/pkg/bus"
+    "github.com/renesul/ok/pkg/channels"
+    "github.com/renesul/ok/pkg/config"
 )
 
 func init() {
@@ -442,11 +441,11 @@ import (
     "context"
     "fmt"
 
-    "github.com/sipeed/picoclaw/pkg/bus"
-    "github.com/sipeed/picoclaw/pkg/channels"
-    "github.com/sipeed/picoclaw/pkg/config"
-    "github.com/sipeed/picoclaw/pkg/identity"
-    "github.com/sipeed/picoclaw/pkg/logger"
+    "github.com/renesul/ok/pkg/bus"
+    "github.com/renesul/ok/pkg/channels"
+    "github.com/renesul/ok/pkg/config"
+    "github.com/renesul/ok/pkg/identity"
+    "github.com/renesul/ok/pkg/logger"
 )
 
 // MatrixChannel implements channels.Channel for the Matrix protocol.
@@ -754,9 +753,9 @@ if c.owner != nil && c.placeholderRecorder != nil {
 ```
 
 **This means**:
-- Channels implementing `TypingCapable` (Telegram, Discord, LINE, Pico) do not need to manually call `StartTyping` + `RecordTypingStop` in `handleMessage`
+- Channels implementing `TypingCapable` (Telegram, Discord, LINE) do not need to manually call `StartTyping` + `RecordTypingStop` in `handleMessage`
 - Channels implementing `ReactionCapable` (Slack, OneBot) do not need to manually call `AddReaction` + `RecordTypingStop` in `handleMessage`
-- Channels implementing `PlaceholderCapable` (Telegram, Discord, Pico) do not need to manually send placeholder messages and call `RecordPlaceholder` in `handleMessage`
+- Channels implementing `PlaceholderCapable` (Telegram, Discord) do not need to manually send placeholder messages and call `RecordPlaceholder` in `handleMessage`
 - Channels only need to implement the corresponding interface; `HandleMessage` handles orchestration automatically
 - Channels that don't implement these interfaces are unaffected (type assertions will fail and be skipped)
 - `PlaceholderCapable`'s `SendPlaceholder` method internally decides whether to send based on the configured `PlaceholderConfig.Enabled`; returning `("", nil)` skips registration
@@ -798,21 +797,12 @@ if m.config.Channels.Matrix.Enabled && m.config.Channels.Matrix.Token != "" {
 }
 ```
 
-> **Note**: If your channel has multiple modes (like WhatsApp Bridge vs Native), branch in initChannels based on config:
-> ```go
-> if cfg.UseNative {
->     m.initChannel("whatsapp_native", "WhatsApp Native")
-> } else {
->     m.initChannel("whatsapp", "WhatsApp")
-> }
-> ```
-
 #### Add blank import in Gateway
 
 ```go
-// cmd/picoclaw/internal/gateway/helpers.go
+// cmd/ok/internal/gateway/helpers.go
 import (
-    _ "github.com/sipeed/picoclaw/pkg/channels/matrix"
+    _ "github.com/renesul/ok/pkg/channels/matrix"
 )
 ```
 
@@ -1253,15 +1243,13 @@ make test                                       # Full test suite
 | `pkg/channels/slack/` | `"slack"` | ReactionCapable, MediaSender |
 | `pkg/channels/line/` | `"line"` | TypingCapable, MediaSender, WebhookHandler |
 | `pkg/channels/onebot/` | `"onebot"` | ReactionCapable, MediaSender |
-| `pkg/channels/dingtalk/` | `"dingtalk"` | — |
 | `pkg/channels/feishu/` | `"feishu"` | — (architecture-specific build tags: `feishu_32.go` / `feishu_64.go`) |
 | `pkg/channels/wecom/` | `"wecom"` | WebhookHandler, HealthChecker |
 | `pkg/channels/wecom/` | `"wecom_app"` | MediaSender, WebhookHandler, HealthChecker |
 | `pkg/channels/qq/` | `"qq"` | — |
-| `pkg/channels/whatsapp/` | `"whatsapp"` | — (Bridge mode) |
-| `pkg/channels/whatsapp_native/` | `"whatsapp_native"` | — (Native whatsmeow mode) |
+| `pkg/channels/whatsapp/` | `"whatsapp"` | — (Native whatsmeow) |
 | `pkg/channels/maixcam/` | `"maixcam"` | — |
-| `pkg/channels/pico/` | `"pico"` | TypingCapable, PlaceholderCapable, MessageEditor, WebhookHandler |
+
 
 ### A.3 Interface Quick Reference
 
@@ -1373,12 +1361,8 @@ agentLoop.Stop()               // Stop Agent
 
 3. **WeCom has two factories**: `"wecom"` (Bot mode, webhook only) and `"wecom_app"` (App mode, supports MediaSender) are registered separately. Both implement `WebhookHandler` and `HealthChecker`.
 
-4. **Pico Protocol**: `pkg/channels/pico/` implements a custom PicoClaw native protocol channel that receives messages via WebSocket webhook (`/pico/ws`).
+4. **WhatsApp** uses whatsmeow for native in-process connection to WhatsApp. On first run it displays a QR code in the terminal for pairing via Linked Devices.
 
-5. **WhatsApp has two modes**: `"whatsapp"` (Bridge mode, communicates via external bridge URL) and `"whatsapp_native"` (native whatsmeow mode, connects directly to WhatsApp). Manager selects which to initialize based on `WhatsAppConfig.UseNative`.
+5. **PlaceholderConfig vs implementation**: `PlaceholderConfig` appears in 5 channel configs (Telegram, Discord, Slack, LINE, OneBot), but only channels that implement both `PlaceholderCapable` + `MessageEditor` (Telegram, Discord) can actually use placeholder message editing. The rest are reserved fields.
 
-6. **DingTalk uses Stream mode**: DingTalk uses the SDK's Stream/WebSocket mode (not HTTP webhook), so it does not implement `WebhookHandler`.
-
-7. **PlaceholderConfig vs implementation**: `PlaceholderConfig` appears in 6 channel configs (Telegram, Discord, Slack, LINE, OneBot, Pico), but only channels that implement both `PlaceholderCapable` + `MessageEditor` (Telegram, Discord, Pico) can actually use placeholder message editing. The rest are reserved fields.
-
-8. **ReasoningChannelID**: Most channel configs include a `reasoning_channel_id` field to route LLM reasoning/thinking output to a designated channel (WhatsApp, Telegram, Feishu, Discord, MaixCam, QQ, DingTalk, Slack, LINE, OneBot, WeCom, WeComApp). Note: `PicoConfig` does not currently expose this field. `BaseChannel` exposes this via the `WithReasoningChannelID` option and `ReasoningChannelID()` method.
+6. **ReasoningChannelID**: Most channel configs include a `reasoning_channel_id` field to route LLM reasoning/thinking output to a designated channel (WhatsApp, Telegram, Feishu, Discord, MaixCam, QQ, Slack, LINE, OneBot, WeCom, WeComApp). `BaseChannel` exposes this via the `WithReasoningChannelID` option and `ReasoningChannelID()` method.

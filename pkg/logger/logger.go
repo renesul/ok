@@ -5,7 +5,9 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path/filepath"
 	"runtime"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -31,14 +33,21 @@ var (
 	}
 
 	currentLevel = INFO
-	logger       *Logger
-	once         sync.Once
 	mu           sync.RWMutex
-)
 
-type Logger struct {
-	file *os.File
-}
+	// Ring buffer for recent log entries, queryable via /logs endpoint.
+	recentLogs    [512]LogEntry
+	recentHead    int
+	recentCount   int
+	recentTotal   int // monotonic counter of all entries ever written
+	recentMu      sync.Mutex
+
+	// File-based logging
+	logDir  string
+	fileMu  sync.Mutex
+	files   map[string]*os.File // sanitized component name → file handle
+	allFile *os.File
+)
 
 type LogEntry struct {
 	Level     string         `json:"level"`
@@ -47,12 +56,6 @@ type LogEntry struct {
 	Message   string         `json:"message"`
 	Fields    map[string]any `json:"fields,omitempty"`
 	Caller    string         `json:"caller,omitempty"`
-}
-
-func init() {
-	once.Do(func() {
-		logger = &Logger{}
-	})
 }
 
 func SetLevel(level LogLevel) {
@@ -65,35 +68,6 @@ func GetLevel() LogLevel {
 	mu.RLock()
 	defer mu.RUnlock()
 	return currentLevel
-}
-
-func EnableFileLogging(filePath string) error {
-	mu.Lock()
-	defer mu.Unlock()
-
-	file, err := os.OpenFile(filePath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o644)
-	if err != nil {
-		return fmt.Errorf("failed to open log file: %w", err)
-	}
-
-	if logger.file != nil {
-		logger.file.Close()
-	}
-
-	logger.file = file
-	log.Println("File logging enabled:", filePath)
-	return nil
-}
-
-func DisableFileLogging() {
-	mu.Lock()
-	defer mu.Unlock()
-
-	if logger.file != nil {
-		logger.file.Close()
-		logger.file = nil
-		log.Println("File logging disabled")
-	}
 }
 
 func logMessage(level LogLevel, component string, message string, fields map[string]any) {
@@ -116,33 +90,59 @@ func logMessage(level LogLevel, component string, message string, fields map[str
 		}
 	}
 
-	if logger.file != nil {
-		jsonData, err := json.Marshal(entry)
-		if err == nil {
-			logger.file.Write(append(jsonData, '\n'))
-		}
+	// Store in ring buffer
+	recentMu.Lock()
+	recentLogs[recentHead] = entry
+	recentHead = (recentHead + 1) % len(recentLogs)
+	if recentCount < len(recentLogs) {
+		recentCount++
 	}
+	recentTotal++
+	recentMu.Unlock()
 
-	var fieldStr string
-	if len(fields) > 0 {
-		fieldStr = " " + formatFields(fields)
+	// Write to per-component and all.log files
+	writeToFiles(entry, component)
+
+	// Output JSONL to stdout for structured capture by launcher
+	if jsonData, err := json.Marshal(entry); err == nil {
+		log.Println(string(jsonData))
 	} else {
-		fieldStr = ""
+		var fieldStr string
+		if len(fields) > 0 {
+			fieldStr = " " + formatFields(fields)
+		}
+		log.Printf("[%s] [%s]%s %s%s",
+			entry.Timestamp, logLevelNames[level],
+			formatComponent(component), message, fieldStr)
 	}
-
-	logLine := fmt.Sprintf("[%s] [%s]%s %s%s",
-		entry.Timestamp,
-		logLevelNames[level],
-		formatComponent(component),
-		message,
-		fieldStr,
-	)
-
-	log.Println(logLine)
 
 	if level == FATAL {
 		os.Exit(1)
 	}
+}
+
+// RecentEntries returns log entries written after the given offset (monotonic index).
+// Returns the entries and the current total count (to be used as next offset).
+func RecentEntries(afterOffset int) ([]LogEntry, int) {
+	recentMu.Lock()
+	defer recentMu.Unlock()
+
+	if afterOffset >= recentTotal {
+		return nil, recentTotal
+	}
+
+	// How many new entries since afterOffset
+	want := recentTotal - afterOffset
+	if want > recentCount {
+		want = recentCount
+	}
+
+	entries := make([]LogEntry, want)
+	start := (recentHead - want + len(recentLogs)) % len(recentLogs)
+	for i := range want {
+		entries[i] = recentLogs[(start+i)%len(recentLogs)]
+	}
+	return entries, recentTotal
 }
 
 func formatComponent(component string) string {
@@ -160,82 +160,147 @@ func formatFields(fields map[string]any) string {
 	return fmt.Sprintf("{%s}", strings.Join(parts, ", "))
 }
 
-func Debug(message string) {
-	logMessage(DEBUG, "", message, nil)
-}
-
 func DebugC(component string, message string) {
 	logMessage(DEBUG, component, message, nil)
-}
-
-func DebugF(message string, fields map[string]any) {
-	logMessage(DEBUG, "", message, fields)
 }
 
 func DebugCF(component string, message string, fields map[string]any) {
 	logMessage(DEBUG, component, message, fields)
 }
 
-func Info(message string) {
-	logMessage(INFO, "", message, nil)
-}
-
 func InfoC(component string, message string) {
 	logMessage(INFO, component, message, nil)
-}
-
-func InfoF(message string, fields map[string]any) {
-	logMessage(INFO, "", message, fields)
 }
 
 func InfoCF(component string, message string, fields map[string]any) {
 	logMessage(INFO, component, message, fields)
 }
 
-func Warn(message string) {
-	logMessage(WARN, "", message, nil)
-}
-
 func WarnC(component string, message string) {
 	logMessage(WARN, component, message, nil)
-}
-
-func WarnF(message string, fields map[string]any) {
-	logMessage(WARN, "", message, fields)
 }
 
 func WarnCF(component string, message string, fields map[string]any) {
 	logMessage(WARN, component, message, fields)
 }
 
-func Error(message string) {
-	logMessage(ERROR, "", message, nil)
-}
-
 func ErrorC(component string, message string) {
 	logMessage(ERROR, component, message, nil)
-}
-
-func ErrorF(message string, fields map[string]any) {
-	logMessage(ERROR, "", message, fields)
 }
 
 func ErrorCF(component string, message string, fields map[string]any) {
 	logMessage(ERROR, component, message, fields)
 }
 
-func Fatal(message string) {
-	logMessage(FATAL, "", message, nil)
-}
-
-func FatalC(component string, message string) {
-	logMessage(FATAL, component, message, nil)
-}
-
-func FatalF(message string, fields map[string]any) {
-	logMessage(FATAL, "", message, fields)
-}
-
 func FatalCF(component string, message string, fields map[string]any) {
 	logMessage(FATAL, component, message, fields)
+}
+
+// InitFileLogging enables JSONL file logging. Creates dir and opens all.log.
+// Each component gets its own file lazily on first log entry.
+func InitFileLogging(dir string) error {
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		return err
+	}
+	f, err := os.OpenFile(filepath.Join(dir, "all.log"), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
+	if err != nil {
+		return err
+	}
+	fileMu.Lock()
+	logDir = dir
+	allFile = f
+	files = make(map[string]*os.File)
+	fileMu.Unlock()
+	return nil
+}
+
+// CloseFileLogging closes all open log file handles.
+func CloseFileLogging() {
+	fileMu.Lock()
+	defer fileMu.Unlock()
+	for _, f := range files {
+		f.Close()
+	}
+	files = nil
+	if allFile != nil {
+		allFile.Close()
+		allFile = nil
+	}
+	logDir = ""
+}
+
+// LogDir returns the current log directory path (empty if file logging is disabled).
+func LogDir() string {
+	fileMu.Lock()
+	defer fileMu.Unlock()
+	return logDir
+}
+
+// LogComponents returns sorted list of component names that have log files.
+// "all" is always first if it exists.
+func LogComponents() []string {
+	fileMu.Lock()
+	dir := logDir
+	fileMu.Unlock()
+	if dir == "" {
+		return nil
+	}
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return nil
+	}
+	var components []string
+	for _, e := range entries {
+		if e.IsDir() || !strings.HasSuffix(e.Name(), ".log") {
+			continue
+		}
+		name := strings.TrimSuffix(e.Name(), ".log")
+		if name == "all" {
+			continue
+		}
+		components = append(components, name)
+	}
+	sort.Strings(components)
+	return append([]string{"all"}, components...)
+}
+
+func sanitizeComponent(component string) string {
+	if component == "" {
+		return "general"
+	}
+	return strings.ReplaceAll(component, ".", "_")
+}
+
+// getComponentFile returns the file handle for a component, creating it if needed.
+// Must be called with fileMu held.
+func getComponentFile(component string) *os.File {
+	name := sanitizeComponent(component)
+	if f, ok := files[name]; ok {
+		return f
+	}
+	f, err := os.OpenFile(filepath.Join(logDir, name+".log"), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
+	if err != nil {
+		return nil
+	}
+	files[name] = f
+	return f
+}
+
+func writeToFiles(entry LogEntry, component string) {
+	data, err := json.Marshal(entry)
+	if err != nil {
+		return
+	}
+	data = append(data, '\n')
+	fileMu.Lock()
+	defer fileMu.Unlock()
+	if logDir == "" {
+		return
+	}
+	if f := getComponentFile(component); f != nil {
+		f.Write(data)
+	}
+	if allFile != nil {
+		allFile.Write(data)
+	}
 }

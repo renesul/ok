@@ -6,7 +6,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/sipeed/picoclaw/pkg/providers"
+	"github.com/renesul/ok/pkg/providers"
 )
 
 // --- mock types ---
@@ -294,22 +294,6 @@ func TestToolRegistry_Count(t *testing.T) {
 	r.Register(newMockTool("a", "replaced"))
 	if r.Count() != 2 {
 		t.Errorf("expected 2 after overwrite, got %d", r.Count())
-	}
-}
-
-func TestToolRegistry_GetSummaries(t *testing.T) {
-	r := NewToolRegistry()
-	r.Register(newMockTool("read_file", "Reads a file"))
-
-	summaries := r.GetSummaries()
-	if len(summaries) != 1 {
-		t.Fatalf("expected 1 summary, got %d", len(summaries))
-	}
-	if !strings.Contains(summaries[0], "`read_file`") {
-		t.Errorf("expected backtick-quoted name in summary, got %q", summaries[0])
-	}
-	if !strings.Contains(summaries[0], "Reads a file") {
-		t.Errorf("expected description in summary, got %q", summaries[0])
 	}
 }
 

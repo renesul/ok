@@ -1,8 +1,8 @@
-// PicoClaw - Ultra-lightweight personal AI agent
+// OK - Lightweight personal AI agent
 // Inspired by and based on nanobot: https://github.com/HKUDS/nanobot
 // License: MIT
 //
-// Copyright (c) 2026 PicoClaw contributors
+// Copyright (c) 2026 OK contributors
 
 package heartbeat
 
@@ -15,12 +15,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/sipeed/picoclaw/pkg/bus"
-	"github.com/sipeed/picoclaw/pkg/constants"
-	"github.com/sipeed/picoclaw/pkg/fileutil"
-	"github.com/sipeed/picoclaw/pkg/logger"
-	"github.com/sipeed/picoclaw/pkg/state"
-	"github.com/sipeed/picoclaw/pkg/tools"
+	"github.com/renesul/ok/pkg/bus"
+	"github.com/renesul/ok/pkg/constants"
+	"github.com/renesul/ok/pkg/fileutil"
+	"github.com/renesul/ok/pkg/logger"
+	"github.com/renesul/ok/pkg/state"
+	"github.com/renesul/ok/pkg/tools"
 )
 
 const (

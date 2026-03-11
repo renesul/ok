@@ -9,10 +9,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/sipeed/picoclaw/pkg/fileutil"
-	"github.com/sipeed/picoclaw/pkg/logger"
-	"github.com/sipeed/picoclaw/pkg/skills"
-	"github.com/sipeed/picoclaw/pkg/utils"
+	"github.com/renesul/ok/pkg/fileutil"
+	"github.com/renesul/ok/pkg/logger"
+	"github.com/renesul/ok/pkg/skills"
+	"github.com/renesul/ok/pkg/utils"
 )
 
 // InstallSkillTool allows the LLM agent to install skills from registries.

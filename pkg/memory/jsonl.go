@@ -7,15 +7,15 @@ import (
 	"encoding/json"
 	"fmt"
 	"hash/fnv"
-	"log"
 	"os"
 	"path/filepath"
 	"strings"
 	"sync"
 	"time"
 
-	"github.com/sipeed/picoclaw/pkg/fileutil"
-	"github.com/sipeed/picoclaw/pkg/providers"
+	"github.com/renesul/ok/pkg/fileutil"
+	"github.com/renesul/ok/pkg/logger"
+	"github.com/renesul/ok/pkg/providers"
 )
 
 const (
@@ -64,6 +64,7 @@ func NewJSONLStore(dir string) (*JSONLStore, error) {
 	if err != nil {
 		return nil, fmt.Errorf("memory: create directory: %w", err)
 	}
+	logger.InfoCF("memory", "JSONL store initialized", map[string]any{"dir": dir})
 	return &JSONLStore{dir: dir}, nil
 }
 
@@ -156,11 +157,11 @@ func readMessages(path string, skip int) ([]providers.Message, error) {
 		var msg providers.Message
 		if err := json.Unmarshal(line, &msg); err != nil {
 			// Corrupt line — likely a partial write from a crash.
-			// Log so operators know data was skipped, but don't
-			// fail the entire read; this is the standard JSONL
-			// recovery pattern.
-			log.Printf("memory: skipping corrupt line %d in %s: %v",
-				lineNum, filepath.Base(path), err)
+			logger.WarnCF("memory", "Skipping corrupt line", map[string]any{
+				"line": lineNum,
+				"file": filepath.Base(path),
+				"error": err.Error(),
+			})
 			continue
 		}
 		msgs = append(msgs, msg)
@@ -264,6 +265,11 @@ func (s *JSONLStore) addMsg(sessionKey string, msg providers.Message) error {
 	meta.Count++
 	meta.UpdatedAt = now
 
+	logger.InfoCF("memory", "Message persisted", map[string]any{
+		"session": sessionKey,
+		"role":    msg.Role,
+		"count":   meta.Count,
+	})
 	return s.writeMeta(sessionKey, meta)
 }
 
@@ -321,6 +327,10 @@ func (s *JSONLStore) SetSummary(
 	meta.Summary = summary
 	meta.UpdatedAt = now
 
+	logger.InfoCF("memory", "Summary updated", map[string]any{
+		"session":     sessionKey,
+		"summary_len": len(summary),
+	})
 	return s.writeMeta(sessionKey, meta)
 }
 

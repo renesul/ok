@@ -1,7 +1,7 @@
-// PicoClaw - Ultra-lightweight personal AI agent
+// OK - Lightweight personal AI agent
 // License: MIT
 //
-// Copyright (c) 2026 PicoClaw contributors
+// Copyright (c) 2026 OK contributors
 
 package config
 
@@ -10,16 +10,16 @@ import (
 	"path/filepath"
 )
 
-// DefaultConfig returns the default configuration for PicoClaw.
+// DefaultConfig returns the default configuration for OK.
 func DefaultConfig() *Config {
 	// Determine the base path for the workspace.
-	// Priority: $PICOCLAW_HOME > ~/.picoclaw
+	// Priority: $OK_HOME > ~/.ok
 	var homePath string
-	if picoclawHome := os.Getenv("PICOCLAW_HOME"); picoclawHome != "" {
-		homePath = picoclawHome
+	if okHome := os.Getenv("OK_HOME"); okHome != "" {
+		homePath = okHome
 	} else {
 		userHome, _ := os.UserHomeDir()
-		homePath = filepath.Join(userHome, ".picoclaw")
+		homePath = filepath.Join(userHome, ".ok")
 	}
 	workspacePath := filepath.Join(homePath, "workspace")
 
@@ -44,8 +44,6 @@ func DefaultConfig() *Config {
 		Channels: ChannelsConfig{
 			WhatsApp: WhatsAppConfig{
 				Enabled:          false,
-				BridgeURL:        "ws://localhost:3001",
-				UseNative:        false,
 				SessionStorePath: "",
 				AllowFrom:        FlexibleStringSlice{},
 			},
@@ -59,52 +57,17 @@ func DefaultConfig() *Config {
 					Text:    "Thinking... 💭",
 				},
 			},
-			Feishu: FeishuConfig{
-				Enabled:           false,
-				AppID:             "",
-				AppSecret:         "",
-				EncryptKey:        "",
-				VerificationToken: "",
-				AllowFrom:         FlexibleStringSlice{},
-			},
 			Discord: DiscordConfig{
 				Enabled:     false,
 				Token:       "",
 				AllowFrom:   FlexibleStringSlice{},
 				MentionOnly: false,
 			},
-			MaixCam: MaixCamConfig{
-				Enabled:   false,
-				Host:      "0.0.0.0",
-				Port:      18790,
-				AllowFrom: FlexibleStringSlice{},
-			},
-			QQ: QQConfig{
-				Enabled:   false,
-				AppID:     "",
-				AppSecret: "",
-				AllowFrom: FlexibleStringSlice{},
-			},
-			DingTalk: DingTalkConfig{
-				Enabled:      false,
-				ClientID:     "",
-				ClientSecret: "",
-				AllowFrom:    FlexibleStringSlice{},
-			},
 			Slack: SlackConfig{
 				Enabled:   false,
 				BotToken:  "",
 				AppToken:  "",
 				AllowFrom: FlexibleStringSlice{},
-			},
-			Matrix: MatrixConfig{
-				Enabled:      false,
-				Homeserver:   "https://matrix.org",
-				UserID:       "",
-				AccessToken:  "",
-				DeviceID:     "",
-				JoinOnInvite: true,
-				AllowFrom:    FlexibleStringSlice{},
 				GroupTrigger: GroupTriggerConfig{
 					MentionOnly: true,
 				},
@@ -112,67 +75,6 @@ func DefaultConfig() *Config {
 					Enabled: true,
 					Text:    "Thinking... 💭",
 				},
-			},
-			LINE: LINEConfig{
-				Enabled:            false,
-				ChannelSecret:      "",
-				ChannelAccessToken: "",
-				WebhookHost:        "0.0.0.0",
-				WebhookPort:        18791,
-				WebhookPath:        "/webhook/line",
-				AllowFrom:          FlexibleStringSlice{},
-				GroupTrigger:       GroupTriggerConfig{MentionOnly: true},
-			},
-			OneBot: OneBotConfig{
-				Enabled:            false,
-				WSUrl:              "ws://127.0.0.1:3001",
-				AccessToken:        "",
-				ReconnectInterval:  5,
-				GroupTriggerPrefix: []string{},
-				AllowFrom:          FlexibleStringSlice{},
-			},
-			WeCom: WeComConfig{
-				Enabled:        false,
-				Token:          "",
-				EncodingAESKey: "",
-				WebhookURL:     "",
-				WebhookHost:    "0.0.0.0",
-				WebhookPort:    18793,
-				WebhookPath:    "/webhook/wecom",
-				AllowFrom:      FlexibleStringSlice{},
-				ReplyTimeout:   5,
-			},
-			WeComApp: WeComAppConfig{
-				Enabled:        false,
-				CorpID:         "",
-				CorpSecret:     "",
-				AgentID:        0,
-				Token:          "",
-				EncodingAESKey: "",
-				WebhookHost:    "0.0.0.0",
-				WebhookPort:    18792,
-				WebhookPath:    "/webhook/wecom-app",
-				AllowFrom:      FlexibleStringSlice{},
-				ReplyTimeout:   5,
-			},
-			WeComAIBot: WeComAIBotConfig{
-				Enabled:        false,
-				Token:          "",
-				EncodingAESKey: "",
-				WebhookPath:    "/webhook/wecom-aibot",
-				AllowFrom:      FlexibleStringSlice{},
-				ReplyTimeout:   5,
-				MaxSteps:       10,
-				WelcomeMessage: "Hello! I'm your AI assistant. How can I help you today?",
-			},
-			Pico: PicoConfig{
-				Enabled:        false,
-				Token:          "",
-				PingInterval:   30,
-				ReadTimeout:    60,
-				WriteTimeout:   10,
-				MaxConnections: 100,
-				AllowFrom:      FlexibleStringSlice{},
 			},
 		},
 		Providers: ProvidersConfig{
@@ -183,7 +85,7 @@ func DefaultConfig() *Config {
 			// Add your API key to the model you want to use
 			// ============================================
 
-			// Zhipu AI (智谱) - https://open.bigmodel.cn/usercenter/apikeys
+			// Zhipu AI - https://open.bigmodel.cn/usercenter/apikeys
 			{
 				ModelName: "glm-4.7",
 				Model:     "zhipu/glm-4.7",
@@ -223,7 +125,7 @@ func DefaultConfig() *Config {
 				APIKey:    "",
 			},
 
-			// Qwen (通义千问) - https://dashscope.console.aliyun.com/apiKey
+			// Qwen - https://dashscope.console.aliyun.com/apiKey
 			{
 				ModelName: "qwen-plus",
 				Model:     "qwen/qwen-plus",
@@ -231,7 +133,7 @@ func DefaultConfig() *Config {
 				APIKey:    "",
 			},
 
-			// Moonshot (月之暗面) - https://platform.moonshot.cn/console/api-keys
+			// Moonshot - https://platform.moonshot.cn/console/api-keys
 			{
 				ModelName: "moonshot-v1-8k",
 				Model:     "moonshot/moonshot-v1-8k",
@@ -285,7 +187,7 @@ func DefaultConfig() *Config {
 				APIKey:    "",
 			},
 
-			// Volcengine (火山引擎) - https://console.volcengine.com/ark
+			// Volcengine - https://console.volcengine.com/ark
 			{
 				ModelName: "doubao-pro",
 				Model:     "volcengine/doubao-pro-32k",
@@ -293,7 +195,7 @@ func DefaultConfig() *Config {
 				APIKey:    "",
 			},
 
-			// ShengsuanYun (神算云)
+			// ShengsuanYun
 			{
 				ModelName: "deepseek-v3",
 				Model:     "shengsuanyun/deepseek-v3",
@@ -431,12 +333,6 @@ func DefaultConfig() *Config {
 			SendFile: ToolConfig{
 				Enabled: true,
 			},
-			MCP: MCPConfig{
-				ToolConfig: ToolConfig{
-					Enabled: false,
-				},
-				Servers: map[string]MCPServerConfig{},
-			},
 			AppendFile: ToolConfig{
 				Enabled: true,
 			},
@@ -484,6 +380,18 @@ func DefaultConfig() *Config {
 		Devices: DevicesConfig{
 			Enabled:    false,
 			MonitorUSB: true,
+		},
+		RAG: RAGConfig{
+			Enabled:       false,
+			Model:         "text-embedding-3-small",
+			TopK:          5,
+			MinSimilarity: 0.5,
+		},
+		MCPServers: []MCPServerConfig{},
+		WebUI: WebUIConfig{
+			Enabled: false,
+			Host:    "127.0.0.1",
+			Port:    18800,
 		},
 	}
 }

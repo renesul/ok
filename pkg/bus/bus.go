@@ -5,7 +5,7 @@ import (
 	"errors"
 	"sync/atomic"
 
-	"github.com/sipeed/picoclaw/pkg/logger"
+	"github.com/renesul/ok/pkg/logger"
 )
 
 // ErrBusClosed is returned when publishing to a closed MessageBus.
@@ -39,6 +39,10 @@ func (mb *MessageBus) PublishInbound(ctx context.Context, msg InboundMessage) er
 	}
 	select {
 	case mb.inbound <- msg:
+		logger.InfoCF("bus", "Inbound message published", map[string]any{
+			"channel": msg.Channel,
+			"chat_id": msg.ChatID,
+		})
 		return nil
 	case <-mb.done:
 		return ErrBusClosed
@@ -67,6 +71,11 @@ func (mb *MessageBus) PublishOutbound(ctx context.Context, msg OutboundMessage) 
 	}
 	select {
 	case mb.outbound <- msg:
+		logger.InfoCF("bus", "Outbound message published", map[string]any{
+			"channel":      msg.Channel,
+			"chat_id":      msg.ChatID,
+			"content_len":  len(msg.Content),
+		})
 		return nil
 	case <-mb.done:
 		return ErrBusClosed
@@ -115,6 +124,7 @@ func (mb *MessageBus) SubscribeOutboundMedia(ctx context.Context) (OutboundMedia
 }
 
 func (mb *MessageBus) Close() {
+	logger.InfoC("bus", "Message bus closing")
 	if mb.closed.CompareAndSwap(false, true) {
 		close(mb.done)
 

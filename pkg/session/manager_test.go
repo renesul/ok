@@ -35,7 +35,6 @@ func TestSave_WithColonInKey(t *testing.T) {
 
 	// Create a session with a key containing colon (typical channel session key).
 	key := "telegram:123456"
-	sm.GetOrCreate(key)
 	sm.AddMessage(key, "user", "hello")
 
 	// Save should succeed even though the key contains ':'
@@ -66,7 +65,7 @@ func TestSave_RejectsPathTraversal(t *testing.T) {
 
 	badKeys := []string{"", ".", "..", "foo/bar", "foo\\bar"}
 	for _, key := range badKeys {
-		sm.GetOrCreate(key)
+		sm.AddMessage(key, "user", "test")
 		if err := sm.Save(key); err == nil {
 			t.Errorf("Save(%q) should have failed but didn't", key)
 		}

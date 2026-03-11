@@ -1,13 +1,15 @@
-// PicoClaw - Ultra-lightweight personal AI agent
+// OK - Lightweight personal AI agent
 // License: MIT
 //
-// Copyright (c) 2026 PicoClaw contributors
+// Copyright (c) 2026 OK contributors
 
 package config
 
 import (
 	"slices"
 	"strings"
+
+	"github.com/renesul/ok/pkg/logger"
 )
 
 // buildModelWithProtocol constructs a model string with protocol prefix.
@@ -429,8 +431,12 @@ func ConvertProvidersToModelList(cfg *Config) []ModelConfig {
 			legacyModelNameApplied = true
 		}
 
+		logger.DebugCF("config", "Migrated provider to model_list", map[string]any{"model_name": mc.ModelName, "model": mc.Model})
 		result = append(result, mc)
 	}
 
+	if len(result) > 0 {
+		logger.InfoCF("config", "Provider migration complete", map[string]any{"entries": len(result)})
+	}
 	return result
 }

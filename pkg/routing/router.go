@@ -1,7 +1,8 @@
 package routing
 
 import (
-	"github.com/sipeed/picoclaw/pkg/providers"
+	"github.com/renesul/ok/pkg/logger"
+	"github.com/renesul/ok/pkg/providers"
 )
 
 // defaultThreshold is used when the config threshold is zero or negative.
@@ -66,8 +67,20 @@ func (r *Router) SelectModel(
 	features := ExtractFeatures(msg, history)
 	score = r.classifier.Score(features)
 	if score < r.cfg.Threshold {
+		logger.InfoCF("routing", "Model selected", map[string]any{
+			"model":     r.cfg.LightModel,
+			"tier":      "light",
+			"score":     score,
+			"threshold": r.cfg.Threshold,
+		})
 		return r.cfg.LightModel, true, score
 	}
+	logger.InfoCF("routing", "Model selected", map[string]any{
+		"model":     primaryModel,
+		"tier":      "primary",
+		"score":     score,
+		"threshold": r.cfg.Threshold,
+	})
 	return primaryModel, false, score
 }
 

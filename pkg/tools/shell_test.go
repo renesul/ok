@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/sipeed/picoclaw/pkg/config"
+	"github.com/renesul/ok/pkg/config"
 )
 
 // TestShellTool_Success verifies successful command execution

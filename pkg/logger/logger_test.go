@@ -26,13 +26,13 @@ func TestLogLevelFiltering(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			switch tt.level {
 			case DEBUG:
-				Debug(tt.name)
+				DebugC("test", tt.name)
 			case INFO:
-				Info(tt.name)
+				InfoC("test", tt.name)
 			case WARN:
-				Warn(tt.name)
+				WarnC("test", tt.name)
 			case ERROR:
-				Error(tt.name)
+				ErrorC("test", tt.name)
 			case FATAL:
 				if tt.shouldLog {
 					t.Logf("FATAL test skipped to prevent program exit")
@@ -66,13 +66,10 @@ func TestLoggerWithComponent(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			switch {
-			case tt.fields == nil && tt.component != "":
+			if tt.fields != nil {
+				InfoCF(tt.component, tt.message, tt.fields)
+			} else {
 				InfoC(tt.component, tt.message)
-			case tt.fields != nil:
-				InfoF(tt.message, tt.fields)
-			default:
-				Info(tt.message)
 			}
 		})
 	}
@@ -122,18 +119,18 @@ func TestLoggerHelperFunctions(t *testing.T) {
 
 	SetLevel(INFO)
 
-	Debug("This should not log")
-	Info("This should log")
-	Warn("This should log")
-	Error("This should log")
+	DebugC("test", "This should not log")
+	InfoC("test", "This should log")
+	WarnC("test", "This should log")
+	ErrorC("test", "This should log")
 
 	InfoC("test", "Component message")
-	InfoF("Fields message", map[string]any{"key": "value"})
+	InfoCF("test", "Fields message", map[string]any{"key": "value"})
 
 	WarnC("test", "Warning with component")
-	ErrorF("Error with fields", map[string]any{"error": "test"})
+	ErrorCF("test", "Error with fields", map[string]any{"error": "test"})
 
 	SetLevel(DEBUG)
 	DebugC("test", "Debug with component")
-	WarnF("Warning with fields", map[string]any{"key": "value"})
+	WarnCF("test", "Warning with fields", map[string]any{"key": "value"})
 }

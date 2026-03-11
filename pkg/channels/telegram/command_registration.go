@@ -8,8 +8,8 @@ import (
 
 	"github.com/mymmrac/telego"
 
-	"github.com/sipeed/picoclaw/pkg/commands"
-	"github.com/sipeed/picoclaw/pkg/logger"
+	"github.com/renesul/ok/pkg/commands"
+	"github.com/renesul/ok/pkg/logger"
 )
 
 var commandRegistrationBackoff = []time.Duration{

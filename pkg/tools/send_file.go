@@ -10,8 +10,9 @@ import (
 
 	"github.com/h2non/filetype"
 
-	"github.com/sipeed/picoclaw/pkg/config"
-	"github.com/sipeed/picoclaw/pkg/media"
+	"github.com/renesul/ok/pkg/config"
+	"github.com/renesul/ok/pkg/logger"
+	"github.com/renesul/ok/pkg/media"
 )
 
 // SendFileTool allows the LLM to send a local file (image, document, etc.)
@@ -105,6 +106,7 @@ func (t *SendFileTool) Execute(ctx context.Context, args map[string]any) *ToolRe
 		return ErrorResult("path is a directory, expected a file")
 	}
 	if info.Size() > int64(t.maxFileSize) {
+		logger.WarnCF("send_file", "File too large", map[string]any{"size": info.Size(), "max": t.maxFileSize})
 		return ErrorResult(fmt.Sprintf(
 			"file too large: %d bytes (max %d bytes)",
 			info.Size(), t.maxFileSize,
@@ -125,9 +127,11 @@ func (t *SendFileTool) Execute(ctx context.Context, args map[string]any) *ToolRe
 		Source:      "tool:send_file",
 	}, scope)
 	if err != nil {
+		logger.ErrorCF("send_file", "Failed to register media", map[string]any{"filename": filename, "error": err.Error()})
 		return ErrorResult(fmt.Sprintf("failed to register media: %v", err))
 	}
 
+	logger.InfoCF("send_file", "File sent", map[string]any{"filename": filename, "channel": channel})
 	return MediaResult(fmt.Sprintf("File %q sent to user", filename), []string{ref})
 }
 

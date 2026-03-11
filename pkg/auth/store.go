@@ -6,7 +6,8 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/sipeed/picoclaw/pkg/fileutil"
+	"github.com/renesul/ok/pkg/fileutil"
+	"github.com/renesul/ok/pkg/logger"
 )
 
 type AuthCredential struct {
@@ -39,11 +40,11 @@ func (c *AuthCredential) NeedsRefresh() bool {
 }
 
 func authFilePath() string {
-	if home := os.Getenv("PICOCLAW_HOME"); home != "" {
+	if home := os.Getenv("OK_HOME"); home != "" {
 		return filepath.Join(home, "auth.json")
 	}
 	home, _ := os.UserHomeDir()
-	return filepath.Join(home, ".picoclaw", "auth.json")
+	return filepath.Join(home, ".ok", "auth.json")
 }
 
 func LoadStore() (*AuthStore, error) {
@@ -95,6 +96,10 @@ func SetCredential(provider string, cred *AuthCredential) error {
 		return err
 	}
 	store.Credentials[provider] = cred
+	logger.InfoCF("auth", "Credential saved", map[string]any{
+		"provider":    provider,
+		"auth_method": cred.AuthMethod,
+	})
 	return SaveStore(store)
 }
 
@@ -104,6 +109,7 @@ func DeleteCredential(provider string) error {
 		return err
 	}
 	delete(store.Credentials, provider)
+	logger.InfoCF("auth", "Credential deleted", map[string]any{"provider": provider})
 	return SaveStore(store)
 }
 
