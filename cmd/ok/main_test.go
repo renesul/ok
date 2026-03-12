@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/renesul/ok/cmd/ok/internal"
+	"ok/cmd/ok/internal"
 )
 
 func TestNewOKCommand(t *testing.T) {

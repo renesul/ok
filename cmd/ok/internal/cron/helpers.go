@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/renesul/ok/pkg/cron"
+	"ok/internal/cron"
 )
 
 func cronListCmd(storePath string) {

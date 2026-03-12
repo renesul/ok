@@ -5,8 +5,8 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/renesul/ok/cmd/ok/internal"
-	"github.com/renesul/ok/pkg/skills"
+	"ok/cmd/ok/internal"
+	"ok/internal/skills"
 )
 
 func newInstallCommand(installerFn func() (*skills.SkillInstaller, error)) *cobra.Command {

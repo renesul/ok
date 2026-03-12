@@ -3,7 +3,7 @@ package skills
 import (
 	"github.com/spf13/cobra"
 
-	"github.com/renesul/ok/pkg/skills"
+	"ok/internal/skills"
 )
 
 func newRemoveCommand(installerFn func() (*skills.SkillInstaller, error)) *cobra.Command {

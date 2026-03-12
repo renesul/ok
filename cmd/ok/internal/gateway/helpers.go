@@ -9,26 +9,26 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/renesul/ok/cmd/ok/internal"
-	"github.com/renesul/ok/pkg/agent"
-	"github.com/renesul/ok/pkg/bus"
-	"github.com/renesul/ok/pkg/channels"
-	_ "github.com/renesul/ok/pkg/channels/discord"
-	_ "github.com/renesul/ok/pkg/channels/slack"
-	_ "github.com/renesul/ok/pkg/channels/telegram"
-	_ "github.com/renesul/ok/pkg/channels/whatsapp"
-	"github.com/renesul/ok/pkg/config"
-	"github.com/renesul/ok/pkg/cron"
-	"github.com/renesul/ok/pkg/devices"
-	"github.com/renesul/ok/pkg/health"
-	"github.com/renesul/ok/pkg/heartbeat"
-	"github.com/renesul/ok/pkg/logger"
-	"github.com/renesul/ok/pkg/webui"
-	"github.com/renesul/ok/pkg/media"
-	"github.com/renesul/ok/pkg/providers"
-	"github.com/renesul/ok/pkg/state"
-	"github.com/renesul/ok/pkg/tools"
-	"github.com/renesul/ok/pkg/voice"
+	"ok/cmd/ok/internal"
+	agent "ok/app/orchestrator"
+	events "ok/app/input/bus"
+	channels "ok/app/input"
+	_ "ok/app/input/discord"
+	_ "ok/app/input/slack"
+	_ "ok/app/input/telegram"
+	_ "ok/app/input/whatsapp"
+	"ok/internal/config"
+	"ok/internal/cron"
+	"ok/internal/devices"
+	"ok/internal/health"
+	"ok/internal/heartbeat"
+	"ok/internal/logger"
+	"ok/internal/webui"
+	"ok/internal/media"
+	"ok/providers"
+	"ok/internal/utils"
+	tools "ok/app/execution"
+	"ok/internal/voice"
 )
 
 func gatewayCmd(debug bool) error {
@@ -102,7 +102,7 @@ func runGateway(debug bool, sigChan <-chan os.Signal) (shutdownReason, error) {
 		cfg.Agents.Defaults.ModelName = modelID
 	}
 
-	msgBus := bus.NewMessageBus()
+	msgBus := events.NewMessageBus()
 	agentLoop := agent.NewAgentLoop(cfg, msgBus, provider)
 
 	// Print agent startup info
@@ -211,7 +211,7 @@ func runGateway(debug bool, sigChan <-chan os.Signal) (shutdownReason, error) {
 	}
 	fmt.Println("✓ Heartbeat service started")
 
-	stateManager := state.NewManager(cfg.WorkspacePath())
+	stateManager := utils.NewManager(cfg.WorkspacePath())
 	deviceService := devices.NewService(devices.Config{
 		Enabled:    cfg.Devices.Enabled,
 		MonitorUSB: cfg.Devices.MonitorUSB,
@@ -288,7 +288,7 @@ func runGateway(debug bool, sigChan <-chan os.Signal) (shutdownReason, error) {
 
 func setupCronTool(
 	agentLoop *agent.AgentLoop,
-	msgBus *bus.MessageBus,
+	msgBus *events.MessageBus,
 	workspace string,
 	restrict bool,
 	execTimeout time.Duration,

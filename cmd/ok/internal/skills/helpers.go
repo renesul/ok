@@ -9,10 +9,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/renesul/ok/cmd/ok/internal"
-	"github.com/renesul/ok/pkg/config"
-	"github.com/renesul/ok/pkg/skills"
-	"github.com/renesul/ok/pkg/utils"
+	"ok/cmd/ok/internal"
+	"ok/internal/config"
+	"ok/internal/skills"
+	"ok/internal/utils"
 )
 
 const skillsSearchMaxResults = 20

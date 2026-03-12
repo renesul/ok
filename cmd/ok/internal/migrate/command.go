@@ -3,7 +3,7 @@ package migrate
 import (
 	"github.com/spf13/cobra"
 
-	"github.com/renesul/ok/pkg/migrate"
+	"ok/internal/migrate"
 )
 
 func NewMigrateCommand() *cobra.Command {

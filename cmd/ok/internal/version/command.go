@@ -5,7 +5,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/renesul/ok/cmd/ok/internal"
+	"ok/cmd/ok/internal"
 )
 
 func NewVersionCommand() *cobra.Command {

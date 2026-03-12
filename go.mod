@@ -1,4 +1,4 @@
-module github.com/renesul/ok
+module ok
 
 go 1.25.7
 

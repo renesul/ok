@@ -12,16 +12,16 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/renesul/ok/cmd/ok/internal"
-	"github.com/renesul/ok/cmd/ok/internal/agent"
-	"github.com/renesul/ok/cmd/ok/internal/auth"
-	"github.com/renesul/ok/cmd/ok/internal/cron"
-	"github.com/renesul/ok/cmd/ok/internal/gateway"
-	"github.com/renesul/ok/cmd/ok/internal/migrate"
-	"github.com/renesul/ok/cmd/ok/internal/onboard"
-	"github.com/renesul/ok/cmd/ok/internal/skills"
-	"github.com/renesul/ok/cmd/ok/internal/status"
-	"github.com/renesul/ok/cmd/ok/internal/version"
+	"ok/cmd/ok/internal"
+	"ok/cmd/ok/internal/agent"
+	"ok/cmd/ok/internal/auth"
+	"ok/cmd/ok/internal/cron"
+	"ok/cmd/ok/internal/gateway"
+	"ok/cmd/ok/internal/migrate"
+	"ok/cmd/ok/internal/onboard"
+	"ok/cmd/ok/internal/skills"
+	"ok/cmd/ok/internal/status"
+	"ok/cmd/ok/internal/version"
 )
 
 func NewOKCommand() *cobra.Command {

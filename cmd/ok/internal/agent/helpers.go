@@ -11,11 +11,11 @@ import (
 
 	"github.com/chzyer/readline"
 
-	"github.com/renesul/ok/cmd/ok/internal"
-	"github.com/renesul/ok/pkg/agent"
-	"github.com/renesul/ok/pkg/bus"
-	"github.com/renesul/ok/pkg/logger"
-	"github.com/renesul/ok/pkg/providers"
+	"ok/cmd/ok/internal"
+	agent "ok/app/orchestrator"
+	events "ok/app/input/bus"
+	"ok/internal/logger"
+	"ok/providers"
 )
 
 func agentCmd(message, sessionKey, model string, debug bool) error {
@@ -47,7 +47,7 @@ func agentCmd(message, sessionKey, model string, debug bool) error {
 		cfg.Agents.Defaults.ModelName = modelID
 	}
 
-	msgBus := bus.NewMessageBus()
+	msgBus := events.NewMessageBus()
 	defer msgBus.Close()
 	agentLoop := agent.NewAgentLoop(cfg, msgBus, provider)
 

@@ -9,7 +9,7 @@ VERSION="${VERSION:-$(git describe --tags --always --dirty 2>/dev/null || echo "
 GIT_COMMIT="$(git rev-parse --short=8 HEAD 2>/dev/null || echo "dev")"
 BUILD_TIME="$(date +%FT%T%z)"
 GO_VERSION="$(go version | awk '{print $3}')"
-INTERNAL="github.com/renesul/ok/cmd/ok/internal"
+INTERNAL="ok/cmd/ok/internal"
 LDFLAGS="-X ${INTERNAL}.version=${VERSION} -X ${INTERNAL}.gitCommit=${GIT_COMMIT} -X ${INTERNAL}.buildTime=${BUILD_TIME} -X ${INTERNAL}.goVersion=${GO_VERSION} -s -w"
 
 echo "=== OK Build ==="

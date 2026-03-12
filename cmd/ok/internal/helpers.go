@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"runtime"
 
-	"github.com/renesul/ok/pkg/config"
+	"ok/internal/config"
 )
 
 const Logo = "✓"

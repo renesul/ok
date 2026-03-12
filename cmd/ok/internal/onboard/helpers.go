@@ -6,8 +6,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/renesul/ok/cmd/ok/internal"
-	"github.com/renesul/ok/pkg/config"
+	"ok/cmd/ok/internal"
+	"ok/internal/config"
 )
 
 func onboard() {
