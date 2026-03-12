@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Go-1.25-00ADD8?logo=go&logoColor=white" alt="Go 1.25" />
+  <img src="https://img.shields.io/badge/Go-1.25.7-00ADD8?logo=go&logoColor=white" alt="Go 1.25.7" />
   <img src="https://img.shields.io/badge/License-MIT-blue" alt="MIT License" />
   <img src="https://img.shields.io/badge/Platform-linux%2Famd64%20%7C%20linux%2Farm64-lightgrey" alt="Platforms" />
   <img src="https://img.shields.io/badge/CGO-disabled-green" alt="Zero CGO" />
@@ -101,6 +101,22 @@ Agents run in a restricted workspace by default:
 - Configurable via `restrict_to_workspace` flag
 
 ### Agent Architecture
+
+The codebase follows a layered architecture under `app/`, with strict dependency rules (no cycles):
+
+```
+app/types/         — Shared interfaces (Features, Classifier, ModelRouter, ThinkingLevel)
+app/input/         — Channel adapters + message bus (telegram/, discord/, slack/, whatsapp/)
+app/routing/       — Route resolver, model router, classifier, session keys
+app/context/       — Prompt assembly: ContextBuilder, Persona, RAG cache
+app/planning/      — ReAct loop: LLM → tool calls → observe → loop
+app/execution/     — Agent tools (file ops, exec, web, skills, subagent, MCP)
+app/memory/        — Persistence: JSONL store, sessions, RAG (vector embeddings)
+app/output/        — Summarization
+app/orchestrator/  — Top-level coordinator: AgentLoop, AgentInstance, Registry
+providers/         — LLM backend abstraction (anthropic/, openai_compat/)
+internal/          — Auxiliary packages (config, logger, auth, skills, webui, etc.)
+```
 
 The agent loop is decomposed into focused components:
 
