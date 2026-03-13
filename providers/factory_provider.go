@@ -73,8 +73,8 @@ func CreateProviderFromConfig(cfg *config.ModelConfig) (LLMProvider, string, err
 
 	switch protocol {
 	case "openai":
-		// OpenAI with OAuth/token auth (Codex-style)
-		if cfg.AuthMethod == "oauth" || cfg.AuthMethod == "token" {
+		// OpenAI with OAuth/token auth (Codex-style) — only if no explicit API key
+		if (cfg.AuthMethod == "oauth" || cfg.AuthMethod == "token") && cfg.APIKey == "" {
 			provider, err := createCodexAuthProvider()
 			if err != nil {
 				return nil, "", err
@@ -92,14 +92,14 @@ func CreateProviderFromConfig(cfg *config.ModelConfig) (LLMProvider, string, err
 		return NewHTTPProviderWithMaxTokensFieldAndRequestTimeout(
 			cfg.APIKey,
 			apiBase,
-			cfg.Proxy,
+			"",
 			cfg.MaxTokensField,
 			cfg.RequestTimeout,
 		), modelID, nil
 
 	case "anthropic":
-		if cfg.AuthMethod == "oauth" || cfg.AuthMethod == "token" {
-			// Use OAuth credentials from auth store
+		if (cfg.AuthMethod == "oauth" || cfg.AuthMethod == "token") && cfg.APIKey == "" {
+			// Use OAuth credentials from auth store (only if no explicit API key)
 			provider, err := createClaudeAuthProvider()
 			if err != nil {
 				return nil, "", err
@@ -117,7 +117,7 @@ func CreateProviderFromConfig(cfg *config.ModelConfig) (LLMProvider, string, err
 		return NewHTTPProviderWithMaxTokensFieldAndRequestTimeout(
 			cfg.APIKey,
 			apiBase,
-			cfg.Proxy,
+			"",
 			cfg.MaxTokensField,
 			cfg.RequestTimeout,
 		), modelID, nil
@@ -157,6 +157,26 @@ func CreateProviderFromConfig(cfg *config.ModelConfig) (LLMProvider, string, err
 	default:
 		// Any other protocol is treated as OpenAI-compatible HTTP provider.
 		// This allows model_list entries with any vendor prefix to work.
+		if cfg.AuthMethod == "token" && cfg.APIKey == "" {
+			apiBase := cfg.APIBase
+			if apiBase == "" {
+				apiBase = getDefaultAPIBase(protocol)
+			}
+			// For custom providers, try the auth store's APIBase
+			if apiBase == "" {
+				if cred, err := getCredential(protocol); err == nil && cred != nil && cred.APIBase != "" {
+					apiBase = cred.APIBase
+				}
+			}
+			if apiBase == "" {
+				return nil, "", fmt.Errorf("no default API base for protocol %q; please set api_base in model_list", protocol)
+			}
+			provider, err := createTokenAuthProvider(protocol, apiBase)
+			if err != nil {
+				return nil, "", err
+			}
+			return provider, modelID, nil
+		}
 		if cfg.APIKey == "" && cfg.APIBase == "" {
 			return nil, "", fmt.Errorf("api_key or api_base is required for HTTP-based protocol %q", protocol)
 		}
@@ -170,7 +190,7 @@ func CreateProviderFromConfig(cfg *config.ModelConfig) (LLMProvider, string, err
 		return NewHTTPProviderWithMaxTokensFieldAndRequestTimeout(
 			cfg.APIKey,
 			apiBase,
-			cfg.Proxy,
+			"",
 			cfg.MaxTokensField,
 			cfg.RequestTimeout,
 		), modelID, nil
@@ -186,7 +206,27 @@ func getDefaultAPIBase(protocol string) string {
 		return "https://api.anthropic.com/v1"
 	case "ollama":
 		return "http://localhost:11434/v1"
+	case "groq":
+		return "https://api.groq.com/openai/v1"
+	case "deepseek":
+		return "https://api.deepseek.com/v1"
+	case "mistral":
+		return "https://api.mistral.ai/v1"
+	case "xai":
+		return "https://api.x.ai/v1"
 	default:
 		return ""
 	}
+}
+
+// createTokenAuthProvider creates an HTTP provider using token credentials from the auth store.
+func createTokenAuthProvider(providerName, apiBase string) (LLMProvider, error) {
+	cred, err := getCredential(providerName)
+	if err != nil {
+		return nil, fmt.Errorf("loading auth credentials: %w", err)
+	}
+	if cred == nil {
+		return nil, fmt.Errorf("no credentials for %s. Run: ok auth login --provider %s", providerName, providerName)
+	}
+	return NewHTTPProvider(cred.AccessToken, apiBase, ""), nil
 }

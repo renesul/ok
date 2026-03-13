@@ -9,8 +9,8 @@ VERSION="${VERSION:-$(git describe --tags --always --dirty 2>/dev/null || echo "
 GIT_COMMIT="$(git rev-parse --short=8 HEAD 2>/dev/null || echo "dev")"
 BUILD_TIME="$(date +%FT%T%z)"
 GO_VERSION="$(go version | awk '{print $3}')"
-INTERNAL="ok/cmd/ok/internal"
-LDFLAGS="-X ${INTERNAL}.version=${VERSION} -X ${INTERNAL}.gitCommit=${GIT_COMMIT} -X ${INTERNAL}.buildTime=${BUILD_TIME} -X ${INTERNAL}.goVersion=${GO_VERSION} -s -w"
+APPINFO="ok/internal/appinfo"
+LDFLAGS="-X ${APPINFO}.Version=${VERSION} -X ${APPINFO}.GitCommit=${GIT_COMMIT} -X ${APPINFO}.BuildTime=${BUILD_TIME} -X ${APPINFO}.GoVersion=${GO_VERSION} -s -w"
 
 echo "=== OK Build ==="
 echo "Version: ${VERSION} (${GIT_COMMIT})"
@@ -27,11 +27,10 @@ rm -rf "${BUILD_DIR}"
 mkdir -p "${BUILD_DIR}"
 
 echo "[1/2] Generating embedded files..."
-rm -rf cmd/ok/workspace 2>/dev/null || true
 CGO_ENABLED=0 go generate ./...
 
 echo "[2/2] Building ok..."
-CGO_ENABLED=0 go build ${GOFLAGS} -ldflags "${LDFLAGS}" -o "${BUILD_DIR}/ok" ./cmd/ok
+CGO_ENABLED=0 go build ${GOFLAGS} -ldflags "${LDFLAGS}" -o "${BUILD_DIR}/ok" .
 
 echo ""
 echo "=== Build complete ==="

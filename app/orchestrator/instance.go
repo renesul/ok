@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"sync"
 
 	appctx "ok/app/context"
 	tools "ok/app/execution"
@@ -23,6 +24,7 @@ type AgentInstance struct {
 	ID                        string
 	Name                      string
 	Model                     string
+	modelMu                   sync.RWMutex
 	Fallbacks                 []string
 	Workspace                 string
 	MaxIterations             int

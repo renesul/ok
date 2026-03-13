@@ -24,8 +24,8 @@ func registerGatewayAPI(mux *http.ServeMux, absPath string) {
 
 	// POST /api/gateway/reload — trigger gateway restart with new config
 	mux.HandleFunc("POST /api/gateway/reload", func(w http.ResponseWriter, r *http.Request) {
-		if reloadFunc != nil {
-			reloadFunc()
+		if fn := getReloadFunc(); fn != nil {
+			fn()
 		}
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(map[string]string{"status": "ok"})

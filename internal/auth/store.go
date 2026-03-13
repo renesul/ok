@@ -4,11 +4,14 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"sync"
 	"time"
 
 	"ok/internal/utils"
 	"ok/internal/logger"
 )
+
+var storeMu sync.Mutex
 
 type AuthCredential struct {
 	AccessToken  string    `json:"access_token"`
@@ -19,6 +22,8 @@ type AuthCredential struct {
 	AuthMethod   string    `json:"auth_method"`
 	Email        string    `json:"email,omitempty"`
 	ProjectID    string    `json:"project_id,omitempty"`
+	Label        string    `json:"label,omitempty"`
+	APIBase      string    `json:"api_base,omitempty"`
 }
 
 type AuthStore struct {
@@ -43,7 +48,10 @@ func authFilePath() string {
 	if home := os.Getenv("OK_HOME"); home != "" {
 		return filepath.Join(home, "auth.json")
 	}
-	home, _ := os.UserHomeDir()
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return filepath.Join(".", ".ok", "auth.json")
+	}
 	return filepath.Join(home, ".ok", "auth.json")
 }
 
@@ -91,6 +99,8 @@ func GetCredential(provider string) (*AuthCredential, error) {
 }
 
 func SetCredential(provider string, cred *AuthCredential) error {
+	storeMu.Lock()
+	defer storeMu.Unlock()
 	store, err := LoadStore()
 	if err != nil {
 		return err
@@ -104,6 +114,8 @@ func SetCredential(provider string, cred *AuthCredential) error {
 }
 
 func DeleteCredential(provider string) error {
+	storeMu.Lock()
+	defer storeMu.Unlock()
 	store, err := LoadStore()
 	if err != nil {
 		return err
@@ -114,6 +126,8 @@ func DeleteCredential(provider string) error {
 }
 
 func DeleteAllCredentials() error {
+	storeMu.Lock()
+	defer storeMu.Unlock()
 	path := authFilePath()
 	if err := os.Remove(path); err != nil && !os.IsNotExist(err) {
 		return err

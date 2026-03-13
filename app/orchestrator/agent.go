@@ -21,6 +21,7 @@ import (
 	"ok/app/output"
 	"ok/app/routing"
 	"ok/app/types"
+	"ok/internal/auth"
 	"ok/internal/commands"
 	"ok/internal/config"
 	"ok/internal/logger"
@@ -67,11 +68,7 @@ type processOptions struct {
 const (
 	defaultResponse           = "I've completed processing but have no response to give. Increase `max_tool_iterations` in config.json."
 	sessionKeyAgentPrefix     = "agent:"
-	metadataKeyAccountID      = "account_id"
-	metadataKeyGuildID        = "guild_id"
-	metadataKeyTeamID         = "team_id"
-	metadataKeyParentPeerKind = "parent_peer_kind"
-	metadataKeyParentPeerID   = "parent_peer_id"
+	metadataKeyAccountID = "account_id"
 )
 
 func NewAgentLoop(
@@ -115,7 +112,11 @@ func NewAgentLoop(
 			if err := store.Open(); err != nil {
 				logger.ErrorCF("rag", "Failed to open RAG store", map[string]any{"error": err.Error()})
 			} else {
-				embedder := memory.NewHTTPEmbedder(ragBaseURL, cfg.RAG.APIKey, cfg.RAG.Model)
+				ragAPIKey := cfg.RAG.APIKey
+				if ragAPIKey == "" {
+					ragAPIKey = resolveAPIKeyFromAuthStore(ragBaseURL)
+				}
+				embedder := memory.NewHTTPEmbedder(ragBaseURL, ragAPIKey, cfg.RAG.Model)
 				store.SetEmbeddingModel(cfg.RAG.Model)
 				retriever := memory.NewRetriever(store, embedder, cfg.RAG.TopK, cfg.RAG.MinSimilarity)
 				memMgr.retriever = retriever
@@ -204,7 +205,7 @@ func registerSharedTools(
 				GLMSearchEngine:      cfg.Tools.Web.GLMSearch.SearchEngine,
 				GLMSearchMaxResults:  cfg.Tools.Web.GLMSearch.MaxResults,
 				GLMSearchEnabled:     cfg.Tools.Web.GLMSearch.Enabled,
-				Proxy:                cfg.Tools.Web.Proxy,
+				Proxy:                cfg.Proxy,
 			})
 			if err != nil {
 				logger.ErrorCF("agent", "Failed to create web search tool", map[string]any{"error": err.Error()})
@@ -213,7 +214,7 @@ func registerSharedTools(
 			}
 		}
 		if cfg.Tools.IsToolEnabled("web_fetch") {
-			fetchTool, err := tools.NewWebFetchToolWithProxy(50000, cfg.Tools.Web.Proxy, cfg.Tools.Web.FetchLimitBytes)
+			fetchTool, err := tools.NewWebFetchToolWithProxy(50000, cfg.Proxy, cfg.Tools.Web.FetchLimitBytes)
 			if err != nil {
 				logger.ErrorCF("agent", "Failed to create web fetch tool", map[string]any{"error": err.Error()})
 			} else {
@@ -647,12 +648,9 @@ func (al *AgentLoop) processMessage(ctx context.Context, msg events.InboundMessa
 
 func (al *AgentLoop) resolveMessageRoute(msg events.InboundMessage) (types.ResolvedRoute, *AgentInstance, error) {
 	route := al.registry.ResolveRoute(types.RouteInput{
-		Channel:    msg.Channel,
-		AccountID:  inboundMetadata(msg, metadataKeyAccountID),
-		Peer:       extractPeer(msg),
-		ParentPeer: extractParentPeer(msg),
-		GuildID:    inboundMetadata(msg, metadataKeyGuildID),
-		TeamID:     inboundMetadata(msg, metadataKeyTeamID),
+		Channel:   msg.Channel,
+		AccountID: inboundMetadata(msg, metadataKeyAccountID),
+		Peer:      extractPeer(msg),
 	})
 
 	agent, ok := al.registry.GetAgent(route.AgentID)
@@ -934,9 +932,13 @@ func (al *AgentLoop) buildCommandsRuntime(agent *AgentInstance) *commands.Runtim
 	}
 	if agent != nil {
 		rt.GetModelInfo = func() (string, string) {
+			agent.modelMu.RLock()
+			defer agent.modelMu.RUnlock()
 			return agent.Model, al.cfg.Agents.Defaults.Provider
 		}
 		rt.SwitchModel = func(value string) (string, error) {
+			agent.modelMu.Lock()
+			defer agent.modelMu.Unlock()
 			oldModel := agent.Model
 			agent.Model = value
 			return oldModel, nil
@@ -975,12 +977,37 @@ func inboundMetadata(msg events.InboundMessage, key string) string {
 	return msg.Metadata[key]
 }
 
-// extractParentPeer extracts the parent peer (reply-to) from inbound message metadata.
-func extractParentPeer(msg events.InboundMessage) *types.RoutePeer {
-	parentKind := inboundMetadata(msg, metadataKeyParentPeerKind)
-	parentID := inboundMetadata(msg, metadataKeyParentPeerID)
-	if parentKind == "" || parentID == "" {
-		return nil
+// resolveAPIKeyFromAuthStore detects the provider from a base URL and returns
+// the access token from the auth store. This allows RAG (and other features)
+// to use credentials from connected providers without explicit api_key config.
+func resolveAPIKeyFromAuthStore(baseURL string) string {
+	providerMap := map[string][]string{
+		"openai":    {"api.openai.com"},
+		"anthropic": {"api.anthropic.com"},
+		"groq":      {"api.groq.com"},
+		"deepseek":  {"api.deepseek.com"},
+		"mistral":   {"api.mistral.ai"},
+		"xai":       {"api.x.ai"},
 	}
-	return &types.RoutePeer{Kind: parentKind, ID: parentID}
+	for provider, hosts := range providerMap {
+		for _, host := range hosts {
+			if strings.Contains(baseURL, host) {
+				cred, err := auth.GetCredential(provider)
+				if err == nil && cred != nil && cred.AccessToken != "" {
+					return cred.AccessToken
+				}
+			}
+		}
+	}
+	// Try custom providers
+	store, err := auth.LoadStore()
+	if err == nil {
+		for name, cred := range store.Credentials {
+			if strings.HasPrefix(name, "custom-") && cred.APIBase != "" && strings.Contains(baseURL, cred.APIBase) {
+				return cred.AccessToken
+			}
+		}
+	}
+	return ""
 }
+

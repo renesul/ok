@@ -11,47 +11,32 @@ import (
 	"ok/providers"
 )
 
-// AgentRegistry manages multiple agent instances and routes messages to them.
+// AgentRegistry manages the agent instance and routes messages.
 type AgentRegistry struct {
 	agents   map[string]*AgentInstance
 	resolver *routing.RouteResolver
+	cfg      *config.Config
 	mu       sync.RWMutex
 }
 
-// NewAgentRegistry creates a registry from config, instantiating all agents.
+// NewAgentRegistry creates a registry with a single implicit "main" agent.
 func NewAgentRegistry(
 	cfg *config.Config,
 	provider providers.LLMProvider,
 ) *AgentRegistry {
 	registry := &AgentRegistry{
 		agents:   make(map[string]*AgentInstance),
-		resolver: routing.NewRouteResolver(cfg),
+		resolver: routing.NewRouteResolver(),
+		cfg:      cfg,
 	}
 
-	agentConfigs := cfg.Agents.List
-	if len(agentConfigs) == 0 {
-		implicitAgent := &config.AgentConfig{
-			ID:      "main",
-			Default: true,
-		}
-		instance := NewAgentInstance(implicitAgent, &cfg.Agents.Defaults, cfg, provider)
-		registry.agents["main"] = instance
-		logger.InfoCF("agent", "Created implicit main agent (no agents.list configured)", nil)
-	} else {
-		for i := range agentConfigs {
-			ac := &agentConfigs[i]
-			id := routing.NormalizeAgentID(ac.ID)
-			instance := NewAgentInstance(ac, &cfg.Agents.Defaults, cfg, provider)
-			registry.agents[id] = instance
-			logger.InfoCF("agent", "Registered agent",
-				map[string]any{
-					"agent_id":  id,
-					"name":      ac.Name,
-					"workspace": instance.Workspace,
-					"model":     instance.Model,
-				})
-		}
+	implicitAgent := &config.AgentConfig{
+		ID:      "main",
+		Default: true,
 	}
+	instance := NewAgentInstance(implicitAgent, &cfg.Agents.Defaults, cfg, provider)
+	registry.agents["main"] = instance
+	logger.InfoCF("agent", "Created implicit main agent", nil)
 
 	return registry
 }
@@ -67,6 +52,13 @@ func (r *AgentRegistry) GetAgent(agentID string) (*AgentInstance, bool) {
 
 // ResolveRoute determines which agent handles the message.
 func (r *AgentRegistry) ResolveRoute(input types.RouteInput) types.ResolvedRoute {
+	// Inject session config into RouteInput
+	if input.DMScope == "" {
+		input.DMScope = r.cfg.Session.DMScope
+	}
+	if input.IdentityLinks == nil {
+		input.IdentityLinks = r.cfg.Session.IdentityLinks
+	}
 	return r.resolver.ResolveRoute(input)
 }
 

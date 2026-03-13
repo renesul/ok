@@ -8,6 +8,6 @@ import (
 
 func init() {
 	channels.RegisterFactory("discord", func(cfg *config.Config, b *events.MessageBus) (channels.Channel, error) {
-		return NewDiscordChannel(cfg.Channels.Discord, b)
+		return NewDiscordChannel(cfg.Channels.Discord, cfg.Proxy, b)
 	})
 }

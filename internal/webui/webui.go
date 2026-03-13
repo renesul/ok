@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io/fs"
 	"net/http"
+	"sync"
 
 	"ok/internal/config"
 	"ok/internal/logger"
@@ -17,11 +18,23 @@ import (
 var staticFiles embed.FS
 
 // reloadFunc is called when the web UI triggers a gateway reload.
-var reloadFunc func()
+var (
+	reloadFunc func()
+	reloadMu   sync.Mutex
+)
 
 // SetReloadFunc sets the callback that triggers a gateway reload.
 func SetReloadFunc(fn func()) {
+	reloadMu.Lock()
+	defer reloadMu.Unlock()
 	reloadFunc = fn
+}
+
+// getReloadFunc returns the current reload callback in a thread-safe manner.
+func getReloadFunc() func() {
+	reloadMu.Lock()
+	defer reloadMu.Unlock()
+	return reloadFunc
 }
 
 // Start launches the web UI HTTP server on its own port.
@@ -34,6 +47,7 @@ func Start(cfg config.WebUIConfig, configPath string) {
 	registerGatewayAPI(mux, configPath)
 	registerMCPAPI(mux)
 	registerSkillsAPI(mux, configPath)
+	registerModelTestAPI(mux, configPath)
 
 	staticFS, err := fs.Sub(staticFiles, "static")
 	if err != nil {

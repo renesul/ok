@@ -18,7 +18,10 @@ func DefaultConfig() *Config {
 	if okHome := os.Getenv("OK_HOME"); okHome != "" {
 		homePath = okHome
 	} else {
-		userHome, _ := os.UserHomeDir()
+		userHome, err := os.UserHomeDir()
+		if err != nil {
+			userHome = "."
+		}
 		homePath = filepath.Join(userHome, ".ok")
 	}
 	workspacePath := filepath.Join(homePath, "workspace")
@@ -37,11 +40,13 @@ func DefaultConfig() *Config {
 				SummarizeTokenPercent:     75,
 			},
 		},
-		Bindings: []AgentBinding{},
 		Session: SessionConfig{
 			DMScope: "per-channel-peer",
 		},
 		Channels: ChannelsConfig{
+			Chat: ChatConfig{
+				Enabled: true,
+			},
 			WhatsApp: WhatsAppConfig{
 				Enabled:          false,
 				SessionStorePath: "",
@@ -77,7 +82,13 @@ func DefaultConfig() *Config {
 				},
 			},
 		},
-		ModelList: []ModelConfig{},
+		ModelList: []ModelConfig{
+			{
+				ModelName: "embedding",
+				Model:     "openai/text-embedding-3-small",
+				APIBase:   "https://api.openai.com/v1",
+			},
+		},
 		Gateway: GatewayConfig{
 			Host: "127.0.0.1",
 			Port: 18790,
@@ -94,7 +105,6 @@ func DefaultConfig() *Config {
 				ToolConfig: ToolConfig{
 					Enabled: true,
 				},
-				Proxy:           "",
 				FetchLimitBytes: 10 * 1024 * 1024, // 10MB by default
 				Brave: BraveConfig{
 					Enabled:    false,
@@ -215,5 +225,6 @@ func DefaultConfig() *Config {
 			Host:    "127.0.0.1",
 			Port:    18800,
 		},
+		Proxy: "",
 	}
 }

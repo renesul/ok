@@ -7,7 +7,6 @@ echo "=== OK Tests ==="
 echo ""
 
 echo "[1/3] Generating embedded files..."
-rm -rf cmd/ok/workspace 2>/dev/null || true
 CGO_ENABLED=0 go generate ./...
 
 echo "[2/3] Running vet..."

@@ -290,6 +290,17 @@ func (c *SlackChannel) handleMessageEvent(ev *slackevents.MessageEvent) {
 
 	senderID := ev.User
 	channelID := ev.Channel
+
+	// Check allow_direct / allow_groups toggles
+	if strings.HasPrefix(channelID, "D") {
+		if !c.config.AllowDirect {
+			return
+		}
+	} else {
+		if !c.config.AllowGroups {
+			return
+		}
+	}
 	threadTS := ev.ThreadTimeStamp
 	messageTS := ev.TimeStamp
 

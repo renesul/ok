@@ -556,8 +556,8 @@ func (c *WhatsAppChannel) handleIncoming(evt *events.Message) {
 }
 
 // isAllowedMessage checks whether an incoming message should be processed.
-// Group messages require the group JID to be in allowed_groups.
-// Direct messages require the sender to be in allowed_contacts.
+// Group messages require allow_groups=true AND the group JID to be in allowed_groups.
+// Direct messages require allow_direct=true AND the sender to be in allowed_contacts.
 // If allow_self is true, messages from the connected account are always allowed.
 // Empty list = nobody allowed (reject all).
 func (c *WhatsAppChannel) isAllowedMessage(chat types.JID, senderID, chatID string, sender msgbus.SenderInfo, isFromMe bool) bool {
@@ -567,7 +567,13 @@ func (c *WhatsAppChannel) isAllowedMessage(chat types.JID, senderID, chatID stri
 	}
 
 	if chat.Server == types.GroupServer {
+		if !c.config.AllowGroups {
+			return false
+		}
 		return matchJID(chatID, c.config.AllowedGroups)
+	}
+	if !c.config.AllowDirect {
+		return false
 	}
 	return matchJID(senderID, c.config.AllowedContacts)
 }

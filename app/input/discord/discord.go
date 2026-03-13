@@ -37,6 +37,7 @@ type DiscordChannel struct {
 	*channels.BaseChannel
 	session    *discordgo.Session
 	config     config.DiscordConfig
+	proxy      string
 	ctx        context.Context
 	cancel     context.CancelFunc
 	typingMu   sync.Mutex
@@ -44,13 +45,13 @@ type DiscordChannel struct {
 	botUserID  string                   // stored for mention checking
 }
 
-func NewDiscordChannel(cfg config.DiscordConfig, bus *events.MessageBus) (*DiscordChannel, error) {
+func NewDiscordChannel(cfg config.DiscordConfig, proxy string, bus *events.MessageBus) (*DiscordChannel, error) {
 	session, err := discordgo.New("Bot " + cfg.Token)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create discord session: %w", err)
 	}
 
-	if err := applyDiscordProxy(session, cfg.Proxy); err != nil {
+	if err := applyDiscordProxy(session, proxy); err != nil {
 		return nil, err
 	}
 	base := channels.NewBaseChannel("discord", cfg, bus, cfg.AllowFrom,
@@ -62,6 +63,7 @@ func NewDiscordChannel(cfg config.DiscordConfig, bus *events.MessageBus) (*Disco
 	return &DiscordChannel{
 		BaseChannel: base,
 		session:     session,
+		proxy:       proxy,
 		config:      cfg,
 		ctx:         context.Background(),
 		typingStop:  make(map[string]chan struct{}),
@@ -294,7 +296,7 @@ func (c *DiscordChannel) handleMessage(s *discordgo.Session, m *discordgo.Messag
 		return
 	}
 
-	if m.Author.ID == s.State.User.ID {
+	if m.Author.ID == c.botUserID {
 		return
 	}
 
@@ -317,6 +319,17 @@ func (c *DiscordChannel) handleMessage(s *discordgo.Session, m *discordgo.Messag
 			"user_id": m.Author.ID,
 		})
 		return
+	}
+
+	// Check allow_direct / allow_groups toggles
+	if m.GuildID == "" {
+		if !c.config.AllowDirect {
+			return
+		}
+	} else {
+		if !c.config.AllowGroups {
+			return
+		}
 	}
 
 	content := m.Content
@@ -496,7 +509,7 @@ func (c *DiscordChannel) StartTyping(ctx context.Context, chatID string) (func()
 func (c *DiscordChannel) downloadAttachment(url, filename string) string {
 	return utils.DownloadFile(url, filename, utils.DownloadOptions{
 		LoggerPrefix: "discord",
-		ProxyURL:     c.config.Proxy,
+		ProxyURL:     c.proxy,
 	})
 }
 

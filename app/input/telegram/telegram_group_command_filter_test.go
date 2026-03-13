@@ -45,10 +45,19 @@ func newGroupMentionOnlyChannel(t *testing.T, botUsername string) (*TelegramChan
 	t.Helper()
 
 	messageBus := events.NewMessageBus()
+	cfg := &config.Config{
+		Channels: config.ChannelsConfig{
+			Telegram: config.TelegramConfig{
+				AllowDirect: true,
+				AllowGroups: true,
+			},
+		},
+	}
 	ch := &TelegramChannel{
-		BaseChannel: channels.NewBaseChannel("telegram", nil, messageBus, nil,
+		BaseChannel: channels.NewBaseChannel("telegram", cfg.Channels.Telegram, messageBus, nil,
 			channels.WithGroupTrigger(config.GroupTriggerConfig{MentionOnly: true}),
 		),
+		config:  cfg,
 		bot:     newTestTelegramBot(t, botUsername),
 		chatIDs: make(map[string]int64),
 		ctx:     context.Background(),

@@ -221,11 +221,9 @@ func (m *Manager) initChannels() error {
 		m.initChannel("slack", "Slack")
 	}
 
-	// Built-in web chat — always active, no config needed
-	chat := NewChatChannel(m.bus)
-	chat.SetPlaceholderRecorder(m)
-	chat.SetOwner(chat)
-	m.channels["chat"] = chat
+	if m.config.Channels.Chat.Enabled {
+		m.initChannel("chat", "Chat")
+	}
 
 	logger.InfoCF("channels", "Channel initialization completed", map[string]any{
 		"enabled_channels": len(m.channels),
@@ -277,7 +275,7 @@ func (m *Manager) StartAll(ctx context.Context) error {
 
 	if len(m.channels) == 0 {
 		logger.WarnC("channels", "No channels enabled")
-		return errors.New("no channels enabled")
+		return nil
 	}
 
 	logger.InfoC("channels", "Starting all channels")
@@ -715,18 +713,6 @@ func (m *Manager) GetChannel(name string) (Channel, bool) {
 	return channel, ok
 }
 
-// GetChatChannel returns the built-in web chat channel, or nil if not found.
-func (m *Manager) GetChatChannel() *ChatChannel {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
-	ch, ok := m.channels["chat"]
-	if !ok {
-		return nil
-	}
-	cc, _ := ch.(*ChatChannel)
-	return cc
-}
-
 func (m *Manager) GetStatus() map[string]any {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
@@ -797,6 +783,11 @@ func (m *Manager) SendToChannel(ctx context.Context, channelName, chatID, conten
 	}
 
 	// Fallback: direct send (should not happen)
+	m.mu.RLock()
 	channel, _ := m.channels[channelName]
+	m.mu.RUnlock()
+	if channel == nil {
+		return fmt.Errorf("channel %s not available", channelName)
+	}
 	return channel.Send(ctx, msg)
 }

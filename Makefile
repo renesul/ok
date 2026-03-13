@@ -3,16 +3,14 @@
 # Build variables
 BINARY_NAME=ok
 BUILD_DIR=build
-CMD_DIR=cmd/$(BINARY_NAME)
-MAIN_GO=$(CMD_DIR)/main.go
 
 # Version
 VERSION?=$(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
 GIT_COMMIT=$(shell git rev-parse --short=8 HEAD 2>/dev/null || echo "dev")
 BUILD_TIME=$(shell date +%FT%T%z)
 GO_VERSION=$(shell $(GO) version | awk '{print $$3}')
-INTERNAL=ok/cmd/ok/internal
-LDFLAGS=-ldflags "-X $(INTERNAL).version=$(VERSION) -X $(INTERNAL).gitCommit=$(GIT_COMMIT) -X $(INTERNAL).buildTime=$(BUILD_TIME) -X $(INTERNAL).goVersion=$(GO_VERSION) -s -w"
+APPINFO=ok/internal/appinfo
+LDFLAGS=-ldflags "-X $(APPINFO).Version=$(VERSION) -X $(APPINFO).GitCommit=$(GIT_COMMIT) -X $(APPINFO).BuildTime=$(BUILD_TIME) -X $(APPINFO).GoVersion=$(GO_VERSION) -s -w"
 
 # Go variables
 GO?=CGO_ENABLED=0 go
@@ -57,7 +55,6 @@ all: build
 ## generate: Run generate
 generate:
 	@echo "Run generate..."
-	@rm -r ./$(CMD_DIR)/workspace 2>/dev/null || true
 	@$(GO) generate ./...
 	@echo "Run generate complete"
 
@@ -65,15 +62,15 @@ generate:
 build: generate
 	@echo "Building $(BINARY_NAME) for $(PLATFORM)/$(ARCH)..."
 	@mkdir -p $(BUILD_DIR)
-	@$(GO) build $(GOFLAGS) $(LDFLAGS) -o $(BINARY_PATH) ./$(CMD_DIR)
+	@$(GO) build $(GOFLAGS) $(LDFLAGS) -o $(BINARY_PATH) .
 	@echo "Build complete: $(BINARY_PATH)"
 
 ## build-all: Build ok for all supported platforms (linux amd64/arm64)
 build-all: generate
 	@echo "Building for all platforms..."
 	@mkdir -p $(BUILD_DIR)
-	GOOS=linux GOARCH=amd64 $(GO) build $(LDFLAGS) -o $(BUILD_DIR)/$(BINARY_NAME)-linux-amd64 ./$(CMD_DIR)
-	GOOS=linux GOARCH=arm64 $(GO) build $(LDFLAGS) -o $(BUILD_DIR)/$(BINARY_NAME)-linux-arm64 ./$(CMD_DIR)
+	GOOS=linux GOARCH=amd64 $(GO) build $(LDFLAGS) -o $(BUILD_DIR)/$(BINARY_NAME)-linux-amd64 .
+	GOOS=linux GOARCH=arm64 $(GO) build $(LDFLAGS) -o $(BUILD_DIR)/$(BINARY_NAME)-linux-arm64 .
 	@echo "All builds complete"
 
 ## install: Install ok to system

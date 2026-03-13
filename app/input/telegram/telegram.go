@@ -9,6 +9,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/mymmrac/telego"
@@ -43,9 +44,12 @@ type TelegramChannel struct {
 	bot     *telego.Bot
 	bh      *th.BotHandler
 	config  *config.Config
-	chatIDs map[string]int64
+	chatIDs   map[string]int64
+	chatIDsMu sync.Mutex
 	ctx     context.Context
 	cancel  context.CancelFunc
+
+	botMentionRe *regexp.Regexp
 
 	registerFunc     func(context.Context, []commands.Definition) error
 	commandRegCancel context.CancelFunc
@@ -55,10 +59,10 @@ func NewTelegramChannel(cfg *config.Config, bus *events.MessageBus) (*TelegramCh
 	var opts []telego.BotOption
 	telegramCfg := cfg.Channels.Telegram
 
-	if telegramCfg.Proxy != "" {
-		proxyURL, parseErr := url.Parse(telegramCfg.Proxy)
+	if cfg.Proxy != "" {
+		proxyURL, parseErr := url.Parse(cfg.Proxy)
 		if parseErr != nil {
-			return nil, fmt.Errorf("invalid proxy URL %q: %w", telegramCfg.Proxy, parseErr)
+			return nil, fmt.Errorf("invalid proxy URL %q: %w", cfg.Proxy, parseErr)
 		}
 		opts = append(opts, telego.WithHTTPClient(&http.Client{
 			Transport: &http.Transport{
@@ -129,6 +133,10 @@ func (c *TelegramChannel) Start(ctx context.Context) error {
 	logger.InfoCF("telegram", "Telegram bot connected", map[string]any{
 		"username": c.bot.Username(),
 	})
+
+	if botUsername := c.bot.Username(); botUsername != "" {
+		c.botMentionRe = regexp.MustCompile(`(?i)@` + regexp.QuoteMeta(botUsername))
+	}
 
 	c.startCommandRegistration(c.ctx, commands.BuiltinDefinitions())
 
@@ -409,7 +417,21 @@ func (c *TelegramChannel) handleMessage(ctx context.Context, message *telego.Mes
 	}
 
 	chatID := message.Chat.ID
+	c.chatIDsMu.Lock()
 	c.chatIDs[platformID] = chatID
+	c.chatIDsMu.Unlock()
+
+	// Check allow_direct / allow_groups toggles before downloading media
+	telegramCfg := c.config.Channels.Telegram
+	if message.Chat.Type == "private" {
+		if !telegramCfg.AllowDirect {
+			return nil
+		}
+	} else {
+		if !telegramCfg.AllowGroups {
+			return nil
+		}
+	}
 
 	content := ""
 	mediaPaths := []string{}
@@ -773,12 +795,15 @@ func isBotCommandEntityForThisBot(entityText, botUsername string) bool {
 
 // stripBotMention removes the @bot mention from the content.
 func (c *TelegramChannel) stripBotMention(content string) string {
-	botUsername := c.bot.Username()
-	if botUsername == "" {
-		return content
+	re := c.botMentionRe
+	if re == nil {
+		// Fallback: compile on the fly if Start() wasn't called (e.g. tests)
+		botUsername := c.bot.Username()
+		if botUsername == "" {
+			return content
+		}
+		re = regexp.MustCompile(`(?i)@` + regexp.QuoteMeta(botUsername))
 	}
-	// Case-insensitive replacement
-	re := regexp.MustCompile(`(?i)@` + regexp.QuoteMeta(botUsername))
 	content = re.ReplaceAllString(content, "")
 	return strings.TrimSpace(content)
 }

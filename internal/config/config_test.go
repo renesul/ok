@@ -92,16 +92,6 @@ func TestAgentConfig_FullParse(t *testing.T) {
 				}
 			]
 		},
-		"bindings": [
-			{
-				"agent_id": "support",
-				"match": {
-					"channel": "telegram",
-					"account_id": "*",
-					"peer": {"kind": "direct", "id": "user123"}
-				}
-			}
-		],
 		"session": {
 			"dm_scope": "per-peer",
 			"identity_links": {
@@ -141,17 +131,6 @@ func TestAgentConfig_FullParse(t *testing.T) {
 		t.Errorf("support.Subagents = %+v", support.Subagents)
 	}
 
-	if len(cfg.Bindings) != 1 {
-		t.Fatalf("bindings len = %d, want 1", len(cfg.Bindings))
-	}
-	binding := cfg.Bindings[0]
-	if binding.AgentID != "support" || binding.Match.Channel != "telegram" {
-		t.Errorf("binding = %+v", binding)
-	}
-	if binding.Match.Peer == nil || binding.Match.Peer.Kind != "direct" || binding.Match.Peer.ID != "user123" {
-		t.Errorf("binding.Match.Peer = %+v", binding.Match.Peer)
-	}
-
 	if cfg.Session.DMScope != "per-peer" {
 		t.Errorf("Session.DMScope = %q", cfg.Session.DMScope)
 	}
@@ -183,9 +162,6 @@ func TestConfig_BackwardCompat_NoAgentsList(t *testing.T) {
 
 	if len(cfg.Agents.List) != 0 {
 		t.Errorf("agents.list should be empty for backward compat, got %d", len(cfg.Agents.List))
-	}
-	if len(cfg.Bindings) != 0 {
-		t.Errorf("bindings should be empty, got %d", len(cfg.Bindings))
 	}
 }
 
@@ -359,13 +335,13 @@ func TestConfig_Complete(t *testing.T) {
 	}
 }
 
-func TestLoadConfig_WebToolsProxy(t *testing.T) {
+func TestLoadConfig_GlobalProxy(t *testing.T) {
 	tmpDir := t.TempDir()
 	configPath := filepath.Join(tmpDir, "config.json")
 	configJSON := `{
   "agents": {"defaults":{"workspace":"./workspace","model":"gpt4","max_tokens":8192,"max_tool_iterations":20}},
   "model_list": [{"model_name":"gpt4","model":"openai/gpt-5.2","api_key":"x"}],
-  "tools": {"web":{"proxy":"http://127.0.0.1:7890"}}
+  "proxy": "http://127.0.0.1:7890"
 }`
 	if err := os.WriteFile(configPath, []byte(configJSON), 0o600); err != nil {
 		t.Fatalf("os.WriteFile() error: %v", err)
@@ -375,8 +351,8 @@ func TestLoadConfig_WebToolsProxy(t *testing.T) {
 	if err != nil {
 		t.Fatalf("LoadConfig() error: %v", err)
 	}
-	if cfg.Tools.Web.Proxy != "http://127.0.0.1:7890" {
-		t.Fatalf("Tools.Web.Proxy = %q, want %q", cfg.Tools.Web.Proxy, "http://127.0.0.1:7890")
+	if cfg.Proxy != "http://127.0.0.1:7890" {
+		t.Fatalf("Config.Proxy = %q, want %q", cfg.Proxy, "http://127.0.0.1:7890")
 	}
 }
 

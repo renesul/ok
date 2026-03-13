@@ -8,12 +8,11 @@ type RoutePeer struct {
 
 // RouteInput contains the routing context from an inbound message.
 type RouteInput struct {
-	Channel    string
-	AccountID  string
-	Peer       *RoutePeer
-	ParentPeer *RoutePeer
-	GuildID    string
-	TeamID     string
+	Channel       string
+	AccountID     string
+	Peer          *RoutePeer
+	DMScope       string              // from config session
+	IdentityLinks map[string][]string // from config session
 }
 
 // ResolvedRoute is the result of agent routing.
@@ -23,7 +22,7 @@ type ResolvedRoute struct {
 	AccountID      string
 	SessionKey     string
 	MainSessionKey string
-	MatchedBy      string // "binding.peer", "binding.peer.parent", "binding.guild", "binding.team", "binding.account", "binding.channel", "default"
+	MatchedBy      string // "default"
 }
 
 // DMScope controls DM session isolation granularity.

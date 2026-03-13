@@ -167,6 +167,7 @@
                             <div id="details-openai"></div>
                             <div class="provider-actions" id="actions-openai">
                                 <button class="btn btn-sm btn-primary" onclick="loginProvider('openai')" data-i18n="auth.loginDevice">Login (Device Code)</button>
+                                <button class="btn btn-sm" onclick="showTokenInput('openai')" data-i18n="auth.loginToken">Login (API Token)</button>
                             </div>
                         </div>
                         <div class="provider-card" id="card-anthropic">
@@ -189,15 +190,75 @@
                                 <button class="btn btn-sm btn-primary" onclick="loginProvider('google-antigravity')" data-i18n="auth.loginOAuth">Login (Browser OAuth)</button>
                             </div>
                         </div>
+                        <div class="provider-card" id="card-groq">
+                            <div class="provider-card-header">
+                                <span class="provider-name">Groq</span>
+                                <span class="provider-badge badge-none" id="badge-groq" data-i18n="auth.notLoggedIn">Not logged in</span>
+                            </div>
+                            <div id="details-groq"></div>
+                            <div class="provider-actions" id="actions-groq">
+                                <button class="btn btn-sm btn-primary" onclick="showTokenInput('groq')" data-i18n="auth.loginToken">Login (API Token)</button>
+                            </div>
+                        </div>
+                        <div class="provider-card" id="card-deepseek">
+                            <div class="provider-card-header">
+                                <span class="provider-name">DeepSeek</span>
+                                <span class="provider-badge badge-none" id="badge-deepseek" data-i18n="auth.notLoggedIn">Not logged in</span>
+                            </div>
+                            <div id="details-deepseek"></div>
+                            <div class="provider-actions" id="actions-deepseek">
+                                <button class="btn btn-sm btn-primary" onclick="showTokenInput('deepseek')" data-i18n="auth.loginToken">Login (API Token)</button>
+                            </div>
+                        </div>
+                        <div class="provider-card" id="card-mistral">
+                            <div class="provider-card-header">
+                                <span class="provider-name">Mistral</span>
+                                <span class="provider-badge badge-none" id="badge-mistral" data-i18n="auth.notLoggedIn">Not logged in</span>
+                            </div>
+                            <div id="details-mistral"></div>
+                            <div class="provider-actions" id="actions-mistral">
+                                <button class="btn btn-sm btn-primary" onclick="showTokenInput('mistral')" data-i18n="auth.loginToken">Login (API Token)</button>
+                            </div>
+                        </div>
+                        <div class="provider-card" id="card-xai">
+                            <div class="provider-card-header">
+                                <span class="provider-name">xAI</span>
+                                <span class="provider-badge badge-none" id="badge-xai" data-i18n="auth.notLoggedIn">Not logged in</span>
+                            </div>
+                            <div id="details-xai"></div>
+                            <div class="provider-actions" id="actions-xai">
+                                <button class="btn btn-sm btn-primary" onclick="showTokenInput('xai')" data-i18n="auth.loginToken">Login (API Token)</button>
+                            </div>
+                        </div>
+                        <div class="provider-card" id="card-custom-1">
+                            <div class="provider-card-header">
+                                <span class="provider-name" id="customName-custom-1" data-i18n="auth.custom1">Custom Provider 1</span>
+                                <span class="provider-badge badge-none" id="badge-custom-1" data-i18n="auth.notLoggedIn">Not logged in</span>
+                            </div>
+                            <div id="details-custom-1"></div>
+                            <div class="provider-actions" id="actions-custom-1">
+                                <button class="btn btn-sm btn-primary" onclick="showCustomProviderInput('custom-1')" data-i18n="auth.configure">Configure</button>
+                            </div>
+                        </div>
+                        <div class="provider-card" id="card-custom-2">
+                            <div class="provider-card-header">
+                                <span class="provider-name" id="customName-custom-2" data-i18n="auth.custom2">Custom Provider 2</span>
+                                <span class="provider-badge badge-none" id="badge-custom-2" data-i18n="auth.notLoggedIn">Not logged in</span>
+                            </div>
+                            <div id="details-custom-2"></div>
+                            <div class="provider-actions" id="actions-custom-2">
+                                <button class="btn btn-sm btn-primary" onclick="showCustomProviderInput('custom-2')" data-i18n="auth.configure">Configure</button>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
                 <!-- Agent Panels -->
                 <div class="content-panel" id="panelAgents"></div>
-                <div class="content-panel" id="panelBindings"></div>
                 <div class="content-panel" id="panelSkills"></div>
 
                 <!-- Channel Panels -->
+                <div class="content-panel" id="panelCh_chat"></div>
                 <div class="content-panel" id="panelCh_telegram"></div>
                 <div class="content-panel" id="panelCh_discord"></div>
                 <div class="content-panel" id="panelCh_slack"></div>
@@ -225,7 +286,7 @@
                 <!-- Chat Panel -->
                 <div class="content-panel" id="panelChat">
                     <div class="panel-header">
-                        <div class="panel-title">Chat</div>
+                        <div class="panel-title" data-i18n="chat.title">Chat</div>
                         <button class="help-tip" onclick="toggleHelpTip(this, event)" aria-label="Help" data-help="panelChat">?</button>
                     </div>
                     <div class="chat-container" id="chatContainer">
@@ -251,7 +312,7 @@
                     <div class="log-toolbar">
                         <div class="log-toolbar-left">
                             <button class="btn btn-sm" onclick="clearLogDisplay()" data-i18n="logs.clear">Clear Display</button>
-                            <button class="btn btn-sm btn-danger" onclick="deleteAllLogs()">Delete All Logs</button>
+                            <button class="btn btn-sm btn-danger" onclick="deleteAllLogs()" data-i18n="logs.deleteAll">Delete All Logs</button>
                             <select class="log-filter-select" id="logComponentFilter" onchange="switchLogComponent()">
                                 <option value="all" data-i18n="logs.allComponents">All Components</option>
                             </select>
@@ -345,23 +406,12 @@
         <div class="modal-title" id="agentModalTitle"></div>
         <div id="agentModalBody"></div>
         <div class="modal-actions">
-            <button class="btn btn-sm" onclick="closeAgentModal()">Cancel</button>
-            <button class="btn btn-sm btn-primary" onclick="saveAgentFromModal()">Save</button>
+            <button class="btn btn-sm" onclick="closeAgentModal()" data-i18n="cancel">Cancel</button>
+            <button class="btn btn-sm btn-primary" onclick="saveAgentFromModal()" data-i18n="save">Save</button>
         </div>
     </div>
 </div>
 
-<!-- Binding Edit Modal -->
-<div class="modal-overlay" id="bindingModal">
-    <div class="modal">
-        <div class="modal-title" id="bindingModalTitle"></div>
-        <div id="bindingModalBody"></div>
-        <div class="modal-actions">
-            <button class="btn btn-sm" onclick="closeBindingModal()">Cancel</button>
-            <button class="btn btn-sm btn-primary" onclick="saveBindingFromModal()">Save</button>
-        </div>
-    </div>
-</div>
 
 <!-- MCP Server Edit Modal -->
 <div class="modal-overlay" id="mcpModal">
@@ -369,8 +419,8 @@
         <div class="modal-title" id="mcpModalTitle"></div>
         <div id="mcpModalBody"></div>
         <div class="modal-actions">
-            <button class="btn btn-sm" onclick="closeMCPModal()">Cancel</button>
-            <button class="btn btn-sm btn-primary" id="mcpModalSaveBtn" onclick="saveMCPFromModal()">Save</button>
+            <button class="btn btn-sm" onclick="closeMCPModal()" data-i18n="cancel">Cancel</button>
+            <button class="btn btn-sm btn-primary" id="mcpModalSaveBtn" onclick="saveMCPFromModal()" data-i18n="save">Save</button>
         </div>
     </div>
 </div>
@@ -381,7 +431,7 @@
         <div class="modal-title" id="skillDetailTitle"></div>
         <div id="skillDetailBody" style="max-height:60vh;overflow:auto;"></div>
         <div class="modal-actions">
-            <button class="btn btn-sm" onclick="closeSkillDetailModal()">Close</button>
+            <button class="btn btn-sm" onclick="closeSkillDetailModal()" data-i18n="close">Close</button>
         </div>
     </div>
 </div>

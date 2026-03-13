@@ -9,12 +9,21 @@ import (
 
 	events "ok/app/input/bus"
 	channels "ok/app/input"
+	"ok/internal/config"
 )
 
 func TestHandleMessage_DoesNotConsumeGenericCommandsLocally(t *testing.T) {
 	messageBus := events.NewMessageBus()
+	cfg := &config.Config{
+		Channels: config.ChannelsConfig{
+			Telegram: config.TelegramConfig{
+				AllowDirect: true,
+			},
+		},
+	}
 	ch := &TelegramChannel{
-		BaseChannel: channels.NewBaseChannel("telegram", nil, messageBus, nil),
+		BaseChannel: channels.NewBaseChannel("telegram", cfg.Channels.Telegram, messageBus, nil),
+		config:      cfg,
 		chatIDs:     make(map[string]int64),
 		ctx:         context.Background(),
 	}

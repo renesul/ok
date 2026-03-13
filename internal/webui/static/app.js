@@ -8,7 +8,6 @@ const panelHelp = {
         panelModels: '<strong>Models</strong> — Configure which LLMs your agents use.<ul><li>Format: <code>vendor/model-id</code> (e.g. <code>openai/gpt-4o</code>, <code>anthropic/claude-sonnet-4-20250514</code>, <code>ollama/llama3</code>)</li><li>The <strong>Primary</strong> model is the default for all agents — pick your best model here</li><li>Add a <strong>Light</strong> model for fast, simple replies (saves cost)</li><li>Multiple entries with the same name are automatically load-balanced</li><li>Models without an API key appear grayed out — set the key in the Auth panel</li></ul>',
         panelAuth: '<strong>Auth</strong> — API keys and credentials for LLM providers.<ul><li><strong>OpenAI</strong>: Click "Sign In" to authenticate via device code (no browser redirect needed)</li><li><strong>Anthropic</strong>: Paste your API key (starts with <code>sk-ant-</code>)</li><li><strong>Google</strong>: Browser-based OAuth flow</li><li>Keys are stored locally in <code>~/.ok/auth.json</code> — never sent anywhere except the provider</li></ul>',
         panelAgents: '<strong>Agents</strong> — Your AI assistants. Each agent can have different personality, model, and tools.<ul><li><strong>Defaults</strong> apply to all agents — override per agent only when needed</li><li><strong>Model</strong>: which LLM this agent uses (leave empty to use the default)</li><li><strong>Workspace</strong>: the directory where the agent reads/writes files and stores memory</li><li><strong>Summarize threshold</strong>: after this many messages, the conversation is auto-summarized to save context</li><li><strong>Max media size</strong>: largest file (in bytes) the agent can process — 0 means unlimited</li></ul>',
-        panelBindings: '<strong>Bindings</strong> — Route messages to the right agent.<br>Without bindings, everything goes to the default agent. Use bindings when you have multiple agents.<ul><li><strong>Peer</strong>: route a specific user to an agent (e.g. your WhatsApp number → personal agent)</li><li><strong>Guild/Team</strong>: route an entire Discord server or Slack workspace</li><li><strong>Channel wildcard</strong>: route all messages from a platform (e.g. all Telegram → work agent)</li><li>Priority order: peer &gt; guild &gt; team &gt; account &gt; channel &gt; default</li></ul>',
         panelCh_telegram: '<strong>Telegram</strong> — Connect a Telegram bot.<ol><li>Open Telegram, search for <strong>@BotFather</strong>, send <code>/newbot</code></li><li>Copy the bot token and paste it here</li><li>Enable the channel and restart the gateway</li></ol><ul><li>Supports groups, DMs, inline commands, photos, documents, and voice messages</li><li>Use <strong>Allow From</strong> to restrict which users can talk to the bot</li></ul>',
         panelCh_discord: '<strong>Discord</strong> — Connect a Discord bot.<ol><li>Go to Discord Developer Portal, create an Application, then a Bot</li><li>Copy the bot token and paste it here</li><li>Invite the bot to your server with the OAuth2 URL generator (scopes: bot, messages)</li></ol><ul><li><strong>Mention Only</strong>: the bot only responds when @mentioned — useful in busy servers</li><li>Supports threads, reactions, file attachments, and slash commands</li></ul>',
         panelCh_slack: '<strong>Slack</strong> — Connect via Socket Mode (no public URL needed).<ol><li>Create a Slack App at api.slack.com with <strong>Socket Mode</strong> enabled</li><li>Generate a <strong>Bot Token</strong> (<code>xoxb-</code>) with chat:write, app_mentions:read scopes</li><li>Generate an <strong>App Token</strong> (<code>xapp-</code>) with connections:write scope</li></ol><ul><li>Supports threads, DMs, channel messages, and file uploads</li></ul>',
@@ -28,14 +27,12 @@ const panelHelp = {
         panelRouting: '<strong>Model Routing</strong> — Route simple messages to a lighter model.<ul><li>Enable routing and set a <strong>Light Model</strong> for simple queries</li><li>The <strong>Threshold</strong> controls the complexity cutoff (0-1)</li><li>Messages below the threshold use the light model; others use the primary model</li></ul>',
         panelWebSearch: '<strong>Web Search</strong> — Configure which search engines agents can use.<ul><li>Toggle individual search providers on/off</li><li>Each provider has its own API key and settings</li><li><strong>DuckDuckGo</strong> works without an API key</li></ul>',
         panelSummarization: '<strong>Summarization</strong> — Automatic conversation history compression.<ul><li><strong>Message Threshold</strong>: number of messages before summarization triggers</li><li><strong>Token Percent</strong>: percentage of max tokens that triggers summarization</li></ul>',
-        panelAgentDefaults: '<strong>Agent Defaults</strong> — Base configuration inherited by all agents.<ul><li><strong>Provider</strong>: which LLM backend to use</li><li><strong>Model</strong>: the default model for all agents</li><li><strong>Fallbacks</strong>: backup models if the primary is unavailable</li><li><strong>Temperature</strong>: creativity level (leave empty for provider default)</li></ul>',
         panelWebUI: '<strong>Web UI</strong> — Settings for this configuration interface.<ul><li><strong>Host</strong>: network interface to bind to</li><li><strong>Port</strong>: HTTP port for the web UI</li></ul>',
     },
     'pt-BR': {
         panelModels: '<strong>Modelos</strong> — Configure quais LLMs seus agentes usam.<ul><li>Formato: <code>vendor/model-id</code> (ex: <code>openai/gpt-4o</code>, <code>anthropic/claude-sonnet-4-20250514</code>, <code>ollama/llama3</code>)</li><li>O modelo <strong>Primário</strong> é o padrão para todos os agentes — escolha seu melhor modelo aqui</li><li>Adicione um modelo <strong>Light</strong> para respostas rápidas e simples (economia de custo)</li><li>Múltiplas entradas com o mesmo nome fazem balanceamento de carga automático</li><li>Modelos sem chave API aparecem esmaecidos — configure a chave no painel Auth</li></ul>',
         panelAuth: '<strong>Auth</strong> — Chaves de API e credenciais dos provedores de LLM.<ul><li><strong>OpenAI</strong>: Clique em "Sign In" para autenticar via código de dispositivo (sem redirecionamento)</li><li><strong>Anthropic</strong>: Cole sua chave API (começa com <code>sk-ant-</code>)</li><li><strong>Google</strong>: Fluxo OAuth via navegador</li><li>As chaves ficam armazenadas localmente em <code>~/.ok/auth.json</code> — nunca são enviadas a outro lugar além do provedor</li></ul>',
         panelAgents: '<strong>Agentes</strong> — Seus assistentes de IA. Cada agente pode ter personalidade, modelo e ferramentas diferentes.<ul><li><strong>Padrões</strong> se aplicam a todos os agentes — sobrescreva por agente apenas quando necessário</li><li><strong>Modelo</strong>: qual LLM este agente usa (deixe vazio para usar o padrão)</li><li><strong>Workspace</strong>: diretório onde o agente lê/escreve arquivos e armazena memória</li><li><strong>Limite de resumo</strong>: após essa quantidade de mensagens, a conversa é resumida automaticamente para economizar contexto</li><li><strong>Máx. mídia</strong>: maior arquivo (em bytes) que o agente pode processar — 0 = ilimitado</li></ul>',
-        panelBindings: '<strong>Vínculos</strong> — Direcione mensagens para o agente certo.<br>Sem vínculos, tudo vai para o agente padrão. Use vínculos quando tiver múltiplos agentes.<ul><li><strong>Peer</strong>: direcione um usuário específico (ex: seu número WhatsApp → agente pessoal)</li><li><strong>Guild/Team</strong>: direcione um servidor Discord ou workspace Slack inteiro</li><li><strong>Canal wildcard</strong>: direcione todas as mensagens de uma plataforma (ex: todo Telegram → agente de trabalho)</li><li>Ordem de prioridade: peer &gt; guild &gt; team &gt; conta &gt; canal &gt; padrão</li></ul>',
         panelCh_telegram: '<strong>Telegram</strong> — Conecte um bot do Telegram.<ol><li>Abra o Telegram, procure <strong>@BotFather</strong>, envie <code>/newbot</code></li><li>Copie o token do bot e cole aqui</li><li>Ative o canal e reinicie o gateway</li></ol><ul><li>Suporta grupos, DMs, comandos inline, fotos, documentos e mensagens de voz</li><li>Use <strong>Permitir De</strong> para restringir quais usuários podem conversar com o bot</li></ul>',
         panelCh_discord: '<strong>Discord</strong> — Conecte um bot do Discord.<ol><li>Vá ao Discord Developer Portal, crie um Application e depois um Bot</li><li>Copie o token do bot e cole aqui</li><li>Convide o bot para seu servidor com o gerador de URL OAuth2 (scopes: bot, messages)</li></ol><ul><li><strong>Apenas Menções</strong>: o bot só responde quando @mencionado — útil em servidores movimentados</li><li>Suporta threads, reações, anexos e slash commands</li></ul>',
         panelCh_slack: '<strong>Slack</strong> — Conecte via Socket Mode (sem URL pública necessária).<ol><li>Crie um Slack App em api.slack.com com <strong>Socket Mode</strong> ativado</li><li>Gere um <strong>Bot Token</strong> (<code>xoxb-</code>) com scopes chat:write, app_mentions:read</li><li>Gere um <strong>App Token</strong> (<code>xapp-</code>) com scope connections:write</li></ol><ul><li>Suporta threads, DMs, mensagens de canal e upload de arquivos</li></ul>',
@@ -55,14 +52,12 @@ const panelHelp = {
         panelRouting: '<strong>Roteamento de Modelo</strong> — Direcione mensagens simples para um modelo mais leve.<ul><li>Ative o roteamento e defina um <strong>Modelo Leve</strong> para consultas simples</li><li>O <strong>Limiar</strong> controla o corte de complexidade (0-1)</li><li>Mensagens abaixo do limiar usam o modelo leve; as demais usam o modelo primário</li></ul>',
         panelWebSearch: '<strong>Busca Web</strong> — Configure quais motores de busca os agentes podem usar.<ul><li>Ative/desative provedores de busca individualmente</li><li>Cada provedor tem sua própria chave API e configurações</li><li><strong>DuckDuckGo</strong> funciona sem chave API</li></ul>',
         panelSummarization: '<strong>Sumarização</strong> — Compressão automática do histórico de conversas.<ul><li><strong>Limiar de Mensagens</strong>: número de mensagens antes da sumarização</li><li><strong>Percentual de Tokens</strong>: percentual de tokens máx. que dispara sumarização</li></ul>',
-        panelAgentDefaults: '<strong>Padrões do Agente</strong> — Configuração base herdada por todos os agentes.<ul><li><strong>Provedor</strong>: qual backend LLM usar</li><li><strong>Modelo</strong>: modelo padrão para todos os agentes</li><li><strong>Fallbacks</strong>: modelos de backup caso o primário esteja indisponível</li><li><strong>Temperatura</strong>: nível de criatividade (deixe vazio para padrão do provedor)</li></ul>',
         panelWebUI: '<strong>Web UI</strong> — Configurações desta interface de configuração.<ul><li><strong>Host</strong>: interface de rede para vincular</li><li><strong>Porta</strong>: porta HTTP para a web UI</li></ul>',
     },
     es: {
         panelModels: '<strong>Modelos</strong> — Configure qué LLMs usan sus agentes.<ul><li>Formato: <code>vendor/model-id</code> (ej: <code>openai/gpt-4o</code>, <code>anthropic/claude-sonnet-4-20250514</code>, <code>ollama/llama3</code>)</li><li>El modelo <strong>Primario</strong> es el predeterminado para todos los agentes — elija su mejor modelo aquí</li><li>Agregue un modelo <strong>Light</strong> para respuestas rápidas y simples (ahorra costos)</li><li>Múltiples entradas con el mismo nombre se balancean automáticamente</li><li>Modelos sin clave API aparecen atenuados — configure la clave en el panel Auth</li></ul>',
         panelAuth: '<strong>Auth</strong> — Claves de API y credenciales de proveedores de LLM.<ul><li><strong>OpenAI</strong>: Haga clic en "Sign In" para autenticar via código de dispositivo (sin redirección)</li><li><strong>Anthropic</strong>: Pegue su clave API (comienza con <code>sk-ant-</code>)</li><li><strong>Google</strong>: Flujo OAuth en navegador</li><li>Las claves se almacenan localmente en <code>~/.ok/auth.json</code> — nunca se envían a otro lugar que no sea el proveedor</li></ul>',
         panelAgents: '<strong>Agentes</strong> — Sus asistentes de IA. Cada agente puede tener personalidad, modelo y herramientas diferentes.<ul><li><strong>Predeterminados</strong> se aplican a todos los agentes — sobreescriba por agente solo cuando sea necesario</li><li><strong>Modelo</strong>: qué LLM usa este agente (deje vacío para usar el predeterminado)</li><li><strong>Workspace</strong>: directorio donde el agente lee/escribe archivos y almacena memoria</li><li><strong>Umbral de resumen</strong>: tras esta cantidad de mensajes, la conversación se resume automáticamente para ahorrar contexto</li><li><strong>Máx. media</strong>: archivo más grande (en bytes) que el agente puede procesar — 0 = ilimitado</li></ul>',
-        panelBindings: '<strong>Vínculos</strong> — Dirija mensajes al agente correcto.<br>Sin vínculos, todo va al agente predeterminado. Use vínculos cuando tenga múltiples agentes.<ul><li><strong>Peer</strong>: dirija un usuario específico (ej: su número WhatsApp → agente personal)</li><li><strong>Guild/Team</strong>: dirija un servidor Discord o workspace Slack completo</li><li><strong>Canal wildcard</strong>: dirija todos los mensajes de una plataforma (ej: todo Telegram → agente de trabajo)</li><li>Orden de prioridad: peer &gt; guild &gt; team &gt; cuenta &gt; canal &gt; predeterminado</li></ul>',
         panelCh_telegram: '<strong>Telegram</strong> — Conecte un bot de Telegram.<ol><li>Abra Telegram, busque <strong>@BotFather</strong>, envíe <code>/newbot</code></li><li>Copie el token del bot y péguelo aquí</li><li>Active el canal y reinicie el gateway</li></ol><ul><li>Soporta grupos, DMs, comandos inline, fotos, documentos y mensajes de voz</li><li>Use <strong>Permitir De</strong> para restringir qué usuarios pueden hablar con el bot</li></ul>',
         panelCh_discord: '<strong>Discord</strong> — Conecte un bot de Discord.<ol><li>Vaya al Discord Developer Portal, cree una Application y luego un Bot</li><li>Copie el token del bot y péguelo aquí</li><li>Invite al bot a su servidor con el generador de URL OAuth2 (scopes: bot, messages)</li></ol><ul><li><strong>Solo Menciones</strong>: el bot solo responde cuando es @mencionado — útil en servidores activos</li><li>Soporta threads, reacciones, archivos adjuntos y slash commands</li></ul>',
         panelCh_slack: '<strong>Slack</strong> — Conecte via Socket Mode (sin URL pública necesaria).<ol><li>Cree una Slack App en api.slack.com con <strong>Socket Mode</strong> activado</li><li>Genere un <strong>Bot Token</strong> (<code>xoxb-</code>) con scopes chat:write, app_mentions:read</li><li>Genere un <strong>App Token</strong> (<code>xapp-</code>) con scope connections:write</li></ol><ul><li>Soporta threads, DMs, mensajes de canal y subida de archivos</li></ul>',
@@ -82,7 +77,6 @@ const panelHelp = {
         panelRouting: '<strong>Enrutamiento de Modelo</strong> — Dirija mensajes simples a un modelo más ligero.<ul><li>Active el enrutamiento y defina un <strong>Modelo Ligero</strong> para consultas simples</li><li>El <strong>Umbral</strong> controla el corte de complejidad (0-1)</li><li>Mensajes debajo del umbral usan el modelo ligero; los demás usan el modelo primario</li></ul>',
         panelWebSearch: '<strong>Búsqueda Web</strong> — Configure qué motores de búsqueda pueden usar los agentes.<ul><li>Active/desactive proveedores de búsqueda individualmente</li><li>Cada proveedor tiene su propia clave API y configuraciones</li><li><strong>DuckDuckGo</strong> funciona sin clave API</li></ul>',
         panelSummarization: '<strong>Sumarización</strong> — Compresión automática del historial de conversaciones.<ul><li><strong>Umbral de Mensajes</strong>: número de mensajes antes de la sumarización</li><li><strong>Porcentaje de Tokens</strong>: porcentaje de tokens máx. que dispara sumarización</li></ul>',
-        panelAgentDefaults: '<strong>Predeterminados del Agente</strong> — Configuración base heredada por todos los agentes.<ul><li><strong>Proveedor</strong>: qué backend LLM usar</li><li><strong>Modelo</strong>: modelo predeterminado para todos los agentes</li><li><strong>Fallbacks</strong>: modelos de respaldo si el primario no está disponible</li><li><strong>Temperatura</strong>: nivel de creatividad (deje vacío para predeterminado del proveedor)</li></ul>',
         panelWebUI: '<strong>Web UI</strong> — Configuraciones de esta interfaz de configuración.<ul><li><strong>Host</strong>: interfaz de red para vincular</li><li><strong>Puerto</strong>: puerto HTTP para la web UI</li></ul>',
     },
 };
@@ -223,10 +217,16 @@ const i18nData = {
         'models.advancedOptions': 'Advanced Options',
         'models.deleteConfirm': 'Delete model "{name}"?',
         'models.requiredFields': 'Model Name and Model ID are required',
+        'models.test': 'Test',
+        'models.testing': 'Testing...',
+        'models.testSuccess': '{model}: {response}',
+        'models.testFail': '{model}: {error}',
         // Model fields
         'field.modelName': 'Model Name',
         'field.modelId': 'Model ID',
         'field.modelIdHint': 'Format: protocol/model-id',
+        'field.provider': 'Provider',
+        'field.providerManual': '(Manual - API Key)',
         'field.apiKey': 'API Key',
         'field.apiBase': 'API Base',
         'field.proxy': 'Proxy',
@@ -260,6 +260,14 @@ const i18nData = {
         'auth.account': 'Account',
         'auth.project': 'Project',
         'auth.expires': 'Expires',
+        'auth.custom1': 'Custom Provider 1',
+        'auth.custom2': 'Custom Provider 2',
+        'auth.configure': 'Configure',
+        'auth.customLabel': 'Provider Name',
+        'auth.customApiBase': 'API Base URL',
+        'auth.customToken': 'API Token',
+        'auth.customLabelPlaceholder': 'e.g. Together AI',
+        'auth.customApiBasePlaceholder': 'e.g. https://api.together.xyz/v1',
         // Channel
         'ch.configure': 'Configure {name} channel settings.',
         'ch.docLink': 'Configuration Guide',
@@ -268,6 +276,11 @@ const i18nData = {
         'ch.allowedGroups': 'Allowed Groups',
         'ch.allowedContacts': 'Allowed Contacts',
         'ch.addItem': '+ Add',
+        'ch.allowDirect': 'Allow Direct Messages',
+        'ch.allowDirectHint': 'Respond to direct (private) messages',
+        'ch.allowGroups': 'Allow Group Messages',
+        'ch.allowGroupsHint': 'Respond in groups when mentioned',
+        'ch.allowSelfHint': 'Respond to messages from the connected number',
         'ch.mentionOnly': 'Mention Only',
         'ch.mentionOnlyHint': 'Only respond when mentioned',
         'ch.groupTrigger': 'Group Trigger Prefixes',
@@ -331,13 +344,14 @@ const i18nData = {
         'status.running': 'Running',
         // Agents
         'agents.title': 'Agents',
-        'agents.desc': 'Configure agent defaults and individual agent overrides.',
+        'agents.desc': 'Configure agent defaults and create specialized agents.',
         'agents.defaults': 'Default Settings',
-        'agents.agentList': 'Agent List',
+        'agents.defaultsDesc': 'Base configuration inherited by all agents. Individual agents can override these values.',
+        'agents.agentList': 'Agents',
         'agents.addAgent': '+ Add Agent',
         'agents.editAgent': 'Edit Agent',
         'agents.addAgentTitle': 'Add Agent',
-        'agents.noAgents': 'No custom agents. The default agent handles all messages.',
+        'agents.noAgents': 'No custom agents configured. All messages are handled by the default agent with the settings above.',
         'agents.saveDefaults': 'Save Defaults',
         'agents.defaultsSaved': 'Agent defaults saved',
         'agents.deleteConfirm': 'Delete agent "{name}"?',
@@ -345,8 +359,8 @@ const i18nData = {
         'agents.duplicateId': 'Agent with ID "{id}" already exists',
         'agents.restrictWorkspace': 'Restrict to Workspace',
         'agents.allowReadOutside': 'Allow Read Outside',
-        'agents.modelName': 'Model Name',
-        'agents.modelNameHint': 'Must match a model_name from Models panel',
+        'agents.modelName': 'Default Model',
+        'agents.modelNameHint': 'Model used by all agents unless overridden',
         'agents.maxTokens': 'Max Tokens',
         'agents.maxToolIter': 'Max Tool Iterations',
         'agents.summarizeThreshold': 'Summarize Threshold',
@@ -355,27 +369,21 @@ const i18nData = {
         'agents.maxMediaSize': 'Max Media Size (bytes)',
         'agents.maxMediaSizeHint': '0 = default (20MB)',
         'agents.defaultAgent': 'Default Agent',
-        'agents.friendlyName': 'Friendly name',
+        'agents.friendlyName': 'e.g. Research Assistant',
         'agents.inheritsDefaults': 'Inherits from defaults',
         'agents.modelHint': 'Model name (must match a model_name from Models)',
-        'agents.modelPrimary': 'Model (Primary)',
-        'agents.modelFallbacks': 'Model Fallbacks',
+        'agents.modelPrimary': 'Model',
+        'agents.modelFallbacks': 'Fallback Models',
+        'agents.sectionIdentity': 'Identity',
+        'agents.sectionModel': 'Model',
+        'agents.sectionAdvanced': 'Advanced',
+        'agents.subagents': 'Allowed Subagents',
+        'agents.subagentsHint': 'Other agents this agent can invoke',
+        'agents.inheritedFrom': 'inherited',
+        'agents.overridden': 'custom',
+        'agents.agentSaved': 'Agent saved',
+        'agents.skillsHint': 'Select which installed skills this agent can use',
         // Bindings
-        'bindings.title': 'Bindings',
-        'bindings.desc': 'Map agents to channels. Bindings control which agent handles messages from specific channels or chat IDs.',
-        'bindings.addBinding': '+ Add Binding',
-        'bindings.addBindingTitle': 'Add Binding',
-        'bindings.editBinding': 'Edit Binding',
-        'bindings.noBindings': 'No bindings configured. The default agent handles all messages.',
-        'bindings.deleteConfirm': 'Delete this binding?',
-        'bindings.required': 'Agent ID and Channel are required',
-        'bindings.agentId': 'Agent ID',
-        'bindings.channel': 'Channel',
-        'bindings.accountId': 'Account ID',
-        'bindings.peerKind': 'Peer Kind',
-        'bindings.peerId': 'Peer ID',
-        'bindings.guildId': 'Guild ID',
-        'bindings.teamId': 'Team ID',
         // MCP
         'mcp.title': 'MCP Servers',
         'mcp.desc': 'Connect to Model Context Protocol servers to extend agent capabilities with external tools.',
@@ -441,6 +449,8 @@ const i18nData = {
         'gateway.desc': 'Network settings for the gateway server.',
         'gateway.host': 'Host',
         'gateway.port': 'Port',
+        'gateway.proxy': 'Proxy',
+        'gateway.proxyHint': 'Global HTTP proxy (http/https/socks5). Used by all channels, tools, and providers.',
         'gateway.saved': 'Gateway settings saved',
         // Session
         'session.title': 'Session',
@@ -510,6 +520,26 @@ const i18nData = {
         'chat.offline': 'Offline',
         'chat.placeholder': 'Type a message...',
         'chat.send': 'Send',
+        // Additional keys
+        'close': 'Close',
+        'addItem': '+ Add',
+        'status.reloadTriggered': 'Config reload triggered',
+        'logs.deleteAllConfirm': 'Delete all log files? This cannot be undone.',
+        'logs.allDeleted': 'All logs deleted',
+        'logs.deleteAll': 'Delete All Logs',
+        'skills.removeConfirm': 'Remove skill "{name}"? This cannot be undone.',
+        'skills.removed': 'Skill "{name}" removed',
+        'skills.searching': 'Searching...',
+        'skills.noResults': 'No results found.',
+        'skills.alreadyInstalled': 'Installed',
+        'skills.install': 'Install',
+        'skills.installing': 'Installing...',
+        'skills.blockedMalware': 'Skill blocked: flagged as malware',
+        'skills.installedSuspicious': 'Skill installed but flagged as suspicious',
+        'skills.installSuccess': 'Skill "{slug}" installed (v{version})',
+        'skills.installFailed': 'Install failed: {msg}',
+        'skills.showFailed': 'Failed to load skill: {msg}',
+        'skills.removeFailed': 'Failed to remove skill: {msg}',
     },
     'pt-BR': {
         // Header & global
@@ -567,10 +597,16 @@ const i18nData = {
         'models.advancedOptions': 'Opções Avançadas',
         'models.deleteConfirm': 'Excluir modelo "{name}"?',
         'models.requiredFields': 'Nome do Modelo e ID do Modelo são obrigatórios',
+        'models.test': 'Testar',
+        'models.testing': 'Testando...',
+        'models.testSuccess': '{model}: {response}',
+        'models.testFail': '{model}: {error}',
         // Model fields
         'field.modelName': 'Nome do Modelo',
         'field.modelId': 'ID do Modelo',
         'field.modelIdHint': 'Formato: protocolo/id-modelo',
+        'field.provider': 'Provedor',
+        'field.providerManual': '(Manual - Chave API)',
         'field.apiKey': 'Chave API',
         'field.apiBase': 'URL Base da API',
         'field.proxy': 'Proxy',
@@ -604,6 +640,14 @@ const i18nData = {
         'auth.account': 'Conta',
         'auth.project': 'Projeto',
         'auth.expires': 'Expira',
+        'auth.custom1': 'Provedor Customizado 1',
+        'auth.custom2': 'Provedor Customizado 2',
+        'auth.configure': 'Configurar',
+        'auth.customLabel': 'Nome do Provedor',
+        'auth.customApiBase': 'URL Base da API',
+        'auth.customToken': 'Token da API',
+        'auth.customLabelPlaceholder': 'ex: Together AI',
+        'auth.customApiBasePlaceholder': 'ex: https://api.together.xyz/v1',
         // Channel
         'ch.configure': 'Configurar canal {name}.',
         'ch.docLink': 'Guia de Configuração',
@@ -612,6 +656,11 @@ const i18nData = {
         'ch.allowedGroups': 'Grupos Permitidos',
         'ch.allowedContacts': 'Contatos Permitidos',
         'ch.addItem': '+ Adicionar',
+        'ch.allowDirect': 'Permitir Mensagens Diretas',
+        'ch.allowDirectHint': 'Responder a mensagens diretas (privadas)',
+        'ch.allowGroups': 'Permitir Mensagens em Grupo',
+        'ch.allowGroupsHint': 'Responder em grupos quando mencionado',
+        'ch.allowSelfHint': 'Responder a mensagens do número conectado',
         'ch.mentionOnly': 'Apenas Menções',
         'ch.mentionOnlyHint': 'Responder apenas quando mencionado',
         'ch.groupTrigger': 'Prefixos de Gatilho em Grupo',
@@ -675,13 +724,14 @@ const i18nData = {
         'status.running': 'Em execução',
         // Agents
         'agents.title': 'Agentes',
-        'agents.desc': 'Configure padrões de agentes e sobreposições individuais.',
+        'agents.desc': 'Configure padrões de agentes e crie agentes especializados.',
         'agents.defaults': 'Configurações Padrão',
-        'agents.agentList': 'Lista de Agentes',
+        'agents.defaultsDesc': 'Configuração base herdada por todos os agentes. Agentes individuais podem sobrescrever estes valores.',
+        'agents.agentList': 'Agentes',
         'agents.addAgent': '+ Adicionar Agente',
         'agents.editAgent': 'Editar Agente',
         'agents.addAgentTitle': 'Adicionar Agente',
-        'agents.noAgents': 'Nenhum agente personalizado. O agente padrão trata todas as mensagens.',
+        'agents.noAgents': 'Nenhum agente personalizado. Todas as mensagens são tratadas pelo agente padrão com as configurações acima.',
         'agents.saveDefaults': 'Salvar Padrões',
         'agents.defaultsSaved': 'Padrões de agente salvos',
         'agents.deleteConfirm': 'Excluir agente "{name}"?',
@@ -689,8 +739,8 @@ const i18nData = {
         'agents.duplicateId': 'Agente com ID "{id}" já existe',
         'agents.restrictWorkspace': 'Restringir ao Workspace',
         'agents.allowReadOutside': 'Permitir Leitura Externa',
-        'agents.modelName': 'Nome do Modelo',
-        'agents.modelNameHint': 'Deve corresponder a um model_name do painel Modelos',
+        'agents.modelName': 'Modelo Padrão',
+        'agents.modelNameHint': 'Modelo usado por todos os agentes, exceto quando sobrescrito',
         'agents.maxTokens': 'Máx. Tokens',
         'agents.maxToolIter': 'Máx. Iterações de Ferramentas',
         'agents.summarizeThreshold': 'Limite de Resumo',
@@ -699,27 +749,21 @@ const i18nData = {
         'agents.maxMediaSize': 'Tamanho Máx. de Mídia (bytes)',
         'agents.maxMediaSizeHint': '0 = padrão (20MB)',
         'agents.defaultAgent': 'Agente Padrão',
-        'agents.friendlyName': 'Nome amigável',
+        'agents.friendlyName': 'ex: Assistente de Pesquisa',
         'agents.inheritsDefaults': 'Herda dos padrões',
         'agents.modelHint': 'Nome do modelo (deve corresponder a um model_name de Modelos)',
-        'agents.modelPrimary': 'Modelo (Primário)',
-        'agents.modelFallbacks': 'Modelos Fallback',
+        'agents.modelPrimary': 'Modelo',
+        'agents.modelFallbacks': 'Modelos de Reserva',
+        'agents.sectionIdentity': 'Identidade',
+        'agents.sectionModel': 'Modelo',
+        'agents.sectionAdvanced': 'Avançado',
+        'agents.subagents': 'Subagentes Permitidos',
+        'agents.subagentsHint': 'Outros agentes que este agente pode invocar',
+        'agents.inheritedFrom': 'herdado',
+        'agents.overridden': 'personalizado',
+        'agents.agentSaved': 'Agente salvo',
+        'agents.skillsHint': 'Selecione quais skills instaladas este agente pode usar',
         // Bindings
-        'bindings.title': 'Vínculos',
-        'bindings.desc': 'Mapeie agentes para canais. Vínculos controlam qual agente responde mensagens de canais ou chats específicos.',
-        'bindings.addBinding': '+ Adicionar Vínculo',
-        'bindings.addBindingTitle': 'Adicionar Vínculo',
-        'bindings.editBinding': 'Editar Vínculo',
-        'bindings.noBindings': 'Nenhum vínculo configurado. O agente padrão trata todas as mensagens.',
-        'bindings.deleteConfirm': 'Excluir este vínculo?',
-        'bindings.required': 'ID do Agente e Canal são obrigatórios',
-        'bindings.agentId': 'ID do Agente',
-        'bindings.channel': 'Canal',
-        'bindings.accountId': 'ID da Conta',
-        'bindings.peerKind': 'Tipo de Peer',
-        'bindings.peerId': 'ID do Peer',
-        'bindings.guildId': 'ID do Guild',
-        'bindings.teamId': 'ID do Team',
         // MCP
         'mcp.title': 'Servidores MCP',
         'mcp.desc': 'Conecte a servidores Model Context Protocol para estender as capacidades dos agentes com ferramentas externas.',
@@ -785,6 +829,8 @@ const i18nData = {
         'gateway.desc': 'Configurações de rede do servidor gateway.',
         'gateway.host': 'Host',
         'gateway.port': 'Porta',
+        'gateway.proxy': 'Proxy',
+        'gateway.proxyHint': 'Proxy HTTP global (http/https/socks5). Usado por todos os canais, ferramentas e provedores.',
         'gateway.saved': 'Configurações do gateway salvas',
         // Session
         'session.title': 'Sessão',
@@ -854,6 +900,26 @@ const i18nData = {
         'chat.offline': 'Desconectado',
         'chat.placeholder': 'Digite uma mensagem...',
         'chat.send': 'Enviar',
+        // Additional keys
+        'close': 'Fechar',
+        'addItem': '+ Adicionar',
+        'status.reloadTriggered': 'Recarga de configuração acionada',
+        'logs.deleteAllConfirm': 'Excluir todos os arquivos de log? Isso não pode ser desfeito.',
+        'logs.allDeleted': 'Todos os logs excluídos',
+        'logs.deleteAll': 'Excluir Todos os Logs',
+        'skills.removeConfirm': 'Remover skill "{name}"? Isso não pode ser desfeito.',
+        'skills.removed': 'Skill "{name}" removida',
+        'skills.searching': 'Buscando...',
+        'skills.noResults': 'Nenhum resultado encontrado.',
+        'skills.alreadyInstalled': 'Instalada',
+        'skills.install': 'Instalar',
+        'skills.installing': 'Instalando...',
+        'skills.blockedMalware': 'Skill bloqueada: identificada como malware',
+        'skills.installedSuspicious': 'Skill instalada mas marcada como suspeita',
+        'skills.installSuccess': 'Skill "{slug}" instalada (v{version})',
+        'skills.installFailed': 'Falha na instalação: {msg}',
+        'skills.showFailed': 'Falha ao carregar skill: {msg}',
+        'skills.removeFailed': 'Falha ao remover skill: {msg}',
     },
     es: {
         // Header & global
@@ -911,10 +977,16 @@ const i18nData = {
         'models.advancedOptions': 'Opciones Avanzadas',
         'models.deleteConfirm': 'Eliminar modelo "{name}"?',
         'models.requiredFields': 'Nombre del Modelo e ID del Modelo son requeridos',
+        'models.test': 'Probar',
+        'models.testing': 'Probando...',
+        'models.testSuccess': '{model}: {response}',
+        'models.testFail': '{model}: {error}',
         // Model fields
         'field.modelName': 'Nombre del Modelo',
         'field.modelId': 'ID del Modelo',
         'field.modelIdHint': 'Formato: protocolo/id-modelo',
+        'field.provider': 'Proveedor',
+        'field.providerManual': '(Manual - Clave API)',
         'field.apiKey': 'Clave API',
         'field.apiBase': 'URL Base de API',
         'field.proxy': 'Proxy',
@@ -948,6 +1020,14 @@ const i18nData = {
         'auth.account': 'Cuenta',
         'auth.project': 'Proyecto',
         'auth.expires': 'Expira',
+        'auth.custom1': 'Proveedor Personalizado 1',
+        'auth.custom2': 'Proveedor Personalizado 2',
+        'auth.configure': 'Configurar',
+        'auth.customLabel': 'Nombre del Proveedor',
+        'auth.customApiBase': 'URL Base de la API',
+        'auth.customToken': 'Token de API',
+        'auth.customLabelPlaceholder': 'ej: Together AI',
+        'auth.customApiBasePlaceholder': 'ej: https://api.together.xyz/v1',
         // Channel
         'ch.configure': 'Configurar canal {name}.',
         'ch.docLink': 'Guía de Configuración',
@@ -956,6 +1036,11 @@ const i18nData = {
         'ch.allowedGroups': 'Grupos Permitidos',
         'ch.allowedContacts': 'Contactos Permitidos',
         'ch.addItem': '+ Agregar',
+        'ch.allowDirect': 'Permitir Mensajes Directos',
+        'ch.allowDirectHint': 'Responder a mensajes directos (privados)',
+        'ch.allowGroups': 'Permitir Mensajes en Grupo',
+        'ch.allowGroupsHint': 'Responder en grupos cuando sea mencionado',
+        'ch.allowSelfHint': 'Responder a mensajes del número conectado',
         'ch.mentionOnly': 'Solo Menciones',
         'ch.mentionOnlyHint': 'Responder solo cuando sea mencionado',
         'ch.groupTrigger': 'Prefijos de Activación en Grupo',
@@ -1019,13 +1104,14 @@ const i18nData = {
         'status.running': 'En ejecución',
         // Agents
         'agents.title': 'Agentes',
-        'agents.desc': 'Configure valores predeterminados de agentes y sobrecargas individuales.',
+        'agents.desc': 'Configure valores predeterminados de agentes y cree agentes especializados.',
         'agents.defaults': 'Configuración Predeterminada',
-        'agents.agentList': 'Lista de Agentes',
+        'agents.defaultsDesc': 'Configuración base heredada por todos los agentes. Los agentes individuales pueden sobrescribir estos valores.',
+        'agents.agentList': 'Agentes',
         'agents.addAgent': '+ Agregar Agente',
         'agents.editAgent': 'Editar Agente',
         'agents.addAgentTitle': 'Agregar Agente',
-        'agents.noAgents': 'Sin agentes personalizados. El agente predeterminado maneja todos los mensajes.',
+        'agents.noAgents': 'Sin agentes personalizados. Todos los mensajes son manejados por el agente predeterminado con la configuración anterior.',
         'agents.saveDefaults': 'Guardar Predeterminados',
         'agents.defaultsSaved': 'Valores predeterminados de agente guardados',
         'agents.deleteConfirm': 'Eliminar agente "{name}"?',
@@ -1033,8 +1119,8 @@ const i18nData = {
         'agents.duplicateId': 'Ya existe un agente con ID "{id}"',
         'agents.restrictWorkspace': 'Restringir al Workspace',
         'agents.allowReadOutside': 'Permitir Lectura Externa',
-        'agents.modelName': 'Nombre del Modelo',
-        'agents.modelNameHint': 'Debe coincidir con un model_name del panel Modelos',
+        'agents.modelName': 'Modelo Predeterminado',
+        'agents.modelNameHint': 'Modelo usado por todos los agentes, excepto cuando se sobrescribe',
         'agents.maxTokens': 'Máx. Tokens',
         'agents.maxToolIter': 'Máx. Iteraciones de Herramientas',
         'agents.summarizeThreshold': 'Umbral de Resumen',
@@ -1043,27 +1129,21 @@ const i18nData = {
         'agents.maxMediaSize': 'Tamaño Máx. de Media (bytes)',
         'agents.maxMediaSizeHint': '0 = predeterminado (20MB)',
         'agents.defaultAgent': 'Agente Predeterminado',
-        'agents.friendlyName': 'Nombre amigable',
+        'agents.friendlyName': 'ej: Asistente de Investigación',
         'agents.inheritsDefaults': 'Hereda de los predeterminados',
         'agents.modelHint': 'Nombre del modelo (debe coincidir con un model_name de Modelos)',
-        'agents.modelPrimary': 'Modelo (Primario)',
-        'agents.modelFallbacks': 'Modelos Fallback',
+        'agents.modelPrimary': 'Modelo',
+        'agents.modelFallbacks': 'Modelos de Respaldo',
+        'agents.sectionIdentity': 'Identidad',
+        'agents.sectionModel': 'Modelo',
+        'agents.sectionAdvanced': 'Avanzado',
+        'agents.subagents': 'Subagentes Permitidos',
+        'agents.subagentsHint': 'Otros agentes que este agente puede invocar',
+        'agents.inheritedFrom': 'heredado',
+        'agents.overridden': 'personalizado',
+        'agents.agentSaved': 'Agente guardado',
+        'agents.skillsHint': 'Seleccione qué skills instaladas puede usar este agente',
         // Bindings
-        'bindings.title': 'Vínculos',
-        'bindings.desc': 'Mapee agentes a canales. Los vínculos controlan qué agente maneja mensajes de canales o chats específicos.',
-        'bindings.addBinding': '+ Agregar Vínculo',
-        'bindings.addBindingTitle': 'Agregar Vínculo',
-        'bindings.editBinding': 'Editar Vínculo',
-        'bindings.noBindings': 'Sin vínculos configurados. El agente predeterminado maneja todos los mensajes.',
-        'bindings.deleteConfirm': '¿Eliminar este vínculo?',
-        'bindings.required': 'ID del Agente y Canal son requeridos',
-        'bindings.agentId': 'ID del Agente',
-        'bindings.channel': 'Canal',
-        'bindings.accountId': 'ID de Cuenta',
-        'bindings.peerKind': 'Tipo de Peer',
-        'bindings.peerId': 'ID del Peer',
-        'bindings.guildId': 'ID del Guild',
-        'bindings.teamId': 'ID del Team',
         // MCP
         'mcp.title': 'Servidores MCP',
         'mcp.desc': 'Conéctese a servidores Model Context Protocol para extender las capacidades de los agentes con herramientas externas.',
@@ -1129,6 +1209,8 @@ const i18nData = {
         'gateway.desc': 'Configuraciones de red del servidor gateway.',
         'gateway.host': 'Host',
         'gateway.port': 'Puerto',
+        'gateway.proxy': 'Proxy',
+        'gateway.proxyHint': 'Proxy HTTP global (http/https/socks5). Usado por todos los canales, herramientas y proveedores.',
         'gateway.saved': 'Configuraciones del gateway guardadas',
         // Session
         'session.title': 'Sesión',
@@ -1198,6 +1280,26 @@ const i18nData = {
         'chat.offline': 'Desconectado',
         'chat.placeholder': 'Escriba un mensaje...',
         'chat.send': 'Enviar',
+        // Additional keys
+        'close': 'Cerrar',
+        'addItem': '+ Agregar',
+        'status.reloadTriggered': 'Recarga de configuración activada',
+        'logs.deleteAllConfirm': '¿Eliminar todos los archivos de log? Esto no se puede deshacer.',
+        'logs.allDeleted': 'Todos los logs eliminados',
+        'logs.deleteAll': 'Eliminar Todos los Logs',
+        'skills.removeConfirm': '¿Eliminar skill "{name}"? Esto no se puede deshacer.',
+        'skills.removed': 'Skill "{name}" eliminada',
+        'skills.searching': 'Buscando...',
+        'skills.noResults': 'No se encontraron resultados.',
+        'skills.alreadyInstalled': 'Instalada',
+        'skills.install': 'Instalar',
+        'skills.installing': 'Instalando...',
+        'skills.blockedMalware': 'Skill bloqueada: identificada como malware',
+        'skills.installedSuspicious': 'Skill instalada pero marcada como sospechosa',
+        'skills.installSuccess': 'Skill "{slug}" instalada (v{version})',
+        'skills.installFailed': 'Error de instalación: {msg}',
+        'skills.showFailed': 'Error al cargar skill: {msg}',
+        'skills.removeFailed': 'Error al eliminar skill: {msg}',
     }
 };
 
@@ -1217,7 +1319,7 @@ function switchLang(lang) {
     applyI18n();
     // Re-render all panels
     if (configData) {
-        renderModels(); renderAgents(); renderBindings();
+        renderModels(); renderAgents();
         renderMCP(); renderToolSettings(); renderRAG();
         renderGateway(); renderSession(); renderHeartbeat();
         renderDevices(); renderDebug(); renderSkills();
@@ -1263,11 +1365,16 @@ function setNestedValue(obj, path, val) {
 
 // ── Channel schemas ─────────────────────────────────
 const channelSchemas = {
+    chat: {
+        title: 'Web Chat', configKey: 'chat', docSlug: null,
+        fields: []
+    },
     telegram: {
         title: 'Telegram', configKey: 'telegram', docSlug: 'telegram',
         fields: [
             { key: 'token', label: 'Bot Token', type: 'password', placeholder: 'Telegram bot token from @BotFather' },
-            { key: 'proxy', label: 'Proxy', type: 'text', placeholder: 'http://proxy:port' },
+            { key: 'allow_direct', label: 'ch.allowDirect', type: 'toggle', hint: 'ch.allowDirectHint', i18nLabel: true, i18nHint: true },
+            { key: 'allow_groups', label: 'ch.allowGroups', type: 'toggle', hint: 'ch.allowGroupsHint', i18nLabel: true, i18nHint: true },
             { key: 'group_trigger.mention_only', label: 'Mention Only (Groups)', type: 'toggle' },
             { key: 'group_trigger.prefixes', label: 'Group Prefixes', type: 'array', placeholder: '/ok' },
             { key: 'typing.enabled', label: 'Show Typing Indicator', type: 'toggle' },
@@ -1280,6 +1387,8 @@ const channelSchemas = {
         title: 'Discord', configKey: 'discord', docSlug: 'discord',
         fields: [
             { key: 'token', label: 'Bot Token', type: 'password', placeholder: 'Discord bot token' },
+            { key: 'allow_direct', label: 'ch.allowDirect', type: 'toggle', hint: 'ch.allowDirectHint', i18nLabel: true, i18nHint: true },
+            { key: 'allow_groups', label: 'ch.allowGroups', type: 'toggle', hint: 'ch.allowGroupsHint', i18nLabel: true, i18nHint: true },
             { key: 'mention_only', label: 'ch.mentionOnly', type: 'toggle', hint: 'ch.mentionOnlyHint', i18nLabel: true },
             { key: 'group_trigger.mention_only', label: 'Mention Only (Groups)', type: 'toggle' },
             { key: 'group_trigger.prefixes', label: 'Group Prefixes', type: 'array', placeholder: '/ok' },
@@ -1294,6 +1403,8 @@ const channelSchemas = {
         fields: [
             { key: 'bot_token', label: 'Bot Token', type: 'password', placeholder: 'xoxb-...' },
             { key: 'app_token', label: 'App Token', type: 'password', placeholder: 'xapp-...' },
+            { key: 'allow_direct', label: 'ch.allowDirect', type: 'toggle', hint: 'ch.allowDirectHint', i18nLabel: true, i18nHint: true },
+            { key: 'allow_groups', label: 'ch.allowGroups', type: 'toggle', hint: 'ch.allowGroupsHint', i18nLabel: true, i18nHint: true },
             { key: 'group_trigger.mention_only', label: 'Mention Only (Groups)', type: 'toggle' },
             { key: 'group_trigger.prefixes', label: 'Group Prefixes', type: 'array', placeholder: '/ok' },
             { key: 'typing.enabled', label: 'Show Typing Indicator', type: 'toggle' },
@@ -1306,7 +1417,9 @@ const channelSchemas = {
         title: 'WhatsApp', configKey: 'whatsapp', docSlug: null,
         fields: [
             { key: 'session_store_path', label: 'Session Store Path', type: 'text', placeholder: '~/.ok/workspace/whatsapp' },
-            { key: 'allow_self', label: 'Allow Self Chat', type: 'toggle', hint: 'Respond to messages from the connected number' },
+            { key: 'allow_self', label: 'Allow Self Chat', type: 'toggle', hint: 'ch.allowSelfHint', i18nHint: true },
+            { key: 'allow_direct', label: 'ch.allowDirect', type: 'toggle', hint: 'ch.allowDirectHint', i18nLabel: true, i18nHint: true },
+            { key: 'allow_groups', label: 'ch.allowGroups', type: 'toggle', hint: 'ch.allowGroupsHint', i18nLabel: true, i18nHint: true },
             { key: 'reasoning_channel_id', label: 'Reasoning Channel ID', type: 'text', hint: 'Channel ID for reasoning output' },
         ]
     },
@@ -1315,13 +1428,13 @@ const channelSchemas = {
 // ── Tab Navigation ──────────────────────────────────
 const tabDefs = {
     input: [
+        { panel: 'panelCh_chat', label: 'Web Chat', icon: '<svg class="si" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"><path d="M2 3h12v8H6l-3 2v-2H2z"/></svg>' },
         { panel: 'panelCh_telegram', label: 'Telegram', icon: '<svg class="si" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"><path d="M14 2L7 9m7-7l-4 12-3-6L1 6z"/></svg>' },
         { panel: 'panelCh_discord', label: 'Discord', icon: '<svg class="si" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M5.5 3S7 2 8 2s2.5 1 2.5 1M3.5 5.5C3 7 2.5 9 3 11c.3 1 1.5 2 2 2.5l1-1.5m5-6.5c.5 1.5 1 3.5.5 5.5-.3 1-1.5 2-2 2.5l-1-1.5"/><circle cx="6" cy="8.5" r=".8" fill="currentColor" stroke="none"/><circle cx="10" cy="8.5" r=".8" fill="currentColor" stroke="none"/></svg>' },
         { panel: 'panelCh_slack', label: 'Slack', icon: '<svg class="si" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><path d="M3 6h10M3 10h10M6 3v10M10 3v10"/></svg>' },
         { panel: 'panelCh_whatsapp', label: 'WhatsApp', icon: '<svg class="si" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="8" cy="8" r="6"/><path d="M6.5 6c0-.5.5-.8.8-.5l.5.5c.3.5 0 1.2 0 1.2s.8.8 1.2 1.2c0 0 .7-.3 1.2 0l.5.5c.3.3 0 .8-.5.8C8.5 10.5 5.5 7.5 6.5 6z"/></svg>' },
     ],
     routing: [
-        { panel: 'panelBindings', label: 'Bindings', icon: '<svg class="si" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M6 4h7M6 8h7M6 12h7M3 4h.01M3 8h.01M3 12h.01"/></svg>' },
         { panel: 'panelSession', label: 'Session', icon: '<svg class="si" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M8 2a6 6 0 110 12A6 6 0 018 2zM8 5v3l2 2"/></svg>' },
         { panel: 'panelRouting', label: 'Model Routing', icon: '<svg class="si" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M2 8h4l2-4 2 8 2-4h4"/></svg>' },
     ],
@@ -1340,7 +1453,6 @@ const tabDefs = {
         { panel: 'panelSummarization', label: 'Summarization', icon: '<svg class="si" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M3 3h10M3 6h8M3 9h6M3 12h4"/></svg>' },
     ],
     orchestrator: [
-        { panel: 'panelAgentDefaults', label: 'Defaults', icon: '<svg class="si" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M6.5 2v3M6.5 9v5M11.5 2v7M11.5 13v1"/><circle cx="6.5" cy="7" r="2"/><circle cx="11.5" cy="11" r="2"/></svg>' },
         { panel: 'panelAgents', label: 'Agents', icon: '<svg class="si" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="8" cy="5" r="3"/><path d="M3 14c0-2.8 2.2-5 5-5s5 2.2 5 5"/></svg>' },
     ],
     system: [
@@ -1356,7 +1468,7 @@ const tabDefs = {
 };
 
 // Track which sub-tab was last active per group
-const lastSubTab = { input: 'panelCh_telegram', routing: 'panelBindings', planning: 'panelModels', execution: 'panelToolSettings', memory: 'panelRAG', orchestrator: 'panelAgentDefaults', system: 'panelGateway' };
+const lastSubTab = { input: 'panelCh_telegram', routing: 'panelSession', planning: 'panelModels', execution: 'panelToolSettings', memory: 'panelRAG', orchestrator: 'panelAgents', system: 'panelGateway' };
 
 // ── Hash routing ────────────────────────────────────
 // Maps panel IDs to short URL hashes and vice versa.
@@ -1402,7 +1514,6 @@ function activatePanel(panelId) {
     if (panelId === 'panelLogs') { loadLogComponents(); startLogPolling(); } else { stopLogPolling(); }
     if (panelId === 'panelMCP') renderMCP();
     if (panelId === 'panelAgents') renderAgents();
-    if (panelId === 'panelBindings') renderBindings();
     if (panelId === 'panelToolSettings') renderToolSettings();
     if (panelId === 'panelRAG') renderRAG();
     if (panelId === 'panelGateway') renderGateway();
@@ -1414,7 +1525,7 @@ function activatePanel(panelId) {
     if (panelId === 'panelRouting') renderRouting();
     if (panelId === 'panelWebSearch') renderWebSearch();
     if (panelId === 'panelSummarization') renderSummarization();
-    if (panelId === 'panelAgentDefaults') renderAgentDefaults();
+    // panelAgentDefaults merged into panelAgents
     if (panelId === 'panelWebUI') renderWebUI();
     if (panelId.startsWith('panelCh_')) {
         renderChannelForm(panelId.replace('panelCh_', ''));
@@ -1516,6 +1627,7 @@ async function loadConfig() {
         document.getElementById('filePath').textContent = configPath || '-';
         renderModels();
         updateRunStopButton(gatewayRunning);
+        updateChatVisibility(!!(configData.channels && configData.channels.chat && configData.channels.chat.enabled));
     } catch (e) {
         showStatus(t('status.loadFailed') + ': ' + e.message, 'error');
     }
@@ -1639,10 +1751,12 @@ function renderModels() {
         if (m.api_base) html += `<div class="model-detail"><strong>API Base:</strong> ${esc(m.api_base)}</div>`;
         if (m.api_key) html += `<div class="model-detail"><strong>API Key:</strong> ${maskKey(m.api_key)}</div>`;
         if (m.auth_method) html += `<div class="model-detail"><strong>Auth:</strong> ${esc(m.auth_method)}</div>`;
-        if (m.proxy) html += `<div class="model-detail"><strong>Proxy:</strong> ${esc(m.proxy)}</div>`;
 
         html += `<div class="model-actions">`;
         html += `<button class="btn btn-sm" onclick="showEditModelModal(${idx})">${t('edit')}</button>`;
+        if (available) {
+            html += `<button class="btn btn-sm" id="testBtn_${idx}" onclick="testModel(${idx})">${t('models.test')}</button>`;
+        }
         if (available && !isPrimary) {
             html += `<button class="btn btn-sm btn-success" onclick="setPrimaryModel(${idx})">${t('models.setPrimary')}</button>`;
         }
@@ -1670,7 +1784,145 @@ function deleteModel(idx) {
     saveConfig().then(renderModels);
 }
 
+async function testModel(idx) {
+    const btn = document.getElementById('testBtn_' + idx);
+    if (!btn) return;
+    const origText = btn.textContent;
+    btn.textContent = t('models.testing');
+    btn.disabled = true;
+    try {
+        const res = await fetch('/api/models/test', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ model_index: idx }),
+        });
+        const data = await res.json();
+        if (data.status === 'ok') {
+            btn.textContent = '✓ OK';
+            btn.classList.add('btn-success');
+            showStatus(t('models.testSuccess', { model: data.model, response: data.response }), 'success');
+        } else {
+            btn.textContent = '✗ Fail';
+            btn.classList.add('btn-danger');
+            showStatus(t('models.testFail', { model: data.model || '', error: data.error }), 'error');
+        }
+    } catch (e) {
+        btn.textContent = '✗ Fail';
+        btn.classList.add('btn-danger');
+        showStatus(t('models.testFail', { model: '', error: e.message }), 'error');
+    }
+    setTimeout(() => {
+        btn.textContent = origText;
+        btn.disabled = false;
+        btn.classList.remove('btn-success', 'btn-danger');
+    }, 3000);
+}
+
 // ── Model Modal ─────────────────────────────────────
+const PROVIDER_INFO = {
+    openai:               { label: 'OpenAI',             apiBase: 'https://api.openai.com/v1',      prefix: 'openai/' },
+    anthropic:            { label: 'Anthropic',          apiBase: 'https://api.anthropic.com/v1',   prefix: 'anthropic/' },
+    groq:                 { label: 'Groq',               apiBase: 'https://api.groq.com/openai/v1', prefix: 'groq/' },
+    deepseek:             { label: 'DeepSeek',           apiBase: 'https://api.deepseek.com/v1',    prefix: 'deepseek/' },
+    mistral:              { label: 'Mistral',            apiBase: 'https://api.mistral.ai/v1',      prefix: 'mistral/' },
+    xai:                  { label: 'xAI',                apiBase: 'https://api.x.ai/v1',            prefix: 'xai/' },
+    'google-antigravity': { label: 'Google Antigravity', apiBase: '',                                prefix: 'antigravity/' },
+};
+
+function detectProviderFromModel(model) {
+    if (!model) return '';
+    for (const [name, info] of Object.entries(PROVIDER_INFO)) {
+        if (model.startsWith(info.prefix)) return name;
+    }
+    return '';
+}
+
+function getAllProviders() {
+    const result = [];
+    for (const [name, info] of Object.entries(PROVIDER_INFO)) {
+        const auth = authProviderMap[name];
+        const authenticated = auth && auth.status === 'active';
+        result.push({ name, ...info, authenticated });
+    }
+    return result;
+}
+
+function isProviderAuthenticated(name) {
+    const auth = authProviderMap[name];
+    return auth && auth.status === 'active';
+}
+
+// Renders a <select> with all configured model_list entries.
+// dataField: the data-field attribute name
+// label: form label text
+// currentValue: the currently selected model_name
+// opts: { allowEmpty: bool, emptyLabel: string, hint: string }
+function renderModelSelect(dataField, label, currentValue, opts) {
+    opts = opts || {};
+    const models = (configData && configData.model_list) || [];
+    let html = '<div class="form-group">';
+    html += `<label class="form-label">${esc(label)}</label>`;
+    html += `<select class="form-input" data-field="${esc(dataField)}">`;
+    if (opts.allowEmpty) {
+        html += `<option value="">${esc(opts.emptyLabel || '')}</option>`;
+    }
+    models.forEach(m => {
+        const name = m.model_name || '';
+        const sel = name === currentValue ? ' selected' : '';
+        const displayLabel = name + (m.model ? ' (' + m.model + ')' : '');
+        html += `<option value="${esc(name)}"${sel}>${esc(displayLabel)}</option>`;
+    });
+    html += '</select>';
+    if (opts.hint) html += `<div class="form-hint">${opts.hint}</div>`;
+    html += '</div>';
+    return html;
+}
+
+function onProviderSelectChange(selectEl) {
+    const selected = selectEl.value;
+    const info = PROVIDER_INFO[selected];
+    const modelInput = document.querySelector('#modalBody input[data-field="model"]');
+    const apiBaseInput = document.querySelector('#modalBody input[data-field="api_base"]');
+    const apiKeyInput = document.querySelector('#modalBody input[data-field="api_key"]');
+    const modelNameInput = document.querySelector('#modalBody input[data-field="model_name"]');
+    const authMethodInput = document.querySelector('#modalBody input[data-field="auth_method"]');
+    const fg = el => el ? el.closest('.form-group') : null;
+    const authenticated = selected && isProviderAuthenticated(selected);
+
+    if (selected && info) {
+        if (apiBaseInput) apiBaseInput.value = info.apiBase;
+        if (modelInput) {
+            const current = modelInput.value;
+            let bare = current;
+            for (const pi of Object.values(PROVIDER_INFO)) {
+                if (current.startsWith(pi.prefix)) { bare = current.slice(pi.prefix.length); break; }
+            }
+            modelInput.value = info.prefix + bare;
+        }
+        if (authMethodInput) {
+            const auth = authProviderMap[selected];
+            authMethodInput.value = auth && auth.auth_method ? auth.auth_method : '';
+        }
+        // Hide auto-filled fields
+        if (fg(modelNameInput)) fg(modelNameInput).style.display = 'none';
+        if (fg(apiBaseInput)) fg(apiBaseInput).style.display = 'none';
+        if (fg(authMethodInput)) fg(authMethodInput).style.display = 'none';
+        if (authenticated) {
+            if (apiKeyInput) apiKeyInput.value = '';
+            if (fg(apiKeyInput)) fg(apiKeyInput).style.display = 'none';
+        } else {
+            if (fg(apiKeyInput)) fg(apiKeyInput).style.display = '';
+        }
+    } else {
+        // Manual — show all fields
+        if (fg(modelNameInput)) fg(modelNameInput).style.display = '';
+        if (fg(apiBaseInput)) fg(apiBaseInput).style.display = '';
+        if (fg(apiKeyInput)) fg(apiKeyInput).style.display = '';
+        if (fg(authMethodInput)) fg(authMethodInput).style.display = '';
+        if (authMethodInput) authMethodInput.value = '';
+    }
+}
+
 const modelFieldsRequired = [
     { key: 'model_name', labelKey: 'field.modelName', type: 'text', placeholder: 'e.g. gpt-4o', required: true },
     { key: 'model', labelKey: 'field.modelId', type: 'text', placeholder: 'e.g. openai/gpt-4o', required: true, hintKey: 'field.modelIdHint' },
@@ -1678,7 +1930,6 @@ const modelFieldsRequired = [
     { key: 'api_base', labelKey: 'field.apiBase', type: 'text', placeholder: 'https://api.openai.com/v1' },
 ];
 const modelFieldsOptional = [
-    { key: 'proxy', labelKey: 'field.proxy', type: 'text', placeholder: 'http://proxy:port' },
     { key: 'auth_method', labelKey: 'field.authMethod', type: 'text', placeholder: 'oauth / token' },
     { key: 'connect_mode', labelKey: 'field.connectMode', type: 'text', placeholder: 'stdio / grpc' },
     { key: 'thinking_level', labelKey: 'field.thinkingLevel', type: 'select', options: ['', 'off', 'low', 'medium', 'high', 'xhigh', 'adaptive'] },
@@ -1693,14 +1944,17 @@ function showEditModelModal(idx) {
     editingModelIndex = idx;
     const m = configData.model_list[idx];
     document.getElementById('modalTitle').textContent = t('models.editModel') + ': ' + m.model_name;
-    renderModalBody(m);
+    const detected = detectProviderFromModel(m.model);
+    const auth = authProviderMap[detected];
+    const preselect = (detected && auth && auth.status === 'active') ? detected : '';
+    renderModalBody(m, preselect);
     document.getElementById('modelModal').classList.add('active');
 }
 
 function showAddModelModal() {
     editingModelIndex = -1;
     document.getElementById('modalTitle').textContent = t('models.addModel');
-    renderModalBody({});
+    renderModalBody({}, '');
     document.getElementById('modelModal').classList.add('active');
 }
 
@@ -1708,16 +1962,23 @@ function closeModelModal() {
     document.getElementById('modelModal').classList.remove('active');
 }
 
-function renderModalBody(data) {
+function renderModalBody(data, preselectedProvider) {
     const hasOptionalValues = modelFieldsOptional.some(f => {
         const v = data[f.key];
         return v !== undefined && v !== null && v !== '' && v !== 0;
     });
 
+    const allProviders = getAllProviders();
+
     function renderField(f) {
         const val = data[f.key] !== undefined && data[f.key] !== null ? data[f.key] : '';
         const label = t(f.labelKey);
-        let h = `<div class="form-group">`;
+        const hasProvider = !!preselectedProvider;
+        const hideField = (f.key === 'model_name' && hasProvider)
+            || (f.key === 'api_base' && hasProvider)
+            || (f.key === 'auth_method' && hasProvider)
+            || (f.key === 'api_key' && hasProvider && isProviderAuthenticated(preselectedProvider));
+        let h = `<div class="form-group"${hideField ? ' style="display:none"' : ''}>`;
         h += `<label class="form-label">${label}${f.required ? ' *' : ''}</label>`;
         if (f.type === 'select' && f.options) {
             h += `<select class="form-input" data-field="${f.key}">`;
@@ -1737,6 +1998,19 @@ function renderModalBody(data) {
     }
 
     let html = '';
+
+    // Provider select
+    html += `<div class="form-group">`;
+    html += `<label class="form-label">${t('field.provider')}</label>`;
+    html += `<select class="form-input" data-field="provider" onchange="onProviderSelectChange(this)">`;
+    html += `<option value="">${t('field.providerManual')}</option>`;
+    allProviders.forEach(p => {
+        const suffix = p.authenticated ? ' ✓' : '';
+        html += `<option value="${esc(p.name)}"${preselectedProvider === p.name ? ' selected' : ''}>${esc(p.label)}${suffix}</option>`;
+    });
+    html += `</select>`;
+    html += `</div>`;
+
     modelFieldsRequired.forEach(f => { html += renderField(f); });
 
     html += `<div class="collapsible-header" onclick="this.classList.toggle('open');this.nextElementSibling.classList.toggle('open')">`;
@@ -1754,11 +2028,21 @@ function saveModelFromModal() {
     const obj = {};
     inputs.forEach(input => {
         const key = input.dataset.field;
+        if (key === 'provider') return;
         let val = input.value.trim();
         if (input.type === 'number' && val) val = parseInt(val, 10) || 0;
         if (val !== '' && val !== 0) obj[key] = val;
         else if (key === 'model_name' || key === 'model') obj[key] = val;
     });
+
+    // Auto-derive model_name from model ID (strip provider prefix)
+    if (!obj.model_name && obj.model) {
+        let name = obj.model;
+        for (const pi of Object.values(PROVIDER_INFO)) {
+            if (name.startsWith(pi.prefix)) { name = name.slice(pi.prefix.length); break; }
+        }
+        obj.model_name = name;
+    }
 
     if (!obj.model_name || !obj.model) {
         showStatus(t('models.requiredFields'), 'error');
@@ -1816,7 +2100,7 @@ function renderChannelForm(chKey) {
     schema.fields.forEach(f => {
         const label = f.i18nLabel ? t(f.label) : f.label;
         if (f.type === 'toggle') {
-            const hint = f.i18nLabel && f.hint ? t(f.hint) : (f.hint || '');
+            const hint = (f.i18nHint || f.i18nLabel) && f.hint ? t(f.hint) : (f.hint || '');
             html += `<div class="toggle-row">`;
             html += `<div class="toggle ${getNestedValue(chData, f.key) ? 'on' : ''}" data-chfield="${f.key}" onclick="this.classList.toggle('on')"></div>`;
             html += `<span class="toggle-label">${label}</span>`;
@@ -1920,7 +2204,22 @@ function renderChannelForm(chKey) {
     if (chKey === 'whatsapp') connectWhatsAppQR();
 }
 
-function toggleChannelEnabled(chKey, el) { el.classList.toggle('on'); }
+function toggleChannelEnabled(chKey, el) {
+    el.classList.toggle('on');
+    if (chKey === 'chat') updateChatVisibility(el.classList.contains('on'));
+}
+
+function updateChatVisibility(enabled) {
+    const btn = document.querySelector('.rail-btn[data-tab="chat"]');
+    if (btn) btn.style.display = enabled ? '' : 'none';
+    // If chat panel is active and just disabled, switch away
+    if (!enabled) {
+        const chatPanel = document.getElementById('panelChat');
+        if (chatPanel && chatPanel.classList.contains('active')) {
+            switchTab('input');
+        }
+    }
+}
 
 function addArrayRow(container) {
     const placeholder = container.dataset.placeholder || '';
@@ -2033,10 +2332,29 @@ function renderAuthStatus(providersList, pendingDevice) {
     const providerMap = {};
     providersList.forEach(p => { providerMap[p.provider] = p; });
 
-    ['openai', 'anthropic', 'google-antigravity'].forEach(name => {
+    // Update custom provider card names and register in PROVIDER_INFO
+    ['custom-1', 'custom-2'].forEach(name => {
+        const p = providerMap[name];
+        const nameEl = document.getElementById('customName-' + name);
+        if (p && p.label) {
+            if (nameEl) nameEl.textContent = p.label;
+            // Dynamically register custom provider in PROVIDER_INFO
+            PROVIDER_INFO[name] = {
+                label: p.label,
+                apiBase: p.api_base || '',
+                prefix: name + '/',
+            };
+        } else {
+            if (nameEl) nameEl.textContent = t(name === 'custom-1' ? 'auth.custom1' : 'auth.custom2');
+            delete PROVIDER_INFO[name];
+        }
+    });
+
+    ['openai', 'anthropic', 'google-antigravity', 'groq', 'deepseek', 'mistral', 'xai'].forEach(name => {
         const badge = document.getElementById('badge-' + name);
         const details = document.getElementById('details-' + name);
         const actions = document.getElementById('actions-' + name);
+        if (!badge || !details || !actions) return;
         const p = providerMap[name];
 
         if (p) {
@@ -2063,12 +2381,43 @@ function renderAuthStatus(providersList, pendingDevice) {
             badge.textContent = t('auth.notLoggedIn');
             details.innerHTML = '';
             if (name === 'openai') {
-                actions.innerHTML = `<button class="btn btn-sm btn-primary" onclick="loginProvider('openai')">${t('auth.loginDevice')}</button>`;
+                actions.innerHTML = `<button class="btn btn-sm btn-primary" onclick="loginProvider('openai')">${t('auth.loginDevice')}</button> <button class="btn btn-sm" onclick="showTokenInput('openai')">${t('auth.loginToken')}</button>`;
             } else if (name === 'anthropic') {
                 actions.innerHTML = `<button class="btn btn-sm btn-primary" onclick="showTokenInput('anthropic')">${t('auth.loginToken')}</button>`;
-            } else {
+            } else if (name === 'google-antigravity') {
                 actions.innerHTML = `<button class="btn btn-sm btn-primary" onclick="loginProvider('google-antigravity')">${t('auth.loginOAuth')}</button>`;
+            } else {
+                actions.innerHTML = `<button class="btn btn-sm btn-primary" onclick="showTokenInput('${name}')">${t('auth.loginToken')}</button>`;
             }
+        }
+    });
+
+    // Render custom provider cards
+    ['custom-1', 'custom-2'].forEach(name => {
+        const badge = document.getElementById('badge-' + name);
+        const details = document.getElementById('details-' + name);
+        const actions = document.getElementById('actions-' + name);
+        if (!badge || !details || !actions) return;
+        const p = providerMap[name];
+
+        if (p) {
+            const badgeClass = p.status === 'active' ? 'badge-active' :
+                p.status === 'expired' ? 'badge-expired' : 'badge-pending';
+            const badgeText = p.status === 'active' ? t('auth.active') :
+                p.status === 'expired' ? t('auth.expired') : t('auth.needsRefresh');
+            badge.className = 'provider-badge ' + badgeClass;
+            badge.textContent = badgeText;
+
+            let dh = '';
+            if (p.api_base) dh += `<div class="provider-detail"><strong>${t('auth.customApiBase')}:</strong> ${p.api_base}</div>`;
+            if (p.auth_method) dh += `<div class="provider-detail"><strong>${t('auth.method')}:</strong> ${p.auth_method}</div>`;
+            details.innerHTML = dh;
+            actions.innerHTML = `<button class="btn btn-sm btn-danger" onclick="logoutProvider('${name}')">${t('auth.logout')}</button>`;
+        } else {
+            badge.className = 'provider-badge badge-none';
+            badge.textContent = t('auth.notLoggedIn');
+            details.innerHTML = '';
+            actions.innerHTML = `<button class="btn btn-sm btn-primary" onclick="showCustomProviderInput('${name}')">${t('auth.configure')}</button>`;
         }
     });
 
@@ -2183,6 +2532,43 @@ async function submitToken(provider) {
         });
         if (!res.ok) throw new Error(await res.text());
         showStatus(t('status.tokenSaved', { name: provider }), 'success');
+        loadAuthStatus();
+    } catch (e) {
+        showStatus(t('status.loginFailed') + ': ' + e.message, 'error');
+    }
+}
+
+function showCustomProviderInput(provider) {
+    const actions = document.getElementById('actions-' + provider);
+    const details = document.getElementById('details-' + provider);
+    if (!actions || !details) return;
+
+    details.innerHTML = `
+    <div class="token-input-group" style="display:flex;flex-direction:column;gap:8px;">
+      <input type="text" id="customLabel-${provider}" placeholder="${t('auth.customLabelPlaceholder')}" style="width:100%;" />
+      <input type="text" id="customApiBase-${provider}" placeholder="${t('auth.customApiBasePlaceholder')}" style="width:100%;" />
+      <input type="password" id="customToken-${provider}" placeholder="${t('auth.pasteKey')}" style="width:100%;" />
+    </div>`;
+    actions.innerHTML = `
+      <button class="btn btn-sm btn-primary" onclick="submitCustomProvider('${provider}')">${t('save')}</button>
+      <button class="btn btn-sm" onclick="loadAuthStatus()">${t('cancel')}</button>`;
+    document.getElementById('customLabel-' + provider).focus();
+}
+
+async function submitCustomProvider(provider) {
+    const label = document.getElementById('customLabel-' + provider).value.trim();
+    const apiBase = document.getElementById('customApiBase-' + provider).value.trim();
+    const token = document.getElementById('customToken-' + provider).value.trim();
+    if (!token) { showStatus(t('status.tokenEmpty'), 'error'); return; }
+    if (!label) { showStatus('Provider name is required', 'error'); return; }
+    try {
+        const res = await fetch('/api/auth/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ provider, token, api_base: apiBase, label }),
+        });
+        if (!res.ok) throw new Error(await res.text());
+        showStatus(t('status.tokenSaved', { name: label }), 'success');
         loadAuthStatus();
     } catch (e) {
         showStatus(t('status.loginFailed') + ': ' + e.message, 'error');
@@ -2316,7 +2702,7 @@ async function reloadConfig() {
     try {
         const res = await fetch('/api/gateway/reload', { method: 'POST' });
         if (!res.ok) throw new Error(await res.text());
-        showStatus('Config reload triggered', 'success');
+        showStatus(t('status.reloadTriggered'), 'success');
     } catch (e) {
         showStatus('Reload failed: ' + e.message, 'error');
     }
@@ -2338,7 +2724,6 @@ let logHasContent = false;
 let logEntries = [];
 let debugEnabled = false;
 let logCurrentComponent = 'all';
-let logComponentsLoaded = false;
 
 // Log polling via file-based endpoints (gateway runs in-process)
 async function pollLogTail() {
@@ -2370,6 +2755,7 @@ async function pollLogTail() {
             const frag = document.createDocumentFragment();
             newLogs.forEach(entry => {
                 logEntries.push(entry);
+                if (logEntries.length > 5000) logEntries.shift();
                 const tr = createLogRow(entry);
                 if (shouldHideRow(entry, filterLevel, filterText)) {
                     tr.classList.add('log-row-hidden');
@@ -2480,13 +2866,13 @@ function clearLogDisplay() {
 }
 
 async function deleteAllLogs() {
-    if (!confirm('Delete all log files? This cannot be undone.')) return;
+    if (!confirm(t('logs.deleteAllConfirm'))) return;
     try {
         const res = await fetch('/api/logs', { method: 'DELETE' });
         if (!res.ok) throw new Error(await res.text());
         clearLogDisplay();
         loadLogComponents();
-        showStatus('All logs deleted', 'success');
+        showStatus(t('logs.allDeleted'), 'success');
     } catch (e) {
         showStatus('Failed to delete logs: ' + e.message, 'error');
     }
@@ -2554,7 +2940,6 @@ async function loadLogComponents() {
         select.value = 'all';
         logCurrentComponent = 'all';
     }
-    logComponentsLoaded = true;
 }
 
 async function switchLogComponent() {
@@ -2637,6 +3022,10 @@ function esc(s) {
     const div = document.createElement('div');
     div.textContent = s;
     return div.innerHTML;
+}
+
+function escAttr(s) {
+    return String(s).replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, '\\"');
 }
 
 function maskKey(key) {
@@ -2733,7 +3122,13 @@ function chatHandleMessage(msg) {
             const msgId = msg.payload?.message_id || '';
             const role = msg.payload?.role || 'bot';
             const el = chatAddMessage(content, role);
-            if (msgId) chatBotMessages[msgId] = el;
+            if (msgId) {
+                chatBotMessages[msgId] = el;
+                const keys = Object.keys(chatBotMessages);
+                if (keys.length > 200) {
+                    keys.slice(0, keys.length - 100).forEach(k => delete chatBotMessages[k]);
+                }
+            }
             break;
         }
         case 'message.update': {
@@ -2864,7 +3259,7 @@ function renderArrayField(key, label, items, opts = {}) {
         h += '<button class="btn btn-sm btn-danger" onclick="removeArrayRow(this)">&times;</button>';
         h += '</div>';
     });
-    h += `<div class="array-add" onclick="addArrayRow(this.parentElement)">+ Add</div>`;
+    h += `<div class="array-add" onclick="addArrayRow(this.parentElement)">${t('addItem')}</div>`;
     h += '</div></div>';
     return h;
 }
@@ -3114,29 +3509,68 @@ function renderAgents() {
     if (!configData) return;
 
     const agents = (configData.agents && configData.agents.list) || [];
+    const d = (configData.agents && configData.agents.defaults) || {};
 
     let html = panelHeader(t('agents.title'), 'panelAgents');
     html += `<div class="panel-desc">${t('agents.desc')}</div>`;
 
-    // Agent list
-    html += `<div class="form-section-title">${t('agents.agentList')}</div>`;
+    // ── Defaults section ──
+    html += `<div class="form-section-title">${t('agents.defaults')}</div>`;
+    html += `<div style="color:var(--text-muted);font-size:12px;margin-bottom:12px;">${t('agents.defaultsDesc')}</div>`;
+    html += '<div class="channel-form" id="agentDefaultsForm">';
+    html += renderModelSelect('model_name', t('agents.modelName'), d.model_name || '', { allowEmpty: true, emptyLabel: '\u2014', hint: t('agents.modelNameHint') });
+    html += renderFormField('workspace', t('field.workspace'), 'text', d.workspace || '', { placeholder: '~/.ok/workspace' });
+    html += renderToggleField('restrict_to_workspace', t('agents.restrictWorkspace'), d.restrict_to_workspace);
+    html += renderToggleField('allow_read_outside_workspace', t('agents.allowReadOutside'), d.allow_read_outside_workspace);
+    html += renderFormField('max_tokens', t('agents.maxTokens'), 'number', d.max_tokens || 32768, { min: 1 });
+    html += renderFormField('temperature', t('agentDefaults.temperature'), 'number', d.temperature !== undefined ? d.temperature : '', { min: 0, max: 2, step: 0.1 });
+    html += renderFormField('max_tool_iterations', t('agents.maxToolIter'), 'number', d.max_tool_iterations || 50, { min: 1 });
+    html += renderFormField('summarize_message_threshold', t('agents.summarizeThreshold'), 'number', d.summarize_message_threshold || 20, { min: 1, hint: t('agents.summarizeThresholdHint') });
+    html += renderFormField('summarize_token_percent', t('agents.summarizeTokenPct'), 'number', d.summarize_token_percent || 75, { min: 1, max: 100 });
+    html += renderFormField('max_media_size', t('agents.maxMediaSize'), 'number', d.max_media_size || 0, { hint: t('agents.maxMediaSizeHint') });
+    html += `<div style="margin-top:16px;"><button class="btn btn-primary" onclick="saveAgentDefaults()">${t('agents.saveDefaults')}</button></div>`;
+    html += '</div>';
+
+    // ── Agent list section ──
+    html += `<div class="form-section-title" style="margin-top:28px;">${t('agents.agentList')}</div>`;
     html += `<div style="margin-bottom:14px;"><button class="btn btn-sm btn-primary" onclick="showAddAgentModal()">${t('agents.addAgent')}</button></div>`;
     if (agents.length === 0) {
         html += `<div style="color:var(--text-muted);font-size:13px;margin-bottom:16px;">${t('agents.noAgents')}</div>`;
     } else {
         html += '<div class="model-grid">';
         agents.forEach((a, i) => {
+            const modelObj = a.model || {};
+            const modelPrimary = typeof modelObj === 'string' ? modelObj : (modelObj.primary || '');
+            const modelFallbacks = typeof modelObj === 'string' ? [] : (modelObj.fallbacks || []);
+            // Resolve display name from model_list
+            const modelDisplay = resolveModelDisplay(modelPrimary);
+            const defaultModelDisplay = d.model_name ? resolveModelDisplay(d.model_name) : '';
+
             html += `<div class="model-card">`;
             html += `<div class="model-card-head"><div class="model-name">${esc(a.name || a.id)}</div>`;
-            if (a.default) html += '<span class="badge-primary">Default</span>';
+            if (a.default) html += `<span class="badge-primary">${t('agents.defaultAgent')}</span>`;
             html += '</div>';
-            html += `<div class="model-detail"><strong>ID:</strong> ${esc(a.id)}</div>`;
-            if (a.workspace) html += `<div class="model-detail"><strong>Workspace:</strong> ${esc(a.workspace)}</div>`;
-            if (a.model) {
-                const modelStr = typeof a.model === 'string' ? a.model : (a.model.primary || '');
-                html += `<div class="model-detail"><strong>Model:</strong> ${esc(modelStr)}</div>`;
+            html += `<div class="model-detail" style="color:var(--text-muted);font-size:11px;">${esc(a.id)}</div>`;
+
+            // Model info
+            if (modelPrimary) {
+                html += `<div class="model-detail"><strong>${t('agents.sectionModel')}:</strong> ${esc(modelDisplay)}`;
+                html += ` <span style="font-size:10px;color:var(--primary);opacity:0.8;">${t('agents.overridden')}</span>`;
+                html += `</div>`;
+            } else if (defaultModelDisplay) {
+                html += `<div class="model-detail" style="opacity:0.6;"><strong>${t('agents.sectionModel')}:</strong> ${esc(defaultModelDisplay)}`;
+                html += ` <span style="font-size:10px;">${t('agents.inheritedFrom')}</span>`;
+                html += `</div>`;
             }
-            if (a.skills && a.skills.length) html += `<div class="model-detail"><strong>Skills:</strong> ${a.skills.map(s => esc(s)).join(', ')}</div>`;
+            if (modelFallbacks.length > 0) {
+                html += `<div class="model-detail"><strong>${t('agents.modelFallbacks')}:</strong> ${modelFallbacks.map(f => esc(resolveModelDisplay(f))).join(', ')}</div>`;
+            }
+            if (a.skills && a.skills.length) {
+                html += `<div class="model-detail"><strong>Skills:</strong> ${a.skills.map(s => esc(s)).join(', ')}</div>`;
+            }
+            if (a.subagents && a.subagents.allow_agents && a.subagents.allow_agents.length) {
+                html += `<div class="model-detail"><strong>${t('agents.subagents')}:</strong> ${a.subagents.allow_agents.map(s => esc(s)).join(', ')}</div>`;
+            }
             html += '<div class="model-actions">';
             html += `<button class="btn btn-sm" onclick="showEditAgentModal(${i})">${t('edit')}</button>`;
             html += `<button class="btn btn-sm btn-danger" onclick="deleteAgent(${i})">${t('delete')}</button>`;
@@ -3146,6 +3580,15 @@ function renderAgents() {
     }
 
     panel.innerHTML = html;
+}
+
+// Helper: resolve model_name to display string
+function resolveModelDisplay(modelName) {
+    if (!modelName) return '';
+    const models = (configData && configData.model_list) || [];
+    const m = models.find(m => m.model_name === modelName);
+    if (m && m.model) return modelName + ' (' + m.model + ')';
+    return modelName;
 }
 
 function saveAgentDefaults() {
@@ -3160,12 +3603,18 @@ function saveAgentDefaults() {
     d.workspace = fields.workspace || d.workspace;
     d.restrict_to_workspace = fields.restrict_to_workspace;
     d.allow_read_outside_workspace = fields.allow_read_outside_workspace;
-    if (fields.model_name) d.model_name = fields.model_name;
+    d.model_name = fields.model_name || '';
     if (fields.max_tokens) d.max_tokens = parseInt(fields.max_tokens) || 32768;
     if (fields.max_tool_iterations) d.max_tool_iterations = parseInt(fields.max_tool_iterations) || 50;
     if (fields.summarize_message_threshold) d.summarize_message_threshold = parseInt(fields.summarize_message_threshold) || 20;
     if (fields.summarize_token_percent) d.summarize_token_percent = parseInt(fields.summarize_token_percent) || 75;
     d.max_media_size = parseInt(fields.max_media_size) || 0;
+    if (fields.temperature !== undefined && fields.temperature !== '') {
+        d.temperature = parseFloat(fields.temperature);
+        if (isNaN(d.temperature)) delete d.temperature;
+    } else {
+        delete d.temperature;
+    }
 
     saveConfig().then(() => showStatus(t('agents.defaultsSaved'), 'success'));
 }
@@ -3199,33 +3648,94 @@ function closeAgentModal() {
     document.getElementById('agentModal').classList.remove('active');
 }
 
-function renderAgentModalBody(data) {
+async function renderAgentModalBody(data) {
     const modelObj = data.model || {};
     const modelPrimary = typeof modelObj === 'string' ? modelObj : (modelObj.primary || '');
     const modelFallbacks = typeof modelObj === 'string' ? [] : (modelObj.fallbacks || []);
+    const agentSkills = data.skills || [];
+    const subagents = (data.subagents && data.subagents.allow_agents) || [];
+    const allAgents = (configData.agents && configData.agents.list) || [];
+
+    // Ensure skills cache is loaded
+    if (!_skillsCache) {
+        try {
+            const resp = await fetch('/api/skills');
+            if (resp.ok) _skillsCache = await resp.json();
+        } catch (e) { /* ignore */ }
+    }
+    const installedSkills = _skillsCache || [];
+
     let html = '';
-    html += renderFormField('id', 'ID', 'text', data.id, { required: true, placeholder: 'e.g. research-agent' });
+
+    // ── Identity section ──
+    html += `<div class="form-section-title" style="margin-top:0;">${t('agents.sectionIdentity')}</div>`;
+    html += renderFormField('name', t('agents.sectionIdentity'), 'text', data.name, { required: true, placeholder: t('agents.friendlyName') });
     if (editingAgentIndex >= 0) {
-        // Make ID read-only on edit by replacing the input after render
+        html += `<div class="form-group"><label class="form-label">ID</label><input class="form-input" type="text" data-field="id" value="${esc(data.id || '')}" readonly style="opacity:0.6;"></div>`;
+    } else {
+        html += renderFormField('id', 'ID', 'text', data.id, { placeholder: 'auto-generated from name', hint: 'Unique identifier (auto-generated if empty)' });
     }
-    html += renderFormField('name', 'Name', 'text', data.name, { placeholder: t('agents.friendlyName') });
     html += renderToggleField('default', t('agents.defaultAgent'), !!data.default);
-    html += renderFormField('workspace', t('field.workspace'), 'text', data.workspace, { placeholder: t('agents.inheritsDefaults') });
-    html += renderFormField('model_primary', t('agents.modelPrimary'), 'text', modelPrimary, { placeholder: 'e.g. gpt-4.1-mini', hint: t('agents.modelHint') });
-    html += renderArrayField('model_fallbacks', t('agents.modelFallbacks'), modelFallbacks, { placeholder: 'e.g. gpt-4o' });
-    html += renderArrayField('skills', 'Skills', data.skills, { placeholder: 'Skill name' });
-    document.getElementById('agentModalBody').innerHTML = html;
-    if (editingAgentIndex >= 0) {
-        const idInput = document.querySelector('#agentModalBody input[data-field="id"]');
-        if (idInput) { idInput.readOnly = true; idInput.style.opacity = '0.6'; }
+
+    // ── Model section ──
+    html += `<div class="form-section-title">${t('agents.sectionModel')}</div>`;
+    html += renderModelSelect('model_primary', t('agents.modelPrimary'), modelPrimary, { allowEmpty: true, emptyLabel: t('agents.inheritsDefaults') });
+    html += renderModelSelect('model_fallback_1', t('agents.modelFallbacks'), modelFallbacks[0] || '', { allowEmpty: true, emptyLabel: '\u2014' });
+
+    // ── Skills section ──
+    if (installedSkills.length > 0) {
+        html += `<div class="form-section-title">Skills</div>`;
+        html += `<div class="form-group">`;
+        html += `<div style="display:flex;flex-wrap:wrap;gap:8px 16px;">`;
+        installedSkills.forEach(s => {
+            const checked = agentSkills.includes(s.name) ? ' checked' : '';
+            const desc = s.description ? ` title="${esc(s.description)}"` : '';
+            const sourceTag = s.source === 'builtin' ? ' <span style="font-size:10px;opacity:0.5;">builtin</span>' : '';
+            html += `<label style="display:flex;align-items:center;gap:5px;font-size:13px;cursor:pointer;"${desc}>`;
+            html += `<input type="checkbox" class="skill-check" value="${esc(s.name)}"${checked}>`;
+            html += `${esc(s.name)}${sourceTag}`;
+            html += `</label>`;
+        });
+        html += `</div>`;
+        html += `<span class="form-hint">${t('agents.skillsHint')}</span>`;
+        html += `</div>`;
     }
+
+    // ── Advanced section (collapsible) ──
+    html += `<details style="margin-top:16px;"><summary class="form-section-title" style="cursor:pointer;user-select:none;">${t('agents.sectionAdvanced')}</summary>`;
+    html += `<div style="padding-top:8px;">`;
+    html += renderFormField('workspace', t('field.workspace'), 'text', data.workspace, { placeholder: t('agents.inheritsDefaults') });
+
+    // Subagents: checkboxes of other agents
+    const otherAgents = allAgents.filter(a => a.id !== data.id);
+    if (otherAgents.length > 0) {
+        html += `<div class="form-group"><label class="form-label">${t('agents.subagents')}</label>`;
+        html += `<div style="display:flex;flex-wrap:wrap;gap:8px;">`;
+        otherAgents.forEach(a => {
+            const checked = subagents.includes(a.id) ? ' checked' : '';
+            html += `<label style="display:flex;align-items:center;gap:4px;font-size:13px;cursor:pointer;">`;
+            html += `<input type="checkbox" class="subagent-check" value="${esc(a.id)}"${checked}> ${esc(a.name || a.id)}`;
+            html += `</label>`;
+        });
+        html += `</div>`;
+        html += `<span class="form-hint">${t('agents.subagentsHint')}</span></div>`;
+    }
+    html += `</div></details>`;
+
+    document.getElementById('agentModalBody').innerHTML = html;
 }
 
 function saveAgentFromModal() {
     const body = document.getElementById('agentModalBody');
     const fields = collectFormFields(body);
 
-    if (!fields.id) {
+    // Auto-generate ID from name if empty
+    let agentId = (fields.id || '').trim();
+    const agentName = (fields.name || '').trim();
+    if (!agentId && agentName) {
+        agentId = agentName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+    }
+    if (!agentId) {
         showStatus(t('agents.idRequired'), 'error');
         return;
     }
@@ -3234,13 +3744,15 @@ function saveAgentFromModal() {
     if (!configData.agents.list) configData.agents.list = [];
 
     const agent = editingAgentIndex >= 0 ? { ...configData.agents.list[editingAgentIndex] } : {};
-    agent.id = fields.id;
-    if (fields.name) agent.name = fields.name; else delete agent.name;
+    agent.id = agentId;
+    if (agentName) agent.name = agentName; else delete agent.name;
     if (fields.default) agent.default = true; else delete agent.default;
     if (fields.workspace) agent.workspace = fields.workspace; else delete agent.workspace;
-    // Model: save as object {primary, fallbacks} if fallbacks exist, otherwise as string
+
+    // Model
     const modelPrimary = fields.model_primary || '';
-    const modelFallbacks = fields.model_fallbacks || [];
+    const modelFallback = fields.model_fallback_1 || '';
+    const modelFallbacks = modelFallback ? [modelFallback] : [];
     if (modelPrimary) {
         if (modelFallbacks.length > 0) {
             agent.model = { primary: modelPrimary, fallbacks: modelFallbacks };
@@ -3250,137 +3762,36 @@ function saveAgentFromModal() {
     } else {
         delete agent.model;
     }
-    if (fields.skills && fields.skills.length) agent.skills = fields.skills; else delete agent.skills;
+
+    // Skills (from checkboxes)
+    const skillChecks = body.querySelectorAll('.skill-check:checked');
+    const selectedSkills = Array.from(skillChecks).map(cb => cb.value);
+    if (selectedSkills.length > 0) agent.skills = selectedSkills; else delete agent.skills;
+
+    // Subagents
+    const subagentChecks = body.querySelectorAll('.subagent-check:checked');
+    const allowAgents = Array.from(subagentChecks).map(cb => cb.value);
+    if (allowAgents.length > 0) {
+        agent.subagents = { allow_agents: allowAgents };
+    } else {
+        delete agent.subagents;
+    }
 
     if (editingAgentIndex >= 0) {
         configData.agents.list[editingAgentIndex] = agent;
     } else {
-        // Check for duplicate ID
-        if (configData.agents.list.some(a => a.id === agent.id)) {
-            showStatus(t('agents.duplicateId', { id: agent.id }), 'error');
+        if (configData.agents.list.some(a => a.id === agentId)) {
+            showStatus(t('agents.duplicateId', { id: agentId }), 'error');
             return;
         }
         configData.agents.list.push(agent);
     }
 
     closeAgentModal();
-    saveConfig().then(renderAgents);
-}
-
-// ── Bindings Panel ──────────────────────────────────
-
-function renderBindings() {
-    const panel = document.getElementById('panelBindings');
-    if (!configData) return;
-
-    const bindings = configData.bindings || [];
-
-    let html = panelHeader(t('bindings.title'), 'panelBindings');
-    html += `<div class="panel-desc">${t('bindings.desc')}</div>`;
-    html += `<div style="margin-bottom:14px;"><button class="btn btn-sm btn-primary" onclick="showAddBindingModal()">${t('bindings.addBinding')}</button></div>`;
-
-    if (bindings.length === 0) {
-        html += `<div style="color:var(--text-muted);font-size:13px;">${t('bindings.noBindings')}</div>`;
-    } else {
-        html += '<div class="model-grid">';
-        bindings.forEach((b, i) => {
-            html += `<div class="model-card">`;
-            html += `<div class="model-card-head"><div class="model-name">${esc(b.agent_id)}</div></div>`;
-            html += `<div class="model-detail"><strong>${t('bindings.channel')}:</strong> ${esc(b.match.channel)}</div>`;
-            if (b.match.account_id) html += `<div class="model-detail"><strong>${t('bindings.accountId')}:</strong> ${esc(b.match.account_id)}</div>`;
-            if (b.match.peer) html += `<div class="model-detail"><strong>Peer:</strong> ${esc(b.match.peer.kind)}:${esc(b.match.peer.id)}</div>`;
-            if (b.match.guild_id) html += `<div class="model-detail"><strong>Guild:</strong> ${esc(b.match.guild_id)}</div>`;
-            if (b.match.team_id) html += `<div class="model-detail"><strong>Team:</strong> ${esc(b.match.team_id)}</div>`;
-            html += '<div class="model-actions">';
-            html += `<button class="btn btn-sm" onclick="showEditBindingModal(${i})">${t('edit')}</button>`;
-            html += `<button class="btn btn-sm btn-danger" onclick="deleteBinding(${i})">${t('delete')}</button>`;
-            html += '</div></div>';
-        });
-        html += '</div>';
-    }
-
-    panel.innerHTML = html;
-}
-
-function deleteBinding(idx) {
-    if (!confirm(t('bindings.deleteConfirm'))) return;
-    configData.bindings.splice(idx, 1);
-    saveConfig().then(renderBindings);
-}
-
-// ── Binding Modal ───────────────────────────────────
-let editingBindingIndex = -1;
-const bindingChannelOptions = ['telegram', 'discord', 'slack', 'whatsapp'];
-const bindingPeerKindOptions = [{ value: '', label: '(none)' }, { value: 'direct', label: 'direct' }, { value: 'group', label: 'group' }];
-
-function getAgentIdOptions() {
-    const opts = [];
-    const agents = (configData.agents && configData.agents.list) || [];
-    agents.forEach(a => opts.push(a.id));
-    if (opts.length === 0) opts.push('default');
-    return opts;
-}
-
-function showAddBindingModal() {
-    editingBindingIndex = -1;
-    document.getElementById('bindingModalTitle').textContent = t('bindings.addBindingTitle');
-    renderBindingModalBody({});
-    document.getElementById('bindingModal').classList.add('active');
-}
-
-function showEditBindingModal(idx) {
-    editingBindingIndex = idx;
-    const b = configData.bindings[idx];
-    document.getElementById('bindingModalTitle').textContent = t('bindings.editBinding');
-    renderBindingModalBody(b);
-    document.getElementById('bindingModal').classList.add('active');
-}
-
-function closeBindingModal() {
-    document.getElementById('bindingModal').classList.remove('active');
-}
-
-function renderBindingModalBody(data) {
-    const match = data.match || {};
-    const agentIds = getAgentIdOptions();
-    let html = '';
-    html += renderSelectField('agent_id', t('bindings.agentId'), agentIds, data.agent_id || agentIds[0]);
-    html += renderSelectField('channel', t('bindings.channel'), bindingChannelOptions, match.channel || 'telegram');
-    html += renderFormField('account_id', t('bindings.accountId'), 'text', match.account_id, { placeholder: 'Optional' });
-    html += renderSelectField('peer_kind', t('bindings.peerKind'), bindingPeerKindOptions, (match.peer && match.peer.kind) || '');
-    html += renderFormField('peer_id', t('bindings.peerId'), 'text', (match.peer && match.peer.id) || '', { placeholder: 'Optional — user or group ID' });
-    html += renderFormField('guild_id', t('bindings.guildId'), 'text', match.guild_id, { placeholder: 'Optional — Discord server ID' });
-    html += renderFormField('team_id', t('bindings.teamId'), 'text', match.team_id, { placeholder: 'Optional — Slack workspace ID' });
-    document.getElementById('bindingModalBody').innerHTML = html;
-}
-
-function saveBindingFromModal() {
-    const body = document.getElementById('bindingModalBody');
-    const fields = collectFormFields(body);
-
-    if (!fields.agent_id || !fields.channel) {
-        showStatus(t('bindings.required'), 'error');
-        return;
-    }
-
-    if (!configData.bindings) configData.bindings = [];
-
-    const binding = { agent_id: fields.agent_id, match: { channel: fields.channel } };
-    if (fields.account_id) binding.match.account_id = fields.account_id;
-    if (fields.peer_kind && fields.peer_id) {
-        binding.match.peer = { kind: fields.peer_kind, id: fields.peer_id };
-    }
-    if (fields.guild_id) binding.match.guild_id = fields.guild_id;
-    if (fields.team_id) binding.match.team_id = fields.team_id;
-
-    if (editingBindingIndex >= 0) {
-        configData.bindings[editingBindingIndex] = binding;
-    } else {
-        configData.bindings.push(binding);
-    }
-
-    closeBindingModal();
-    saveConfig().then(renderBindings);
+    saveConfig().then(() => {
+        renderAgents();
+        showStatus(t('agents.agentSaved'), 'success');
+    });
 }
 
 // ── Tool Settings Panel ─────────────────────────────
@@ -3496,21 +3907,59 @@ function saveToolSettings() {
 
 // ── RAG Panel ───────────────────────────────────────
 
+function detectRAGProvider(baseUrl) {
+    if (!baseUrl) return '';
+    for (const [name, info] of Object.entries(PROVIDER_INFO)) {
+        if (info.apiBase && baseUrl.startsWith(info.apiBase.replace(/\/v1$/, ''))) return name;
+    }
+    return '';
+}
+
+function onRAGProviderChange(selectEl) {
+    const selected = selectEl.value;
+    const info = PROVIDER_INFO[selected];
+    const baseUrlInput = document.querySelector('#ragForm input[data-field="base_url"]');
+    if (selected && info && baseUrlInput) {
+        baseUrlInput.value = info.apiBase;
+    }
+}
+
 function renderRAG() {
     const panel = document.getElementById('panelRAG');
     if (!configData) return;
 
     const rag = configData.rag || {};
+    const connectedProviders = getAllProviders().filter(p => p.authenticated);
+    const detectedProvider = detectRAGProvider(rag.base_url);
 
     let html = panelHeader(t('rag.title'), 'panelRAG');
     html += `<div class="panel-desc">${t('rag.desc')}</div>`;
     html += '<div class="channel-form" id="ragForm">';
     html += renderToggleField('enabled', t('enabled'), rag.enabled);
-    const primaryBase = (configData.model_list && configData.model_list.length > 0) ? configData.model_list[0].api_base : '';
-    const baseHint = primaryBase ? 'Leave empty to use: ' + primaryBase : 'OpenAI-compatible /v1/embeddings endpoint';
-    html += renderFormField('base_url', t('rag.embeddingsUrl'), 'text', rag.base_url, { placeholder: primaryBase || 'http://localhost:11434/v1', hint: baseHint });
-    html += renderFormField('api_key', t('rag.apiKey'), 'password', rag.api_key, { placeholder: 'API key for embeddings service' });
-    html += renderFormField('model', t('rag.embeddingModel'), 'text', rag.model || 'text-embedding-3-small', { placeholder: 'text-embedding-3-small' });
+
+    // Provider select — only connected providers
+    if (connectedProviders.length > 0) {
+        html += '<div class="form-group">';
+        html += `<label class="form-label">${t('field.provider')}</label>`;
+        html += '<select class="form-input" data-field="rag_provider" onchange="onRAGProviderChange(this)">';
+        connectedProviders.forEach((p, i) => {
+            const sel = detectedProvider === p.name || (!detectedProvider && i === 0) ? ' selected' : '';
+            html += `<option value="${esc(p.name)}"${sel}>${esc(p.label)}</option>`;
+        });
+        html += '</select></div>';
+    }
+
+    // Hidden field to hold the resolved base_url
+    const resolvedBase = detectedProvider ? (PROVIDER_INFO[detectedProvider] || {}).apiBase || '' :
+        (connectedProviders.length > 0 ? (PROVIDER_INFO[connectedProviders[0].name] || {}).apiBase || '' : rag.base_url || '');
+    html += `<input type="hidden" data-field="base_url" value="${esc(resolvedBase)}">`;
+
+    // Find model_name that matches the RAG model ID
+    const ragModelId = rag.model || 'text-embedding-3-small';
+    const ragModelList = (configData && configData.model_list) || [];
+    const ragMatch = ragModelList.find(m => m.model && (m.model === ragModelId || m.model.endsWith('/' + ragModelId)));
+    const ragModelName = ragMatch ? ragMatch.model_name : ragModelId;
+    html += renderModelSelect('model', t('rag.embeddingModel'), ragModelName, { allowEmpty: false });
     html += renderFormField('top_k', t('rag.topK'), 'number', rag.top_k || 5, { min: 1, max: 50 });
     html += renderFormField('min_similarity', t('rag.minSimilarity'), 'number', rag.min_similarity || 0.5, { min: 0, max: 1, step: '0.05', hint: t('rag.minSimilarityHint') });
     html += `<div style="margin-top:20px;"><button class="btn btn-primary" onclick="saveRAG()">${t('save')}</button></div>`;
@@ -3523,11 +3972,32 @@ function saveRAG() {
     if (!configData) return;
     const form = document.getElementById('ragForm');
     const f = collectFormFields(form);
+
+    // Resolve model ID and base_url from selected model_name
+    let modelId = f.model || 'text-embedding-3-small';
+    const models = (configData && configData.model_list) || [];
+    const selectedModel = models.find(m => m.model_name === modelId);
+    let baseUrl = f.base_url || '';
+    if (selectedModel) {
+        if (selectedModel.model) {
+            modelId = selectedModel.model.replace(/^[^/]+\//, ''); // strip protocol prefix
+        }
+        if (selectedModel.api_base) {
+            baseUrl = selectedModel.api_base;
+        }
+    }
+
+    // Fallback: resolve base_url from provider select
+    const providerSelect = form.querySelector('select[data-field="rag_provider"]');
+    if (!baseUrl && providerSelect && providerSelect.value) {
+        const info = PROVIDER_INFO[providerSelect.value];
+        if (info) baseUrl = info.apiBase;
+    }
+
     configData.rag = {
         enabled: !!f.enabled,
-        base_url: f.base_url || '',
-        api_key: f.api_key || '',
-        model: f.model || 'text-embedding-3-small',
+        base_url: baseUrl,
+        model: modelId,
         top_k: parseInt(f.top_k) || 5,
         min_similarity: parseFloat(f.min_similarity) || 0.5,
     };
@@ -3545,6 +4015,7 @@ function renderGateway() {
     html += '<div class="channel-form" id="gatewayForm">';
     html += renderFormField('host', t('gateway.host'), 'text', gw.host || '127.0.0.1', { placeholder: '127.0.0.1' });
     html += renderFormField('port', t('gateway.port'), 'number', gw.port || 18790, { min: 1, max: 65535 });
+    html += renderFormField('proxy', t('gateway.proxy'), 'text', configData.proxy || '', { placeholder: 'http://proxy:port', hint: t('gateway.proxyHint') });
     html += `<div style="margin-top:20px;"><button class="btn btn-primary" onclick="saveGateway()">${t('save')}</button></div>`;
     html += '</div>';
     panel.innerHTML = html;
@@ -3554,6 +4025,8 @@ function saveGateway() {
     if (!configData) return;
     const f = collectFormFields(document.getElementById('gatewayForm'));
     configData.gateway = { host: f.host || '127.0.0.1', port: parseInt(f.port) || 18790 };
+    configData.proxy = f.proxy || '';
+    if (!configData.proxy) delete configData.proxy;
     saveConfig().then(() => showStatus(t('gateway.saved'), 'success'));
 }
 
@@ -3654,11 +4127,12 @@ function renderRouting() {
     const panel = document.getElementById('panelRouting');
     if (!configData) return;
     const routing = (configData.agents && configData.agents.defaults && configData.agents.defaults.routing) || {};
+
     let html = panelHeader(t('routing.title'), 'panelRouting');
     html += `<div class="panel-desc">${t('routing.desc')}</div>`;
     html += '<div class="channel-form" id="routingForm">';
     html += renderToggleField('enabled', t('enabled'), routing.enabled);
-    html += renderFormField('light_model', t('routing.lightModel'), 'text', routing.light_model || '', { placeholder: 'e.g. gpt-4.1-mini' });
+    html += renderModelSelect('light_model', t('routing.lightModel'), routing.light_model || '', { allowEmpty: true, emptyLabel: '—' });
     html += renderFormField('threshold', t('routing.threshold'), 'number', routing.threshold !== undefined ? routing.threshold : 0.3, { min: 0, max: 1, step: 0.01, hint: t('routing.thresholdHint') });
     html += `<div style="margin-top:20px;"><button class="btn btn-primary" onclick="saveRouting()">${t('save')}</button></div>`;
     html += '</div>';
@@ -3764,28 +4238,7 @@ function saveSummarization() {
     saveConfig().then(() => showStatus(t('summarization.saved'), 'success'));
 }
 
-function renderAgentDefaults() {
-    const panel = document.getElementById('panelAgentDefaults');
-    if (!configData) return;
-    const d = (configData.agents && configData.agents.defaults) || {};
-    let html = panelHeader(t('agents.defaults'), 'panelAgentDefaults');
-    html += `<div class="panel-desc">${t('agents.desc')}</div>`;
-    html += '<div class="channel-form" id="agentDefaultsForm">';
-    html += renderFormField('provider', t('providers.provider'), 'text', d.provider || '', { placeholder: 'e.g. anthropic, openai, ollama' });
-    html += renderFormField('workspace', t('field.workspace'), 'text', d.workspace || '', { placeholder: '~/.ok/workspace' });
-    html += renderToggleField('restrict_to_workspace', t('agents.restrictWorkspace'), d.restrict_to_workspace);
-    html += renderToggleField('allow_read_outside_workspace', t('agents.allowReadOutside'), d.allow_read_outside_workspace);
-    html += renderFormField('model_name', t('agents.modelName'), 'text', d.model_name || '', { hint: t('agents.modelNameHint') });
-    html += renderFormField('max_tokens', t('agents.maxTokens'), 'number', d.max_tokens || 32768, { min: 1 });
-    html += renderFormField('temperature', t('agentDefaults.temperature'), 'number', d.temperature !== undefined ? d.temperature : '', { min: 0, max: 2, step: 0.1 });
-    html += renderFormField('max_tool_iterations', t('agents.maxToolIter'), 'number', d.max_tool_iterations || 50, { min: 1 });
-    html += renderFormField('summarize_message_threshold', t('agents.summarizeThreshold'), 'number', d.summarize_message_threshold || 20, { min: 1, hint: t('agents.summarizeThresholdHint') });
-    html += renderFormField('summarize_token_percent', t('agents.summarizeTokenPct'), 'number', d.summarize_token_percent || 75, { min: 1, max: 100 });
-    html += renderFormField('max_media_size', t('agents.maxMediaSize'), 'number', d.max_media_size || 0, { hint: t('agents.maxMediaSizeHint') });
-    html += `<div style="margin-top:20px;"><button class="btn btn-primary" onclick="saveAgentDefaults()">${t('agents.saveDefaults')}</button></div>`;
-    html += '</div>';
-    panel.innerHTML = html;
-}
+// renderAgentDefaults merged into renderAgents()
 
 function renderWebUI() {
     const panel = document.getElementById('panelWebUI');
@@ -3924,9 +4377,9 @@ async function fetchInstalledSkills() {
             html += '</div>';
             if (s.description) html += `<div class="model-detail">${esc(s.description)}</div>`;
             html += '<div class="model-actions">';
-            html += `<button class="btn btn-sm" onclick="showSkillDetail('${esc(s.name)}')">${t('skills.show')}</button>`;
+            html += `<button class="btn btn-sm" onclick="showSkillDetail('${escAttr(s.name)}')">${t('skills.show')}</button>`;
             if (s.source !== 'builtin') {
-                html += `<button class="btn btn-sm btn-danger" onclick="removeSkill('${esc(s.name)}')">${t('skills.remove')}</button>`;
+                html += `<button class="btn btn-sm btn-danger" onclick="removeSkill('${escAttr(s.name)}')">${t('skills.remove')}</button>`;
             }
             html += '</div></div>';
         });
@@ -3947,7 +4400,7 @@ async function showSkillDetail(name) {
         document.getElementById('skillDetailBody').innerHTML = `<pre style="white-space:pre-wrap;word-break:break-word;font-size:13px;line-height:1.5;margin:0;">${esc(data.content)}</pre>`;
         document.getElementById('skillDetailModal').classList.add('active');
     } catch (e) {
-        showStatus('Failed to load skill: ' + e.message, 'error');
+        showStatus(t('skills.showFailed', { msg: e.message }), 'error');
     }
 }
 
@@ -3956,7 +4409,7 @@ function closeSkillDetailModal() {
 }
 
 async function removeSkill(name) {
-    if (!confirm('Remove skill "' + name + '"? This cannot be undone.')) return;
+    if (!confirm(t('skills.removeConfirm', { name }))) return;
     try {
         const resp = await fetch('/api/skills/remove', {
             method: 'POST',
@@ -3964,10 +4417,10 @@ async function removeSkill(name) {
             body: JSON.stringify({ name }),
         });
         if (!resp.ok) throw new Error(await resp.text());
-        showStatus('Skill "' + name + '" removed', 'success');
+        showStatus(t('skills.removed', { name }), 'success');
         fetchInstalledSkills();
     } catch (e) {
-        showStatus('Failed to remove skill: ' + e.message, 'error');
+        showStatus(t('skills.removeFailed', { msg: e.message }), 'error');
     }
 }
 
@@ -3979,7 +4432,7 @@ async function searchSkillsUI() {
     const query = input.value.trim();
     if (!query) { container.innerHTML = ''; return; }
 
-    container.innerHTML = '<div class="empty-state"><div class="empty-state-desc">Searching...</div></div>';
+    container.innerHTML = '<div class="empty-state"><div class="empty-state-desc">' + t('skills.searching') + '</div></div>';
 
     try {
         const resp = await fetch('/api/skills/search?q=' + encodeURIComponent(query) + '&limit=10');
@@ -3987,7 +4440,7 @@ async function searchSkillsUI() {
         const results = await resp.json();
 
         if (!results || results.length === 0) {
-            container.innerHTML = '<div class="empty-state"><div class="empty-state-desc">No results found.</div></div>';
+            container.innerHTML = '<div class="empty-state"><div class="empty-state-desc">' + t('skills.noResults') + '</div></div>';
             return;
         }
 
@@ -4003,9 +4456,9 @@ async function searchSkillsUI() {
             if (r.registry_name) html += `<div class="model-detail" style="font-size:11px;opacity:.6">Registry: ${esc(r.registry_name)}</div>`;
             html += '<div class="model-actions">';
             if (installed) {
-                html += '<button class="btn btn-sm" disabled>Installed</button>';
+                html += '<button class="btn btn-sm" disabled>' + t('skills.alreadyInstalled') + '</button>';
             } else {
-                html += `<button class="btn btn-sm btn-primary" onclick="installSkill('${esc(r.slug)}', '${esc(r.registry_name)}', this)">Install</button>`;
+                html += `<button class="btn btn-sm btn-primary" onclick="installSkill('${escAttr(r.slug)}', '${escAttr(r.registry_name)}', this)">${t('skills.install')}</button>`;
             }
             html += '</div></div>';
         });
@@ -4017,7 +4470,7 @@ async function searchSkillsUI() {
 }
 
 async function installSkill(slug, registry, btn) {
-    if (btn) { btn.disabled = true; btn.textContent = 'Installing...'; }
+    if (btn) { btn.disabled = true; btn.textContent = t('skills.installing'); }
     try {
         const resp = await fetch('/api/skills/install', {
             method: 'POST',
@@ -4028,20 +4481,20 @@ async function installSkill(slug, registry, btn) {
         const data = await resp.json();
 
         if (data.is_malware_blocked) {
-            showStatus('Skill blocked: flagged as malware', 'error');
+            showStatus(t('skills.blockedMalware'), 'error');
             return;
         }
         if (data.is_suspicious) {
-            showStatus('Skill installed but flagged as suspicious', 'error');
+            showStatus(t('skills.installedSuspicious'), 'error');
         } else {
-            showStatus('Skill "' + slug + '" installed (v' + (data.version || '?') + ')', 'success');
+            showStatus(t('skills.installSuccess', { slug, version: data.version || '?' }), 'success');
         }
         fetchInstalledSkills();
         // Re-run search to update install buttons
         searchSkillsUI();
     } catch (e) {
-        showStatus('Install failed: ' + e.message, 'error');
-        if (btn) { btn.disabled = false; btn.textContent = 'Install'; }
+        showStatus(t('skills.installFailed', { msg: e.message }), 'error');
+        if (btn) { btn.disabled = false; btn.textContent = t('skills.install'); }
     }
 }
 

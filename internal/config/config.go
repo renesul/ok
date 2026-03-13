@@ -51,7 +51,6 @@ func (f *FlexibleStringSlice) UnmarshalJSON(data []byte) error {
 type Config struct {
 	Debug     bool            `json:"debug" env:"OK_DEBUG"`
 	Agents    AgentsConfig    `json:"agents"`
-	Bindings  []AgentBinding  `json:"bindings,omitempty"`
 	Session   SessionConfig   `json:"session,omitempty"`
 	Channels  ChannelsConfig `json:"channels"`
 	ModelList []ModelConfig  `json:"model_list"`
@@ -62,6 +61,7 @@ type Config struct {
 	RAG        RAGConfig         `json:"rag,omitempty"`
 	MCPServers []MCPServerConfig `json:"mcp_servers,omitempty"`
 	WebUI      WebUIConfig       `json:"web_ui,omitempty"`
+	Proxy      string            `json:"proxy,omitempty" env:"OK_PROXY"`
 }
 
 // WebUIConfig configures the embedded web UI served alongside the gateway.
@@ -173,24 +173,6 @@ type SubagentsConfig struct {
 	Model       *AgentModelConfig `json:"model,omitempty"`
 }
 
-type PeerMatch struct {
-	Kind string `json:"kind"`
-	ID   string `json:"id"`
-}
-
-type BindingMatch struct {
-	Channel   string     `json:"channel"`
-	AccountID string     `json:"account_id,omitempty"`
-	Peer      *PeerMatch `json:"peer,omitempty"`
-	GuildID   string     `json:"guild_id,omitempty"`
-	TeamID    string     `json:"team_id,omitempty"`
-}
-
-type AgentBinding struct {
-	AgentID string       `json:"agent_id"`
-	Match   BindingMatch `json:"match"`
-}
-
 type SessionConfig struct {
 	DMScope       string              `json:"dm_scope,omitempty"`
 	IdentityLinks map[string][]string `json:"identity_links,omitempty"`
@@ -245,7 +227,12 @@ func (d *AgentDefaults) GetModelName() string {
 	return d.Model
 }
 
+type ChatConfig struct {
+	Enabled bool `json:"enabled" env:"OK_CHANNELS_CHAT_ENABLED"`
+}
+
 type ChannelsConfig struct {
+	Chat     ChatConfig     `json:"chat"`
 	WhatsApp WhatsAppConfig `json:"whatsapp"`
 	Telegram TelegramConfig `json:"telegram"`
 	Discord  DiscordConfig  `json:"discord"`
@@ -273,6 +260,8 @@ type WhatsAppConfig struct {
 	Enabled            bool                `json:"enabled"              env:"OK_CHANNELS_WHATSAPP_ENABLED"`
 	SessionStorePath   string              `json:"session_store_path"   env:"OK_CHANNELS_WHATSAPP_SESSION_STORE_PATH"`
 	AllowSelf          bool                `json:"allow_self"           env:"OK_CHANNELS_WHATSAPP_ALLOW_SELF"`
+	AllowDirect        bool                `json:"allow_direct"         env:"OK_CHANNELS_WHATSAPP_ALLOW_DIRECT"`
+	AllowGroups        bool                `json:"allow_groups"         env:"OK_CHANNELS_WHATSAPP_ALLOW_GROUPS"`
 	AllowFrom          FlexibleStringSlice `json:"allow_from"           env:"OK_CHANNELS_WHATSAPP_ALLOW_FROM"`
 	AllowedGroups      FlexibleStringSlice `json:"allowed_groups"       env:"OK_CHANNELS_WHATSAPP_ALLOWED_GROUPS"`
 	AllowedContacts    FlexibleStringSlice `json:"allowed_contacts"     env:"OK_CHANNELS_WHATSAPP_ALLOWED_CONTACTS"`
@@ -283,7 +272,8 @@ type TelegramConfig struct {
 	Enabled            bool                `json:"enabled"                 env:"OK_CHANNELS_TELEGRAM_ENABLED"`
 	Token              string              `json:"token"                   env:"OK_CHANNELS_TELEGRAM_TOKEN"`
 	BaseURL            string              `json:"base_url"                env:"OK_CHANNELS_TELEGRAM_BASE_URL"`
-	Proxy              string              `json:"proxy"                   env:"OK_CHANNELS_TELEGRAM_PROXY"`
+	AllowDirect        bool                `json:"allow_direct"            env:"OK_CHANNELS_TELEGRAM_ALLOW_DIRECT"`
+	AllowGroups        bool                `json:"allow_groups"            env:"OK_CHANNELS_TELEGRAM_ALLOW_GROUPS"`
 	AllowFrom          FlexibleStringSlice `json:"allow_from"              env:"OK_CHANNELS_TELEGRAM_ALLOW_FROM"`
 	GroupTrigger       GroupTriggerConfig  `json:"group_trigger,omitempty"`
 	Typing             TypingConfig        `json:"typing,omitempty"`
@@ -294,7 +284,8 @@ type TelegramConfig struct {
 type DiscordConfig struct {
 	Enabled            bool                `json:"enabled"                 env:"OK_CHANNELS_DISCORD_ENABLED"`
 	Token              string              `json:"token"                   env:"OK_CHANNELS_DISCORD_TOKEN"`
-	Proxy              string              `json:"proxy"                   env:"OK_CHANNELS_DISCORD_PROXY"`
+	AllowDirect        bool                `json:"allow_direct"            env:"OK_CHANNELS_DISCORD_ALLOW_DIRECT"`
+	AllowGroups        bool                `json:"allow_groups"            env:"OK_CHANNELS_DISCORD_ALLOW_GROUPS"`
 	AllowFrom          FlexibleStringSlice `json:"allow_from"              env:"OK_CHANNELS_DISCORD_ALLOW_FROM"`
 	MentionOnly        bool                `json:"mention_only"            env:"OK_CHANNELS_DISCORD_MENTION_ONLY"`
 	GroupTrigger       GroupTriggerConfig  `json:"group_trigger,omitempty"`
@@ -307,6 +298,8 @@ type SlackConfig struct {
 	Enabled            bool                `json:"enabled"                 env:"OK_CHANNELS_SLACK_ENABLED"`
 	BotToken           string              `json:"bot_token"               env:"OK_CHANNELS_SLACK_BOT_TOKEN"`
 	AppToken           string              `json:"app_token"               env:"OK_CHANNELS_SLACK_APP_TOKEN"`
+	AllowDirect        bool                `json:"allow_direct"            env:"OK_CHANNELS_SLACK_ALLOW_DIRECT"`
+	AllowGroups        bool                `json:"allow_groups"            env:"OK_CHANNELS_SLACK_ALLOW_GROUPS"`
 	AllowFrom          FlexibleStringSlice `json:"allow_from"              env:"OK_CHANNELS_SLACK_ALLOW_FROM"`
 	GroupTrigger       GroupTriggerConfig  `json:"group_trigger,omitempty"`
 	Typing             TypingConfig        `json:"typing,omitempty"`
@@ -337,7 +330,6 @@ type ModelConfig struct {
 	// HTTP-based providers
 	APIBase string `json:"api_base,omitempty"` // API endpoint URL
 	APIKey  string `json:"api_key"`            // API authentication key
-	Proxy   string `json:"proxy,omitempty"`    // HTTP proxy URL
 
 	// Special providers (CLI-based, OAuth, etc.)
 	AuthMethod  string `json:"auth_method,omitempty"`  // Authentication method: oauth, token
@@ -418,11 +410,8 @@ type WebToolsConfig struct {
 	DuckDuckGo DuckDuckGoConfig `                                json:"duckduckgo"`
 	Perplexity PerplexityConfig `                                json:"perplexity"`
 	SearXNG    SearXNGConfig    `                                json:"searxng"`
-	GLMSearch  GLMSearchConfig  `                                json:"glm_search"`
-	// Proxy is an optional proxy URL for web tools (http/https/socks5/socks5h).
-	// For authenticated proxies, prefer HTTP_PROXY/HTTPS_PROXY env vars instead of embedding credentials in config.
-	Proxy           string `json:"proxy,omitempty"             env:"OK_TOOLS_WEB_PROXY"`
-	FetchLimitBytes int64  `json:"fetch_limit_bytes,omitempty" env:"OK_TOOLS_WEB_FETCH_LIMIT_BYTES"`
+	GLMSearch       GLMSearchConfig `                                json:"glm_search"`
+	FetchLimitBytes int64           `json:"fetch_limit_bytes,omitempty" env:"OK_TOOLS_WEB_FETCH_LIMIT_BYTES"`
 }
 
 type CronToolsConfig struct {
@@ -508,17 +497,19 @@ func LoadConfig(path string) (*Config, error) {
 		return nil, err
 	}
 
-	// Pre-scan the JSON to check how many model_list entries the user provided.
+	// Pre-scan the JSON to check whether the user provided model_list entries.
 	// Go's JSON decoder reuses existing slice backing-array elements rather than
 	// zero-initializing them, so fields absent from the user's JSON (e.g. api_base)
 	// would silently inherit values from the DefaultConfig template at the same
 	// index position. We only reset cfg.ModelList when the user actually provides
 	// entries; when count is 0 we keep DefaultConfig's built-in list as fallback.
-	var tmp Config
+	var tmp struct {
+		ModelList json.RawMessage `json:"model_list"`
+	}
 	if err := json.Unmarshal(data, &tmp); err != nil {
 		return nil, err
 	}
-	if len(tmp.ModelList) > 0 {
+	if len(tmp.ModelList) > 2 { // "[]" is 2 bytes
 		cfg.ModelList = nil
 	}
 

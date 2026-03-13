@@ -43,6 +43,8 @@ func TestIsAllowedMessage(t *testing.T) {
 
 	t.Run("allowed_groups filters group messages", func(t *testing.T) {
 		cfg := config.WhatsAppConfig{
+			AllowDirect:     true,
+			AllowGroups:     true,
 			AllowedGroups:   []string{"120363012345"},
 			AllowedContacts: []string{"5511999999999"},
 		}
@@ -64,6 +66,7 @@ func TestIsAllowedMessage(t *testing.T) {
 
 	t.Run("allowed_contacts filters direct messages", func(t *testing.T) {
 		cfg := config.WhatsAppConfig{
+			AllowDirect:     true,
 			AllowedContacts: []string{"5511999999999"},
 		}
 		ch := &WhatsAppChannel{
@@ -85,6 +88,8 @@ func TestIsAllowedMessage(t *testing.T) {
 
 	t.Run("no groups configured rejects group messages", func(t *testing.T) {
 		cfg := config.WhatsAppConfig{
+			AllowDirect:     true,
+			AllowGroups:     true,
 			AllowedContacts: []string{"5511999999999"},
 		}
 		ch := &WhatsAppChannel{
@@ -115,8 +120,13 @@ func TestIsAllowedMessage(t *testing.T) {
 
 func TestHandleIncoming_DoesNotConsumeGenericCommandsLocally(t *testing.T) {
 	messageBus := msgbus.NewMessageBus()
+	waCfg := config.WhatsAppConfig{
+		AllowDirect:     true,
+		AllowedContacts: []string{"1001"},
+	}
 	ch := &WhatsAppChannel{
-		BaseChannel: channels.NewBaseChannel("whatsapp", config.WhatsAppConfig{}, messageBus, nil),
+		BaseChannel: channels.NewBaseChannel("whatsapp", waCfg, messageBus, nil),
+		config:      waCfg,
 		runCtx:      context.Background(),
 	}
 

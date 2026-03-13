@@ -3,6 +3,7 @@ package webui
 import (
 	"encoding/json"
 	"fmt"
+	"html"
 	"io"
 	"log"
 	"net/http"
@@ -24,6 +25,8 @@ type providerStatus struct {
 	Email      string `json:"email,omitempty"`
 	ProjectID  string `json:"project_id,omitempty"`
 	ExpiresAt  string `json:"expires_at,omitempty"`
+	Label      string `json:"label,omitempty"`
+	APIBase    string `json:"api_base,omitempty"`
 }
 
 // oauthSession stores in-flight OAuth state for browser-based flows.
@@ -79,6 +82,8 @@ func registerAuthAPI(mux *http.ServeMux, absPath string) {
 				AccountID:  cred.AccountID,
 				Email:      cred.Email,
 				ProjectID:  cred.ProjectID,
+				Label:      cred.Label,
+				APIBase:    cred.APIBase,
 			}
 			if !cred.ExpiresAt.IsZero() {
 				ps.ExpiresAt = cred.ExpiresAt.Format(time.RFC3339)
@@ -91,10 +96,12 @@ func registerAuthAPI(mux *http.ServeMux, absPath string) {
 		if activeDeviceSession != nil {
 			activeDeviceSession.mu.Lock()
 			pendingDevice = map[string]any{
-				"provider":   activeDeviceSession.Provider,
-				"status":     activeDeviceSession.Status,
-				"device_url": activeDeviceSession.Info.VerifyURL,
-				"user_code":  activeDeviceSession.Info.UserCode,
+				"provider": activeDeviceSession.Provider,
+				"status":   activeDeviceSession.Status,
+			}
+			if activeDeviceSession.Info != nil {
+				pendingDevice["device_url"] = activeDeviceSession.Info.VerifyURL
+				pendingDevice["user_code"] = activeDeviceSession.Info.UserCode
 			}
 			if activeDeviceSession.Error != "" {
 				pendingDevice["error"] = activeDeviceSession.Error
@@ -119,6 +126,8 @@ func registerAuthAPI(mux *http.ServeMux, absPath string) {
 		var req struct {
 			Provider string `json:"provider"`
 			Token    string `json:"token,omitempty"`
+			APIBase  string `json:"api_base,omitempty"`
+			Label    string `json:"label,omitempty"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 			http.Error(w, "Invalid request body", http.StatusBadRequest)
@@ -127,15 +136,25 @@ func registerAuthAPI(mux *http.ServeMux, absPath string) {
 
 		switch req.Provider {
 		case "openai":
-			handleOpenAILogin(w, absPath)
+			if req.Token != "" {
+				handleTokenLogin(w, req.Token, absPath, "openai")
+			} else {
+				handleOpenAILogin(w, absPath)
+			}
 		case "anthropic":
-			handleAnthropicLogin(w, req.Token, absPath)
+			handleTokenLogin(w, req.Token, absPath, "anthropic")
 		case "google-antigravity", "antigravity":
 			handleGoogleAntigravityLogin(w, r, absPath)
+		case "groq", "deepseek", "mistral", "xai":
+			handleTokenLogin(w, req.Token, absPath, req.Provider)
 		default:
-			http.Error(w,
-				fmt.Sprintf("Unsupported provider: %s (supported: openai, anthropic, google-antigravity)", req.Provider),
-				http.StatusBadRequest)
+			if strings.HasPrefix(req.Provider, "custom-") && req.Token != "" {
+				handleCustomProviderLogin(w, req.Token, req.APIBase, req.Label, absPath, req.Provider)
+			} else {
+				http.Error(w,
+					fmt.Sprintf("Unsupported provider: %s", req.Provider),
+					http.StatusBadRequest)
+			}
 		}
 	})
 
@@ -258,30 +277,82 @@ func handleOpenAILogin(w http.ResponseWriter, configPath string) {
 	})
 }
 
-func handleAnthropicLogin(w http.ResponseWriter, token, configPath string) {
+func handleTokenLogin(w http.ResponseWriter, token, configPath, provider string) {
 	if token == "" {
-		http.Error(w, "Token is required for Anthropic login", http.StatusBadRequest)
+		http.Error(w, fmt.Sprintf("Token is required for %s login", provider), http.StatusBadRequest)
 		return
 	}
 
 	cred := &auth.AuthCredential{
 		AccessToken: token,
-		Provider:    "anthropic",
+		Provider:    provider,
 		AuthMethod:  "token",
 	}
 
-	if err := auth.SetCredential("anthropic", cred); err != nil {
+	if err := auth.SetCredential(provider, cred); err != nil {
 		http.Error(w, fmt.Sprintf("Failed to save credentials: %v", err), http.StatusInternalServerError)
 		return
 	}
 
-	updateConfigAfterLogin(configPath, "anthropic", cred)
+	updateConfigAfterLogin(configPath, provider, cred)
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{
 		"status":  "success",
-		"message": "Anthropic token saved",
+		"message": provider + " token saved",
 	})
+}
+
+func handleCustomProviderLogin(w http.ResponseWriter, token, apiBase, label, configPath, provider string) {
+	if token == "" {
+		http.Error(w, "Token is required for custom provider login", http.StatusBadRequest)
+		return
+	}
+
+	cred := &auth.AuthCredential{
+		AccessToken: token,
+		Provider:    provider,
+		AuthMethod:  "token",
+		Label:       label,
+		APIBase:     apiBase,
+	}
+
+	if err := auth.SetCredential(provider, cred); err != nil {
+		http.Error(w, fmt.Sprintf("Failed to save credentials: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	// Add a model entry for the custom provider if api_base is specified
+	if apiBase != "" {
+		updateCustomProviderModel(configPath, provider, label, apiBase)
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{
+		"status":  "success",
+		"message": "Custom provider saved",
+	})
+}
+
+func updateCustomProviderModel(configPath, provider, label, apiBase string) {
+	cfg, err := config.LoadConfig(configPath)
+	if err != nil {
+		log.Printf("Warning: could not load config to update custom provider model: %v", err)
+		return
+	}
+
+	// Check if a model already exists for this custom provider
+	for i := range cfg.ModelList {
+		if cfg.ModelList[i].Model != "" && strings.HasPrefix(cfg.ModelList[i].Model, provider+"/") {
+			cfg.ModelList[i].AuthMethod = "token"
+			cfg.ModelList[i].APIBase = apiBase
+			if err := config.SaveConfig(configPath, cfg); err != nil {
+				log.Printf("Warning: could not update config: %v", err)
+			}
+			return
+		}
+	}
+	// Don't auto-create a model entry for custom providers — user will do that via model modal
 }
 
 func handleGoogleAntigravityLogin(w http.ResponseWriter, r *http.Request, configPath string) {
@@ -351,7 +422,7 @@ func handleOAuthCallback(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/html")
 		fmt.Fprintf(w,
 			`<html><body><h2>Authentication failed</h2><p>%s</p><p>You can close this window.</p></body></html>`,
-			errMsg)
+			html.EscapeString(errMsg))
 		return
 	}
 
@@ -360,7 +431,7 @@ func handleOAuthCallback(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/html")
 		fmt.Fprintf(w,
 			`<html><body><h2>Authentication failed</h2><p>%s</p><p>You can close this window.</p></body></html>`,
-			err.Error())
+			html.EscapeString(err.Error()))
 		return
 	}
 
@@ -377,7 +448,7 @@ func handleOAuthCallback(w http.ResponseWriter, r *http.Request) {
 
 	if err := auth.SetCredential(session.Provider, cred); err != nil {
 		w.Header().Set("Content-Type", "text/html")
-		fmt.Fprintf(w, `<html><body><h2>Failed to save credentials</h2><p>%s</p></body></html>`, err.Error())
+		fmt.Fprintf(w, `<html><body><h2>Failed to save credentials</h2><p>%s</p></body></html>`, html.EscapeString(err.Error()))
 		return
 	}
 
@@ -433,10 +504,14 @@ func updateConfigAfterLogin(configPath, provider string, cred *auth.AuthCredenti
 
 	switch provider {
 	case "openai":
+		authMethod := cred.AuthMethod
+		if authMethod == "" {
+			authMethod = "oauth"
+		}
 		found := false
 		for i := range cfg.ModelList {
 			if isOpenAIModel(cfg.ModelList[i].Model) {
-				cfg.ModelList[i].AuthMethod = "oauth"
+				cfg.ModelList[i].AuthMethod = authMethod
 				found = true
 				break
 			}
@@ -445,10 +520,12 @@ func updateConfigAfterLogin(configPath, provider string, cred *auth.AuthCredenti
 			cfg.ModelList = append(cfg.ModelList, config.ModelConfig{
 				ModelName:  "gpt-5.2",
 				Model:      "openai/gpt-5.2",
-				AuthMethod: "oauth",
+				AuthMethod: authMethod,
 			})
 		}
-		cfg.Agents.Defaults.ModelName = "gpt-5.2"
+		if cfg.Agents.Defaults.ModelName == "" {
+			cfg.Agents.Defaults.ModelName = "gpt-5.2"
+		}
 
 	case "anthropic":
 		found := false
@@ -466,7 +543,9 @@ func updateConfigAfterLogin(configPath, provider string, cred *auth.AuthCredenti
 				AuthMethod: "token",
 			})
 		}
-		cfg.Agents.Defaults.ModelName = "claude-sonnet-4.6"
+		if cfg.Agents.Defaults.ModelName == "" {
+			cfg.Agents.Defaults.ModelName = "claude-sonnet-4.6"
+		}
 
 	case "google-antigravity":
 		found := false
@@ -484,7 +563,21 @@ func updateConfigAfterLogin(configPath, provider string, cred *auth.AuthCredenti
 				AuthMethod: "oauth",
 			})
 		}
-		cfg.Agents.Defaults.ModelName = "gemini-flash"
+		if cfg.Agents.Defaults.ModelName == "" {
+			cfg.Agents.Defaults.ModelName = "gemini-flash"
+		}
+
+	case "groq":
+		updateOrAddTokenModel(cfg, "groq", isGroqModel, "groq-llama", "groq/llama-4-scout-17b-16e-instruct", "https://api.groq.com/openai/v1")
+
+	case "deepseek":
+		updateOrAddTokenModel(cfg, "deepseek", isDeepSeekModel, "deepseek-chat", "deepseek/deepseek-chat", "https://api.deepseek.com/v1")
+
+	case "mistral":
+		updateOrAddTokenModel(cfg, "mistral", isMistralModel, "mistral-medium", "mistral/mistral-medium-latest", "https://api.mistral.ai/v1")
+
+	case "xai":
+		updateOrAddTokenModel(cfg, "xai", isXAIModel, "grok-3-mini", "xai/grok-3-mini", "https://api.x.ai/v1")
 	}
 
 	if err := config.SaveConfig(configPath, cfg); err != nil {
@@ -512,10 +605,32 @@ func clearAuthMethodInConfig(configPath, provider string) {
 			if isAntigravityModel(cfg.ModelList[i].Model) {
 				cfg.ModelList[i].AuthMethod = ""
 			}
+		case "groq":
+			if isGroqModel(cfg.ModelList[i].Model) {
+				cfg.ModelList[i].AuthMethod = ""
+			}
+		case "deepseek":
+			if isDeepSeekModel(cfg.ModelList[i].Model) {
+				cfg.ModelList[i].AuthMethod = ""
+			}
+		case "mistral":
+			if isMistralModel(cfg.ModelList[i].Model) {
+				cfg.ModelList[i].AuthMethod = ""
+			}
+		case "xai":
+			if isXAIModel(cfg.ModelList[i].Model) {
+				cfg.ModelList[i].AuthMethod = ""
+			}
+		default:
+			if strings.HasPrefix(provider, "custom-") && strings.HasPrefix(cfg.ModelList[i].Model, provider+"/") {
+				cfg.ModelList[i].AuthMethod = ""
+			}
 		}
 	}
 
-	config.SaveConfig(configPath, cfg)
+	if err := config.SaveConfig(configPath, cfg); err != nil {
+		log.Printf("Warning: could not update config: %v", err)
+	}
 }
 
 func clearAllAuthMethodsInConfig(configPath string) {
@@ -526,7 +641,9 @@ func clearAllAuthMethodsInConfig(configPath string) {
 	for i := range cfg.ModelList {
 		cfg.ModelList[i].AuthMethod = ""
 	}
-	config.SaveConfig(configPath, cfg)
+	if err := config.SaveConfig(configPath, cfg); err != nil {
+		log.Printf("Warning: could not update config: %v", err)
+	}
 }
 
 func isOpenAIModel(model string) bool {
@@ -540,4 +657,42 @@ func isAnthropicModel(model string) bool {
 func isAntigravityModel(model string) bool {
 	return model == "antigravity" || model == "google-antigravity" ||
 		strings.HasPrefix(model, "antigravity/") || strings.HasPrefix(model, "google-antigravity/")
+}
+
+func isGroqModel(model string) bool {
+	return model == "groq" || strings.HasPrefix(model, "groq/")
+}
+
+func isDeepSeekModel(model string) bool {
+	return model == "deepseek" || strings.HasPrefix(model, "deepseek/")
+}
+
+func isMistralModel(model string) bool {
+	return model == "mistral" || strings.HasPrefix(model, "mistral/")
+}
+
+func isXAIModel(model string) bool {
+	return model == "xai" || strings.HasPrefix(model, "xai/")
+}
+
+func updateOrAddTokenModel(cfg *config.Config, provider string, isModel func(string) bool, modelName, model, apiBase string) {
+	found := false
+	for i := range cfg.ModelList {
+		if isModel(cfg.ModelList[i].Model) {
+			cfg.ModelList[i].AuthMethod = "token"
+			found = true
+			break
+		}
+	}
+	if !found {
+		cfg.ModelList = append(cfg.ModelList, config.ModelConfig{
+			ModelName:  modelName,
+			Model:      model,
+			APIBase:    apiBase,
+			AuthMethod: "token",
+		})
+	}
+	if cfg.Agents.Defaults.ModelName == "" {
+		cfg.Agents.Defaults.ModelName = modelName
+	}
 }
