@@ -4,6 +4,8 @@ import (
 	"math"
 	"sync"
 	"time"
+
+	"ok/internal/logger"
 )
 
 const (
@@ -56,13 +58,23 @@ func (ct *CooldownTracker) MarkFailure(provider string, reason FailoverReason) {
 	entry.FailureCounts[reason]++
 	entry.LastFailure = now
 
+	var cooldownDuration time.Duration
 	if reason == FailoverBilling {
 		billingCount := entry.FailureCounts[FailoverBilling]
-		entry.DisabledUntil = now.Add(calculateBillingCooldown(billingCount))
+		cooldownDuration = calculateBillingCooldown(billingCount)
+		entry.DisabledUntil = now.Add(cooldownDuration)
 		entry.DisabledReason = FailoverBilling
 	} else {
-		entry.CooldownEnd = now.Add(calculateStandardCooldown(entry.ErrorCount))
+		cooldownDuration = calculateStandardCooldown(entry.ErrorCount)
+		entry.CooldownEnd = now.Add(cooldownDuration)
 	}
+
+	logger.WarnCF("cooldown", "Provider failure recorded", map[string]any{
+		"provider":          provider,
+		"reason":            string(reason),
+		"error_count":       entry.ErrorCount,
+		"cooldown_duration": cooldownDuration.Round(time.Second).String(),
+	})
 }
 
 // MarkSuccess resets all counters and cooldowns for a provider.
@@ -74,6 +86,10 @@ func (ct *CooldownTracker) MarkSuccess(provider string) {
 	if entry == nil {
 		return
 	}
+
+	logger.DebugCF("cooldown", "Provider cooldown reset", map[string]any{
+		"provider": provider,
+	})
 
 	entry.ErrorCount = 0
 	entry.FailureCounts = make(map[FailoverReason]int)

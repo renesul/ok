@@ -413,8 +413,11 @@ func TestChat_EmptyWorkspaceDoesNotSetDir(t *testing.T) {
 
 func TestCreateProvider_ClaudeCli(t *testing.T) {
 	cfg := config.DefaultConfig()
+	cfg.ProviderList = []config.ProviderConfig{
+		{Name: "claude-cli", Workspace: "/test/ws"},
+	}
 	cfg.ModelList = []config.ModelConfig{
-		{ModelName: "claude-sonnet-4.6", Model: "claude-cli/claude-sonnet-4.6", Workspace: "/test/ws"},
+		{ModelName: "claude-sonnet-4.6", Model: "claude-cli/claude-sonnet-4.6", Provider: "claude-cli"},
 	}
 	cfg.Agents.Defaults.Model = "claude-sonnet-4.6"
 

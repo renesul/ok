@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"ok/internal/config"
+	"ok/internal/logger"
 	"ok/internal/mcp"
 )
 
@@ -37,9 +38,18 @@ func registerMCPAPI(mux *http.ServeMux) {
 
 		tools, err := mcp.TestConnection(ctx, cfg)
 		if err != nil {
+			logger.ErrorCF("webui.mcp", "MCP test failed", map[string]any{
+				"server": cfg.Name,
+				"error":  err.Error(),
+			})
 			http.Error(w, fmt.Sprintf("Connection test failed: %v", err), http.StatusBadGateway)
 			return
 		}
+
+		logger.InfoCF("webui.mcp", "MCP test succeeded", map[string]any{
+			"server": cfg.Name,
+			"tools":  len(tools),
+		})
 
 		type toolInfo struct {
 			Name        string `json:"name"`

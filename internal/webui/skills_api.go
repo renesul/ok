@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"ok/internal/config"
+	"ok/internal/logger"
 	"ok/internal/skills"
 )
 
@@ -80,6 +81,7 @@ func registerSkillsAPI(mux *http.ServeMux, configPath string) {
 			return
 		}
 
+		logger.InfoCF("webui.skills", "Skill removed", map[string]any{"name": req.Name})
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(map[string]string{"status": "ok"})
 	})
@@ -111,6 +113,7 @@ func registerSkillsAPI(mux *http.ServeMux, configPath string) {
 
 		results, err := regMgr.SearchAll(ctx, query, limit)
 		if err != nil {
+			logger.WarnCF("webui.skills", "Skill search failed", map[string]any{"query": query, "error": err.Error()})
 			http.Error(w, fmt.Sprintf("Search failed: %v", err), http.StatusBadGateway)
 			return
 		}
@@ -162,10 +165,15 @@ func registerSkillsAPI(mux *http.ServeMux, configPath string) {
 
 		result, err := reg.DownloadAndInstall(ctx, req.Slug, req.Version, targetDir)
 		if err != nil {
+			logger.ErrorCF("webui.skills", "Skill install failed", map[string]any{"slug": req.Slug, "error": err.Error()})
 			http.Error(w, fmt.Sprintf("Install failed: %v", err), http.StatusInternalServerError)
 			return
 		}
 
+		logger.InfoCF("webui.skills", "Skill installed", map[string]any{
+			"slug":    req.Slug,
+			"version": result.Version,
+		})
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(map[string]any{
 			"status":             "ok",

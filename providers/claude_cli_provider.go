@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"os/exec"
 	"strings"
+
+	"ok/internal/logger"
 )
 
 // ClaudeCliProvider implements LLMProvider using the claude CLI as a subprocess.
@@ -17,6 +19,9 @@ type ClaudeCliProvider struct {
 
 // NewClaudeCliProvider creates a new Claude CLI provider.
 func NewClaudeCliProvider(workspace string) *ClaudeCliProvider {
+	logger.DebugCF("provider.claude-cli", "Creating Claude CLI provider", map[string]any{
+		"workspace": workspace,
+	})
 	return &ClaudeCliProvider{
 		command:   "claude",
 		workspace: workspace,
@@ -49,10 +54,19 @@ func (p *ClaudeCliProvider) Chat(
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 
+	logger.DebugCF("provider.claude-cli", "Executing claude CLI", map[string]any{
+		"model": model,
+	})
 	if err := cmd.Run(); err != nil {
 		if stderrStr := stderr.String(); stderrStr != "" {
+			logger.ErrorCF("provider.claude-cli", "CLI execution failed", map[string]any{
+				"error": stderrStr,
+			})
 			return nil, fmt.Errorf("claude cli error: %s", stderrStr)
 		}
+		logger.ErrorCF("provider.claude-cli", "CLI execution failed", map[string]any{
+			"error": err.Error(),
+		})
 		return nil, fmt.Errorf("claude cli error: %w", err)
 	}
 
@@ -110,6 +124,9 @@ func (p *ClaudeCliProvider) buildSystemPrompt(messages []Message, tools []ToolDe
 func (p *ClaudeCliProvider) parseClaudeCliResponse(output string) (*LLMResponse, error) {
 	var resp claudeCliJSONResponse
 	if err := json.Unmarshal([]byte(output), &resp); err != nil {
+		logger.ErrorCF("provider.claude-cli", "JSON parse failed", map[string]any{
+			"error": err.Error(),
+		})
 		return nil, fmt.Errorf("failed to parse claude cli response: %w", err)
 	}
 
@@ -135,6 +152,9 @@ func (p *ClaudeCliProvider) parseClaudeCliResponse(output string) (*LLMResponse,
 		}
 	}
 
+	logger.DebugCF("provider.claude-cli", "CLI response parsed", map[string]any{
+		"tool_calls": len(toolCalls),
+	})
 	return &LLMResponse{
 		Content:      strings.TrimSpace(content),
 		ToolCalls:    toolCalls,

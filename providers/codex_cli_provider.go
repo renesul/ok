@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"os/exec"
 	"strings"
+
+	"ok/internal/logger"
 )
 
 // CodexCliProvider implements LLMProvider by wrapping the codex CLI as a subprocess.
@@ -18,6 +20,9 @@ type CodexCliProvider struct {
 
 // NewCodexCliProvider creates a new Codex CLI provider.
 func NewCodexCliProvider(workspace string) *CodexCliProvider {
+	logger.DebugCF("provider.codex-cli", "Creating Codex CLI provider", map[string]any{
+		"workspace": workspace,
+	})
 	return &CodexCliProvider{
 		command:   "codex",
 		workspace: workspace,
@@ -56,6 +61,9 @@ func (p *CodexCliProvider) Chat(
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 
+	logger.DebugCF("provider.codex-cli", "Executing codex CLI", map[string]any{
+		"model": model,
+	})
 	err := cmd.Run()
 
 	// Parse JSONL from stdout even if exit code is non-zero,
@@ -73,8 +81,14 @@ func (p *CodexCliProvider) Chat(
 			return nil, ctx.Err()
 		}
 		if stderrStr := stderr.String(); stderrStr != "" {
+			logger.ErrorCF("provider.codex-cli", "CLI execution failed", map[string]any{
+				"error": stderrStr,
+			})
 			return nil, fmt.Errorf("codex cli error: %s", stderrStr)
 		}
+		logger.ErrorCF("provider.codex-cli", "CLI execution failed", map[string]any{
+			"error": err.Error(),
+		})
 		return nil, fmt.Errorf("codex cli error: %w", err)
 	}
 
@@ -200,6 +214,9 @@ func (p *CodexCliProvider) parseJSONLEvents(output string) (*LLMResponse, error)
 	}
 
 	if lastError != "" && len(contentParts) == 0 {
+		logger.ErrorCF("provider.codex-cli", "JSONL parse: only errors found", map[string]any{
+			"error": lastError,
+		})
 		return nil, fmt.Errorf("codex cli: %s", lastError)
 	}
 

@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"html"
 	"io"
-	"log"
 	"net/http"
 	"strings"
 	"sync"
@@ -13,6 +12,7 @@ import (
 
 	"ok/internal/auth"
 	"ok/internal/config"
+	"ok/internal/logger"
 	"ok/providers"
 )
 
@@ -261,7 +261,7 @@ func handleOpenAILogin(w http.ResponseWriter, configPath string) {
 					session.Status = "success"
 					session.Done = true
 					session.mu.Unlock()
-					log.Printf("OpenAI device code login successful (account: %s)", cred.AccountID)
+					logger.InfoC("auth", fmt.Sprintf("OpenAI device code login successful (account: %s)", cred.AccountID))
 					return
 				}
 			}
@@ -335,24 +335,18 @@ func handleCustomProviderLogin(w http.ResponseWriter, token, apiBase, label, con
 }
 
 func updateCustomProviderModel(configPath, provider, label, apiBase string) {
-	cfg, err := config.LoadConfig(configPath)
-	if err != nil {
-		log.Printf("Warning: could not load config to update custom provider model: %v", err)
-		return
-	}
-
-	// Check if a model already exists for this custom provider
-	for i := range cfg.ModelList {
-		if cfg.ModelList[i].Model != "" && strings.HasPrefix(cfg.ModelList[i].Model, provider+"/") {
-			cfg.ModelList[i].AuthMethod = "token"
-			cfg.ModelList[i].APIBase = apiBase
-			if err := config.SaveConfig(configPath, cfg); err != nil {
-				log.Printf("Warning: could not update config: %v", err)
-			}
-			return
+	if err := config.WithConfigLock(func() error {
+		cfg, err := config.LoadConfig(configPath)
+		if err != nil {
+			return fmt.Errorf("could not load config to update custom provider model: %w", err)
 		}
+
+		// Ensure provider exists in provider_list
+		ensureProvider(cfg, provider, apiBase, "token")
+		return config.SaveConfig(configPath, cfg)
+	}); err != nil {
+		logger.WarnC("auth", fmt.Sprintf("%v", err))
 	}
-	// Don't auto-create a model entry for custom providers — user will do that via model modal
 }
 
 func handleGoogleAntigravityLogin(w http.ResponseWriter, r *http.Request, configPath string) {
@@ -496,153 +490,85 @@ func fetchGoogleUserEmail(accessToken string) (string, error) {
 // ── Config update helpers ─────────────────────────────────
 
 func updateConfigAfterLogin(configPath, provider string, cred *auth.AuthCredential) {
-	cfg, err := config.LoadConfig(configPath)
-	if err != nil {
-		log.Printf("Warning: could not load config to update auth_method: %v", err)
-		return
-	}
-
-	switch provider {
-	case "openai":
-		authMethod := cred.AuthMethod
-		if authMethod == "" {
-			authMethod = "oauth"
+	if err := config.WithConfigLock(func() error {
+		cfg, err := config.LoadConfig(configPath)
+		if err != nil {
+			return fmt.Errorf("could not load config to update auth_method: %w", err)
 		}
-		found := false
-		for i := range cfg.ModelList {
-			if isOpenAIModel(cfg.ModelList[i].Model) {
-				cfg.ModelList[i].AuthMethod = authMethod
-				found = true
-				break
+
+		switch provider {
+		case "openai":
+			authMethod := cred.AuthMethod
+			if authMethod == "" {
+				authMethod = "oauth"
 			}
-		}
-		if !found {
-			cfg.ModelList = append(cfg.ModelList, config.ModelConfig{
-				ModelName:  "gpt-5.2",
-				Model:      "openai/gpt-5.2",
-				AuthMethod: authMethod,
-			})
-		}
-		if cfg.Agents.Defaults.ModelName == "" {
-			cfg.Agents.Defaults.ModelName = "gpt-5.2"
+			ensureProvider(cfg, "openai", providers.GetDefaultAPIBase("openai"), authMethod)
+			ensureModel(cfg, isOpenAIModel, "gpt-5.2", "openai/gpt-5.2", "openai")
+
+		case "anthropic":
+			ensureProvider(cfg, "anthropic", providers.GetDefaultAPIBase("anthropic"), "token")
+			ensureModel(cfg, isAnthropicModel, "claude-sonnet-4.6", "anthropic/claude-sonnet-4.6", "anthropic")
+
+		case "google-antigravity":
+			ensureProvider(cfg, "google-antigravity", "", "oauth")
+			ensureModel(cfg, isAntigravityModel, "gemini-flash", "antigravity/gemini-3-flash", "google-antigravity")
+
+		case "groq":
+			ensureProvider(cfg, "groq", providers.GetDefaultAPIBase("groq"), "token")
+			ensureModel(cfg, isGroqModel, "groq-llama", "groq/llama-4-scout-17b-16e-instruct", "groq")
+
+		case "deepseek":
+			ensureProvider(cfg, "deepseek", providers.GetDefaultAPIBase("deepseek"), "token")
+			ensureModel(cfg, isDeepSeekModel, "deepseek-chat", "deepseek/deepseek-chat", "deepseek")
+
+		case "mistral":
+			ensureProvider(cfg, "mistral", providers.GetDefaultAPIBase("mistral"), "token")
+			ensureModel(cfg, isMistralModel, "mistral-medium", "mistral/mistral-medium-latest", "mistral")
+
+		case "xai":
+			ensureProvider(cfg, "xai", providers.GetDefaultAPIBase("xai"), "token")
+			ensureModel(cfg, isXAIModel, "grok-3-mini", "xai/grok-3-mini", "xai")
 		}
 
-	case "anthropic":
-		found := false
-		for i := range cfg.ModelList {
-			if isAnthropicModel(cfg.ModelList[i].Model) {
-				cfg.ModelList[i].AuthMethod = "token"
-				found = true
-				break
-			}
-		}
-		if !found {
-			cfg.ModelList = append(cfg.ModelList, config.ModelConfig{
-				ModelName:  "claude-sonnet-4.6",
-				Model:      "anthropic/claude-sonnet-4.6",
-				AuthMethod: "token",
-			})
-		}
-		if cfg.Agents.Defaults.ModelName == "" {
-			cfg.Agents.Defaults.ModelName = "claude-sonnet-4.6"
-		}
-
-	case "google-antigravity":
-		found := false
-		for i := range cfg.ModelList {
-			if isAntigravityModel(cfg.ModelList[i].Model) {
-				cfg.ModelList[i].AuthMethod = "oauth"
-				found = true
-				break
-			}
-		}
-		if !found {
-			cfg.ModelList = append(cfg.ModelList, config.ModelConfig{
-				ModelName:  "gemini-flash",
-				Model:      "antigravity/gemini-3-flash",
-				AuthMethod: "oauth",
-			})
-		}
-		if cfg.Agents.Defaults.ModelName == "" {
-			cfg.Agents.Defaults.ModelName = "gemini-flash"
-		}
-
-	case "groq":
-		updateOrAddTokenModel(cfg, "groq", isGroqModel, "groq-llama", "groq/llama-4-scout-17b-16e-instruct", providers.GetDefaultAPIBase("groq"))
-
-	case "deepseek":
-		updateOrAddTokenModel(cfg, "deepseek", isDeepSeekModel, "deepseek-chat", "deepseek/deepseek-chat", providers.GetDefaultAPIBase("deepseek"))
-
-	case "mistral":
-		updateOrAddTokenModel(cfg, "mistral", isMistralModel, "mistral-medium", "mistral/mistral-medium-latest", providers.GetDefaultAPIBase("mistral"))
-
-	case "xai":
-		updateOrAddTokenModel(cfg, "xai", isXAIModel, "grok-3-mini", "xai/grok-3-mini", providers.GetDefaultAPIBase("xai"))
-	}
-
-	if err := config.SaveConfig(configPath, cfg); err != nil {
-		log.Printf("Warning: could not update config: %v", err)
+		return config.SaveConfig(configPath, cfg)
+	}); err != nil {
+		logger.WarnC("auth", fmt.Sprintf("%v", err))
 	}
 }
 
 func clearAuthMethodInConfig(configPath, provider string) {
-	cfg, err := config.LoadConfig(configPath)
-	if err != nil {
-		return
-	}
+	if err := config.WithConfigLock(func() error {
+		cfg, err := config.LoadConfig(configPath)
+		if err != nil {
+			return err
+		}
 
-	for i := range cfg.ModelList {
-		switch provider {
-		case "openai":
-			if isOpenAIModel(cfg.ModelList[i].Model) {
-				cfg.ModelList[i].AuthMethod = ""
-			}
-		case "anthropic":
-			if isAnthropicModel(cfg.ModelList[i].Model) {
-				cfg.ModelList[i].AuthMethod = ""
-			}
-		case "google-antigravity", "antigravity":
-			if isAntigravityModel(cfg.ModelList[i].Model) {
-				cfg.ModelList[i].AuthMethod = ""
-			}
-		case "groq":
-			if isGroqModel(cfg.ModelList[i].Model) {
-				cfg.ModelList[i].AuthMethod = ""
-			}
-		case "deepseek":
-			if isDeepSeekModel(cfg.ModelList[i].Model) {
-				cfg.ModelList[i].AuthMethod = ""
-			}
-		case "mistral":
-			if isMistralModel(cfg.ModelList[i].Model) {
-				cfg.ModelList[i].AuthMethod = ""
-			}
-		case "xai":
-			if isXAIModel(cfg.ModelList[i].Model) {
-				cfg.ModelList[i].AuthMethod = ""
-			}
-		default:
-			if strings.HasPrefix(provider, "custom-") && strings.HasPrefix(cfg.ModelList[i].Model, provider+"/") {
-				cfg.ModelList[i].AuthMethod = ""
+		// Clear auth_method on the provider in provider_list
+		for i := range cfg.ProviderList {
+			if cfg.ProviderList[i].Name == provider {
+				cfg.ProviderList[i].AuthMethod = ""
+				break
 			}
 		}
-	}
 
-	if err := config.SaveConfig(configPath, cfg); err != nil {
-		log.Printf("Warning: could not update config: %v", err)
+		return config.SaveConfig(configPath, cfg)
+	}); err != nil {
+		logger.WarnC("auth", fmt.Sprintf("could not update config: %v", err))
 	}
 }
 
 func clearAllAuthMethodsInConfig(configPath string) {
-	cfg, err := config.LoadConfig(configPath)
-	if err != nil {
-		return
-	}
-	for i := range cfg.ModelList {
-		cfg.ModelList[i].AuthMethod = ""
-	}
-	if err := config.SaveConfig(configPath, cfg); err != nil {
-		log.Printf("Warning: could not update config: %v", err)
+	if err := config.WithConfigLock(func() error {
+		cfg, err := config.LoadConfig(configPath)
+		if err != nil {
+			return err
+		}
+		for i := range cfg.ProviderList {
+			cfg.ProviderList[i].AuthMethod = ""
+		}
+		return config.SaveConfig(configPath, cfg)
+	}); err != nil {
+		logger.WarnC("auth", fmt.Sprintf("could not update config: %v", err))
 	}
 }
 
@@ -675,24 +601,39 @@ func isXAIModel(model string) bool {
 	return model == "xai" || strings.HasPrefix(model, "xai/")
 }
 
-func updateOrAddTokenModel(cfg *config.Config, provider string, isModel func(string) bool, modelName, model, apiBase string) {
-	found := false
-	for i := range cfg.ModelList {
-		if isModel(cfg.ModelList[i].Model) {
-			cfg.ModelList[i].AuthMethod = "token"
-			found = true
-			break
+// ensureProvider ensures a provider exists in provider_list, creating it if needed.
+func ensureProvider(cfg *config.Config, name, apiBase, authMethod string) {
+	for i := range cfg.ProviderList {
+		if cfg.ProviderList[i].Name == name {
+			// Update auth method and api_base if changed
+			cfg.ProviderList[i].AuthMethod = authMethod
+			if apiBase != "" {
+				cfg.ProviderList[i].APIBase = apiBase
+			}
+			return
 		}
 	}
-	if !found {
-		cfg.ModelList = append(cfg.ModelList, config.ModelConfig{
-			ModelName:  modelName,
-			Model:      model,
-			APIBase:    apiBase,
-			AuthMethod: "token",
-		})
+	cfg.ProviderList = append(cfg.ProviderList, config.ProviderConfig{
+		Name:       name,
+		APIBase:    apiBase,
+		AuthMethod: authMethod,
+	})
+}
+
+// ensureModel ensures a model exists for a provider, creating it if needed.
+func ensureModel(cfg *config.Config, isModel func(string) bool, modelName, model, provider string) {
+	for i := range cfg.ModelList {
+		if isModel(cfg.ModelList[i].Model) {
+			cfg.ModelList[i].Provider = provider
+			return
+		}
 	}
-	if cfg.Agents.Defaults.ModelName == "" {
+	cfg.ModelList = append(cfg.ModelList, config.ModelConfig{
+		ModelName: modelName,
+		Model:     model,
+		Provider:  provider,
+	})
+	if cfg.Agents.Defaults.ModelName == "" && modelName != "transcription" && modelName != "embedding" {
 		cfg.Agents.Defaults.ModelName = modelName
 	}
 }

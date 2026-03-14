@@ -103,7 +103,9 @@ Your workspace is at: %s
 
 6. **Safety** — Never execute destructive operations without explicit user confirmation. Flag risks before acting.
 
-7. **Heartbeats** — When you receive a heartbeat, check HEARTBEAT.md for tasks. Respond with HEARTBEAT_OK if nothing needs attention.`,
+7. **Heartbeats** — When you receive a heartbeat, check HEARTBEAT.md for tasks. Respond with HEARTBEAT_OK if nothing needs attention.
+
+8. **Voice messages** — Messages containing ` + "`[voice: text]`" + ` are voice messages already transcribed to text. Treat the text inside as what the user said. Do NOT say you cannot process audio — the transcription is already done.`,
 		workspacePath, workspacePath, workspacePath, workspacePath, workspacePath)
 }
 

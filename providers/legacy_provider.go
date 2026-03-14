@@ -9,6 +9,7 @@ import (
 	"fmt"
 
 	"ok/internal/config"
+	"ok/internal/logger"
 )
 
 // CreateProvider creates a provider based on the configuration.
@@ -40,14 +41,27 @@ func CreateProvider(cfg *config.Config) (LLMProvider, string, error) {
 		return nil, "", fmt.Errorf("model %q not found in model_list: %w", model, err)
 	}
 
-	if modelCfg.Workspace == "" {
-		modelCfg.Workspace = cfg.WorkspacePath()
+	provCfg, err := cfg.ResolveModelProvider(modelCfg)
+	if err != nil {
+		return nil, "", fmt.Errorf("failed to resolve provider for model %q: %w", model, err)
 	}
 
-	provider, modelID, err := CreateProviderFromConfig(modelCfg)
+	// Inherit workspace from config if not set on provider
+	if provCfg.Workspace == "" {
+		provCfg.Workspace = cfg.WorkspacePath()
+	}
+
+	logger.InfoCF("provider.factory", "Creating provider", map[string]any{
+		"model": model,
+	})
+	provider, modelID, err := CreateProviderFromModelAndProvider(modelCfg, provCfg)
 	if err != nil {
 		return nil, "", fmt.Errorf("failed to create provider for model %q: %w", model, err)
 	}
 
+	logger.InfoCF("provider.factory", "Provider created", map[string]any{
+		"model":    model,
+		"model_id": modelID,
+	})
 	return provider, modelID, nil
 }

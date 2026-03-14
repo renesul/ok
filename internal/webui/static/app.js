@@ -1340,7 +1340,7 @@ function applyI18n() {
             el.textContent = val;
         }
     });
-    document.getElementById('authDesc').innerHTML = t('auth.desc');
+    document.getElementById('authDesc').innerHTML = t('auth.desc') + ' <button class="btn btn-sm btn-primary" onclick="showAddProviderModal()" style="margin-left:12px">+ Add Provider</button>';
     // Sync selector
     const sel = document.getElementById('langSelect');
     if (sel) sel.value = currentLang;
@@ -1439,8 +1439,8 @@ const tabDefs = {
         { panel: 'panelRouting', label: 'Model Routing', icon: '<svg class="si" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M2 8h4l2-4 2 8 2-4h4"/></svg>' },
     ],
     planning: [
+        { panel: 'panelAuth', label: 'Providers', icon: '<svg class="si" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M4 4h8v8H4z"/><path d="M6 2v2M10 2v2M6 12v2M10 12v2M2 6h2M2 10h2M12 6h2M12 10h2"/></svg>' },
         { panel: 'panelModels', label: 'Models', icon: '<svg class="si" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"><path d="M8 2L2 5l6 3 6-3Zm0 6L2 11l6 3 6-3Z"/></svg>' },
-        { panel: 'panelAuth', label: 'Auth', icon: '<svg class="si" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="3" y="7" width="10" height="7" rx="2"/><path d="M5.5 7V5a2.5 2.5 0 015 0v2"/></svg>' },
     ],
     execution: [
         { panel: 'panelToolSettings', label: 'Tools', icon: '<svg class="si" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M6.5 2v3M6.5 9v5M11.5 2v7M11.5 13v1"/><circle cx="6.5" cy="7" r="2"/><circle cx="11.5" cy="11" r="2"/></svg>' },
@@ -1468,7 +1468,7 @@ const tabDefs = {
 };
 
 // Track which sub-tab was last active per group
-const lastSubTab = { input: 'panelCh_telegram', routing: 'panelSession', planning: 'panelModels', execution: 'panelToolSettings', memory: 'panelRAG', orchestrator: 'panelAgents', system: 'panelGateway' };
+const lastSubTab = { input: 'panelCh_telegram', routing: 'panelSession', planning: 'panelAuth', execution: 'panelToolSettings', memory: 'panelRAG', orchestrator: 'panelAgents', system: 'panelGateway' };
 
 // ── Hash routing ────────────────────────────────────
 // Maps panel IDs to short URL hashes and vice versa.
@@ -1748,19 +1748,22 @@ function renderModels() {
         html += `</div>`;
 
         html += `<div class="model-detail"><strong>Model:</strong> ${esc(m.model || '-')}</div>`;
-        if (m.api_base) html += `<div class="model-detail"><strong>API Base:</strong> ${esc(m.api_base)}</div>`;
-        if (m.api_key) html += `<div class="model-detail"><strong>API Key:</strong> ${maskKey(m.api_key)}</div>`;
-        if (m.auth_method) html += `<div class="model-detail"><strong>Auth:</strong> ${esc(m.auth_method)}</div>`;
+        if (m.provider) html += `<div class="model-detail"><strong>Provider:</strong> <span class="model-protocol">${esc(m.provider)}</span></div>`;
 
         html += `<div class="model-actions">`;
         html += `<button class="btn btn-sm" onclick="showEditModelModal(${idx})">${t('edit')}</button>`;
         if (available) {
             html += `<button class="btn btn-sm" id="testBtn_${idx}" onclick="testModel(${idx})">${t('models.test')}</button>`;
         }
-        if (available && !isPrimary) {
+        const isEmbedding = m.model_name === 'embedding';
+        const isTranscription = m.model_name === 'transcription';
+        if (available && !isPrimary && !isEmbedding && !isTranscription) {
             html += `<button class="btn btn-sm btn-success" onclick="setPrimaryModel(${idx})">${t('models.setPrimary')}</button>`;
         }
-        html += `<button class="btn btn-sm btn-danger" onclick="deleteModel(${idx})">${t('delete')}</button>`;
+        const isBuiltin = m.model_name === 'default' || m.model_name === 'embedding' || m.model_name === 'transcription';
+        if (!isBuiltin) {
+            html += `<button class="btn btn-sm btn-danger" onclick="deleteModel(${idx})">${t('delete')}</button>`;
+        }
         html += `</div></div>`;
     });
     grid.innerHTML = html;
@@ -1882,59 +1885,24 @@ function onProviderSelectChange(selectEl) {
     const selected = selectEl.value;
     const info = PROVIDER_INFO[selected];
     const modelInput = document.querySelector('#modalBody input[data-field="model"]');
-    const apiBaseInput = document.querySelector('#modalBody input[data-field="api_base"]');
-    const apiKeyInput = document.querySelector('#modalBody input[data-field="api_key"]');
-    const modelNameInput = document.querySelector('#modalBody input[data-field="model_name"]');
-    const authMethodInput = document.querySelector('#modalBody input[data-field="auth_method"]');
-    const fg = el => el ? el.closest('.form-group') : null;
-    const authenticated = selected && isProviderAuthenticated(selected);
 
-    if (selected && info) {
-        if (apiBaseInput) apiBaseInput.value = info.apiBase;
-        if (modelInput) {
-            const current = modelInput.value;
-            let bare = current;
-            for (const pi of Object.values(PROVIDER_INFO)) {
-                if (current.startsWith(pi.prefix)) { bare = current.slice(pi.prefix.length); break; }
-            }
-            modelInput.value = info.prefix + bare;
+    if (selected && info && modelInput) {
+        const current = modelInput.value;
+        let bare = current;
+        for (const pi of Object.values(PROVIDER_INFO)) {
+            if (current.startsWith(pi.prefix)) { bare = current.slice(pi.prefix.length); break; }
         }
-        if (authMethodInput) {
-            const auth = authProviderMap[selected];
-            authMethodInput.value = auth && auth.auth_method ? auth.auth_method : '';
-        }
-        // Hide auto-filled fields
-        if (fg(modelNameInput)) fg(modelNameInput).style.display = 'none';
-        if (fg(apiBaseInput)) fg(apiBaseInput).style.display = 'none';
-        if (fg(authMethodInput)) fg(authMethodInput).style.display = 'none';
-        if (authenticated) {
-            if (apiKeyInput) apiKeyInput.value = '';
-            if (fg(apiKeyInput)) fg(apiKeyInput).style.display = 'none';
-        } else {
-            if (fg(apiKeyInput)) fg(apiKeyInput).style.display = '';
-        }
-    } else {
-        // Manual — show all fields
-        if (fg(modelNameInput)) fg(modelNameInput).style.display = '';
-        if (fg(apiBaseInput)) fg(apiBaseInput).style.display = '';
-        if (fg(apiKeyInput)) fg(apiKeyInput).style.display = '';
-        if (fg(authMethodInput)) fg(authMethodInput).style.display = '';
-        if (authMethodInput) authMethodInput.value = '';
+        modelInput.value = info.prefix + bare;
     }
 }
 
 const modelFieldsRequired = [
     { key: 'model_name', labelKey: 'field.modelName', type: 'text', placeholder: 'e.g. gpt-4o', required: true },
     { key: 'model', labelKey: 'field.modelId', type: 'text', placeholder: 'e.g. openai/gpt-4o', required: true, hintKey: 'field.modelIdHint' },
-    { key: 'api_key', labelKey: 'field.apiKey', type: 'password', placeholder: 'API key' },
-    { key: 'api_base', labelKey: 'field.apiBase', type: 'text', placeholder: 'https://api.openai.com/v1' },
 ];
 const modelFieldsOptional = [
-    { key: 'auth_method', labelKey: 'field.authMethod', type: 'text', placeholder: 'oauth / token' },
-    { key: 'connect_mode', labelKey: 'field.connectMode', type: 'text', placeholder: 'stdio / grpc' },
     { key: 'thinking_level', labelKey: 'field.thinkingLevel', type: 'select', options: ['', 'off', 'low', 'medium', 'high', 'xhigh', 'adaptive'] },
     { key: 'max_tokens_field', labelKey: 'field.maxTokensField', type: 'text', placeholder: 'e.g. max_completion_tokens' },
-    { key: 'workspace', labelKey: 'field.workspace', type: 'text', placeholder: 'Workspace path' },
     { key: 'rpm', labelKey: 'field.rpm', type: 'number', placeholder: 'RPM' },
     { key: 'request_timeout', labelKey: 'field.requestTimeout', type: 'number', placeholder: 'Seconds' },
 ];
@@ -1944,17 +1912,19 @@ function showEditModelModal(idx) {
     editingModelIndex = idx;
     const m = configData.model_list[idx];
     document.getElementById('modalTitle').textContent = t('models.editModel') + ': ' + m.model_name;
-    const detected = detectProviderFromModel(m.model);
-    const auth = authProviderMap[detected];
-    const preselect = (detected && auth && auth.status === 'active') ? detected : '';
-    renderModalBody(m, preselect);
+    document.getElementById('modalSaveBtn').setAttribute('onclick', 'saveModelFromModal()');
+    renderModalBody(m, m.provider || '');
     document.getElementById('modelModal').classList.add('active');
 }
 
 function showAddModelModal() {
     editingModelIndex = -1;
     document.getElementById('modalTitle').textContent = t('models.addModel');
-    renderModalBody({}, '');
+    document.getElementById('modalSaveBtn').setAttribute('onclick', 'saveModelFromModal()');
+    // Auto-select first provider if available
+    const provList = (configData && configData.provider_list) || [];
+    const defaultProv = provList.length > 0 ? provList[0].name : '';
+    renderModalBody({}, defaultProv);
     document.getElementById('modelModal').classList.add('active');
 }
 
@@ -1963,22 +1933,12 @@ function closeModelModal() {
 }
 
 function renderModalBody(data, preselectedProvider) {
-    const hasOptionalValues = modelFieldsOptional.some(f => {
-        const v = data[f.key];
-        return v !== undefined && v !== null && v !== '' && v !== 0;
-    });
-
-    const allProviders = getAllProviders();
+    const providerList = (configData && configData.provider_list) || [];
 
     function renderField(f) {
         const val = data[f.key] !== undefined && data[f.key] !== null ? data[f.key] : '';
         const label = t(f.labelKey);
-        const hasProvider = !!preselectedProvider;
-        const hideField = (f.key === 'model_name' && hasProvider)
-            || (f.key === 'api_base' && hasProvider)
-            || (f.key === 'auth_method' && hasProvider)
-            || (f.key === 'api_key' && hasProvider && isProviderAuthenticated(preselectedProvider));
-        let h = `<div class="form-group"${hideField ? ' style="display:none"' : ''}>`;
+        let h = `<div class="form-group">`;
         h += `<label class="form-label">${label}${f.required ? ' *' : ''}</label>`;
         if (f.type === 'select' && f.options) {
             h += `<select class="form-input" data-field="${f.key}">`;
@@ -1999,14 +1959,20 @@ function renderModalBody(data, preselectedProvider) {
 
     let html = '';
 
-    // Provider select
+    // Provider select (from provider_list)
+    const currentProvider = data.provider || preselectedProvider || '';
     html += `<div class="form-group">`;
-    html += `<label class="form-label">${t('field.provider')}</label>`;
+    html += `<label class="form-label">${t('field.provider')} *</label>`;
     html += `<select class="form-input" data-field="provider" onchange="onProviderSelectChange(this)">`;
-    html += `<option value="">${t('field.providerManual')}</option>`;
-    allProviders.forEach(p => {
-        const suffix = p.authenticated ? ' ✓' : '';
-        html += `<option value="${esc(p.name)}"${preselectedProvider === p.name ? ' selected' : ''}>${esc(p.label)}${suffix}</option>`;
+    const availableProviders = providerList.filter(p => {
+        const authInfo = authProviderMap[p.name];
+        return p.api_key || (authInfo && authInfo.status === 'active') || (data.provider && p.name === data.provider);
+    });
+    if (availableProviders.length === 0) {
+        html += `<option value="">No connected providers</option>`;
+    }
+    availableProviders.forEach(p => {
+        html += `<option value="${esc(p.name)}"${currentProvider === p.name ? ' selected' : ''}>${esc(p.name)}</option>`;
     });
     html += `</select>`;
     html += `</div>`;
@@ -2028,11 +1994,10 @@ function saveModelFromModal() {
     const obj = {};
     inputs.forEach(input => {
         const key = input.dataset.field;
-        if (key === 'provider') return;
         let val = input.value.trim();
         if (input.type === 'number' && val) val = parseInt(val, 10) || 0;
         if (val !== '' && val !== 0) obj[key] = val;
-        else if (key === 'model_name' || key === 'model') obj[key] = val;
+        else if (key === 'model_name' || key === 'model' || key === 'provider') obj[key] = val;
     });
 
     // Auto-derive model_name from model ID (strip provider prefix)
@@ -2071,6 +2036,133 @@ function saveModelFromModal() {
 }
 
 
+
+// ── Provider CRUD ───────────────────────────────────
+function findProviderIndex(name) {
+    const provList = (configData && configData.provider_list) || [];
+    const idx = provList.findIndex(p => p.name === name);
+    if (idx >= 0) return idx;
+    // Auto-create if not found
+    if (!configData.provider_list) configData.provider_list = [];
+    configData.provider_list.push({ name });
+    return configData.provider_list.length - 1;
+}
+
+function renderProviders() {
+    const panel = document.getElementById('panelProviders');
+    if (!panel || !configData) return;
+    if (!configData.provider_list) configData.provider_list = [];
+    const providers = configData.provider_list;
+
+    let html = '<div class="panel-header"><div class="panel-title">Providers</div></div>';
+    html += '<div class="panel-desc">Configure connectivity for LLM providers. Models reference a provider by name.</div>';
+    html += '<div style="margin-bottom:14px;"><button class="btn btn-sm btn-primary" onclick="showAddProviderModal()">+ Add Provider</button></div>';
+
+    if (providers.length === 0) {
+        html += '<div class="empty-state"><div class="empty-state-title">No providers configured</div></div>';
+    } else {
+        html += '<div class="model-grid">';
+        providers.forEach((p, idx) => {
+            const authInfo = authProviderMap[p.name];
+            const hasKey = !!(p.api_key || (authInfo && authInfo.status === 'active'));
+            html += `<div class="model-card ${hasKey ? '' : 'unavailable'}">`;
+            html += `<div class="model-card-head"><div class="model-name">${esc(p.name)}</div>`;
+            if (hasKey) html += `<span class="badge-primary">Active</span>`;
+            else html += `<span class="badge-nokey">No Key</span>`;
+            html += `</div>`;
+            if (p.api_base) html += `<div class="model-detail"><strong>API Base:</strong> ${esc(p.api_base)}</div>`;
+            if (p.api_key) html += `<div class="model-detail"><strong>API Key:</strong> ${maskKey(p.api_key)}</div>`;
+            if (p.auth_method) html += `<div class="model-detail"><strong>Auth:</strong> ${esc(p.auth_method)}</div>`;
+            if (p.connect_mode) html += `<div class="model-detail"><strong>Connect Mode:</strong> ${esc(p.connect_mode)}</div>`;
+            if (p.workspace) html += `<div class="model-detail"><strong>Workspace:</strong> ${esc(p.workspace)}</div>`;
+            html += `<div class="model-actions">`;
+            html += `<button class="btn btn-sm" onclick="showEditProviderModal(${idx})">Edit</button>`;
+            const isBuiltin = p.name === 'openai' || p.name === 'groq';
+            if (!isBuiltin) html += `<button class="btn btn-sm btn-danger" onclick="deleteProvider(${idx})">Delete</button>`;
+            html += `</div></div>`;
+        });
+        html += '</div>';
+    }
+    panel.innerHTML = html;
+}
+
+const providerFields = [
+    { key: 'name', label: 'Name', type: 'text', placeholder: 'e.g. openai', required: true },
+    { key: 'api_base', label: 'API Base', type: 'text', placeholder: 'https://api.openai.com/v1' },
+    { key: 'api_key', label: 'API Key', type: 'password', placeholder: 'API key' },
+    { key: 'auth_method', label: 'Auth Method', type: 'text', placeholder: 'oauth / token' },
+    { key: 'connect_mode', label: 'Connect Mode', type: 'text', placeholder: 'stdio / grpc' },
+    { key: 'workspace', label: 'Workspace', type: 'text', placeholder: 'Workspace path' },
+];
+
+let editingProviderIndex = -1;
+
+function showAddProviderModal() {
+    editingProviderIndex = -1;
+    document.getElementById('modalTitle').textContent = 'Add Provider';
+    renderProviderModalBody({});
+    document.getElementById('modelModal').classList.add('active');
+}
+
+function showEditProviderModal(idx) {
+    editingProviderIndex = idx;
+    const p = configData.provider_list[idx];
+    document.getElementById('modalTitle').textContent = 'Edit Provider: ' + p.name;
+    renderProviderModalBody(p);
+    document.getElementById('modelModal').classList.add('active');
+}
+
+function renderProviderModalBody(data) {
+    let html = '';
+    providerFields.forEach(f => {
+        const val = data[f.key] !== undefined && data[f.key] !== null ? data[f.key] : '';
+        html += `<div class="form-group">`;
+        html += `<label class="form-label">${f.label}${f.required ? ' *' : ''}</label>`;
+        html += `<input class="form-input" type="${f.type === 'password' ? 'password' : 'text'}" `;
+        html += `data-field="${f.key}" value="${esc(String(val))}" placeholder="${f.placeholder || ''}">`;
+        html += `</div>`;
+    });
+    document.getElementById('modalBody').innerHTML = html;
+    document.getElementById('modalSaveBtn').setAttribute('onclick', 'saveProviderFromModal()');
+}
+
+function saveProviderFromModal() {
+    const inputs = document.querySelectorAll('#modalBody input[data-field]');
+    const obj = {};
+    inputs.forEach(input => {
+        const key = input.dataset.field;
+        const val = input.value.trim();
+        if (val) obj[key] = val;
+        else if (key === 'name') obj[key] = val;
+    });
+    if (!obj.name) {
+        showStatus('Provider name is required', 'error');
+        return;
+    }
+    if (!configData.provider_list) configData.provider_list = [];
+    if (editingProviderIndex >= 0) {
+        configData.provider_list[editingProviderIndex] = obj;
+    } else {
+        // Check duplicate
+        if (configData.provider_list.some(p => p.name === obj.name)) {
+            showStatus('Provider "' + obj.name + '" already exists', 'error');
+            return;
+        }
+        configData.provider_list.push(obj);
+    }
+    editingProviderIndex = -1;
+    closeModelModal();
+    saveConfig().then(() => { renderProviders(); loadAuthStatus(); });
+}
+
+function deleteProvider(idx) {
+    if (!configData || !configData.provider_list) return;
+    const name = configData.provider_list[idx].name;
+    if (name === 'openai') { showStatus('Cannot delete builtin provider', 'error'); return; }
+    if (!confirm('Delete provider "' + name + '"?')) return;
+    configData.provider_list.splice(idx, 1);
+    saveConfig().then(() => { renderProviders(); loadAuthStatus(); });
+}
 
 // ── Channel Forms ───────────────────────────────────
 function renderChannelForm(chKey) {
@@ -2186,7 +2278,7 @@ function renderChannelForm(chKey) {
         html += `</div>`; // close left column
         html += `<div id="waQrSection" style="flex:0 1 280px; min-width:220px; text-align:center; padding-top:8px;">`;
         html += `<div style="font-weight:600; margin-bottom:12px;">WhatsApp Pairing</div>`;
-        html += `<div id="waQrCode" style="margin-bottom:8px;"></div>`;
+        html += `<div id="waQrCode" style="margin-bottom:8px; max-width:100%; overflow:hidden;"></div>`;
         html += `<div id="waQrStatus" style="color:var(--muted); font-size:13px;">Start the gateway to pair</div>`;
         html += `</div>`;
         html += `</div>`; // close flex container
@@ -2332,23 +2424,6 @@ function renderAuthStatus(providersList, pendingDevice) {
     const providerMap = {};
     providersList.forEach(p => { providerMap[p.provider] = p; });
 
-    // Update custom provider card names and register in PROVIDER_INFO
-    ['custom-1', 'custom-2'].forEach(name => {
-        const p = providerMap[name];
-        const nameEl = document.getElementById('customName-' + name);
-        if (p && p.label) {
-            if (nameEl) nameEl.textContent = p.label;
-            // Dynamically register custom provider in PROVIDER_INFO
-            PROVIDER_INFO[name] = {
-                label: p.label,
-                apiBase: p.api_base || '',
-                prefix: name + '/',
-            };
-        } else {
-            if (nameEl) nameEl.textContent = t(name === 'custom-1' ? 'auth.custom1' : 'auth.custom2');
-            delete PROVIDER_INFO[name];
-        }
-    });
 
     ['openai', 'anthropic', 'google-antigravity', 'groq', 'deepseek', 'mistral', 'xai'].forEach(name => {
         const badge = document.getElementById('badge-' + name);
@@ -2356,6 +2431,10 @@ function renderAuthStatus(providersList, pendingDevice) {
         const actions = document.getElementById('actions-' + name);
         if (!badge || !details || !actions) return;
         const p = providerMap[name];
+
+        // Resolve provider config from provider_list
+        const provList = (configData && configData.provider_list) || [];
+        const provCfg = provList.find(pc => pc.name === name);
 
         if (p) {
             const badgeClass = p.status === 'active' ? 'badge-active' :
@@ -2374,52 +2453,37 @@ function renderAuthStatus(providersList, pendingDevice) {
                 const d = new Date(p.expires_at);
                 dh += `<div class="provider-detail"><strong>${t('auth.expires')}:</strong> ${d.toLocaleString()}</div>`;
             }
+            // Show provider config fields from provider_list
+            if (provCfg) {
+                if (provCfg.api_base) dh += `<div class="provider-detail"><strong>API Base:</strong> ${provCfg.api_base}</div>`;
+                if (provCfg.api_key) dh += `<div class="provider-detail"><strong>API Key:</strong> ${maskKey(provCfg.api_key)}</div>`;
+                if (provCfg.connect_mode) dh += `<div class="provider-detail"><strong>Connect Mode:</strong> ${provCfg.connect_mode}</div>`;
+                if (provCfg.workspace) dh += `<div class="provider-detail"><strong>Workspace:</strong> ${provCfg.workspace}</div>`;
+            }
             details.innerHTML = dh;
-            actions.innerHTML = `<button class="btn btn-sm btn-danger" onclick="logoutProvider('${name}')">${t('auth.logout')}</button>`;
+            actions.innerHTML = `<button class="btn btn-sm" onclick="showEditProviderModal(findProviderIndex('${name}'))">Edit</button> <button class="btn btn-sm btn-danger" onclick="logoutProvider('${name}')">${t('auth.logout')}</button>`;
         } else {
             badge.className = 'provider-badge badge-none';
             badge.textContent = t('auth.notLoggedIn');
-            details.innerHTML = '';
+            // Still show provider config if it exists
+            let dh = '';
+            if (provCfg) {
+                if (provCfg.api_base) dh += `<div class="provider-detail"><strong>API Base:</strong> ${provCfg.api_base}</div>`;
+                if (provCfg.api_key) dh += `<div class="provider-detail"><strong>API Key:</strong> ${maskKey(provCfg.api_key)}</div>`;
+            }
+            details.innerHTML = dh;
             if (name === 'openai') {
-                actions.innerHTML = `<button class="btn btn-sm btn-primary" onclick="loginProvider('openai')">${t('auth.loginDevice')}</button> <button class="btn btn-sm" onclick="showTokenInput('openai')">${t('auth.loginToken')}</button>`;
+                actions.innerHTML = `<button class="btn btn-sm" onclick="showEditProviderModal(findProviderIndex('${name}'))">Edit</button> <button class="btn btn-sm btn-primary" onclick="loginProvider('openai')">${t('auth.loginDevice')}</button> <button class="btn btn-sm" onclick="showTokenInput('openai')">${t('auth.loginToken')}</button>`;
             } else if (name === 'anthropic') {
-                actions.innerHTML = `<button class="btn btn-sm btn-primary" onclick="showTokenInput('anthropic')">${t('auth.loginToken')}</button>`;
+                actions.innerHTML = `<button class="btn btn-sm" onclick="showEditProviderModal(findProviderIndex('${name}'))">Edit</button> <button class="btn btn-sm btn-primary" onclick="showTokenInput('anthropic')">${t('auth.loginToken')}</button>`;
             } else if (name === 'google-antigravity') {
-                actions.innerHTML = `<button class="btn btn-sm btn-primary" onclick="loginProvider('google-antigravity')">${t('auth.loginOAuth')}</button>`;
+                actions.innerHTML = `<button class="btn btn-sm" onclick="showEditProviderModal(findProviderIndex('${name}'))">Edit</button> <button class="btn btn-sm btn-primary" onclick="loginProvider('google-antigravity')">${t('auth.loginOAuth')}</button>`;
             } else {
-                actions.innerHTML = `<button class="btn btn-sm btn-primary" onclick="showTokenInput('${name}')">${t('auth.loginToken')}</button>`;
+                actions.innerHTML = `<button class="btn btn-sm" onclick="showEditProviderModal(findProviderIndex('${name}'))">Edit</button> <button class="btn btn-sm btn-primary" onclick="showTokenInput('${name}')">${t('auth.loginToken')}</button>`;
             }
         }
     });
 
-    // Render custom provider cards
-    ['custom-1', 'custom-2'].forEach(name => {
-        const badge = document.getElementById('badge-' + name);
-        const details = document.getElementById('details-' + name);
-        const actions = document.getElementById('actions-' + name);
-        if (!badge || !details || !actions) return;
-        const p = providerMap[name];
-
-        if (p) {
-            const badgeClass = p.status === 'active' ? 'badge-active' :
-                p.status === 'expired' ? 'badge-expired' : 'badge-pending';
-            const badgeText = p.status === 'active' ? t('auth.active') :
-                p.status === 'expired' ? t('auth.expired') : t('auth.needsRefresh');
-            badge.className = 'provider-badge ' + badgeClass;
-            badge.textContent = badgeText;
-
-            let dh = '';
-            if (p.api_base) dh += `<div class="provider-detail"><strong>${t('auth.customApiBase')}:</strong> ${p.api_base}</div>`;
-            if (p.auth_method) dh += `<div class="provider-detail"><strong>${t('auth.method')}:</strong> ${p.auth_method}</div>`;
-            details.innerHTML = dh;
-            actions.innerHTML = `<button class="btn btn-sm btn-danger" onclick="logoutProvider('${name}')">${t('auth.logout')}</button>`;
-        } else {
-            badge.className = 'provider-badge badge-none';
-            badge.textContent = t('auth.notLoggedIn');
-            details.innerHTML = '';
-            actions.innerHTML = `<button class="btn btn-sm btn-primary" onclick="showCustomProviderInput('${name}')">${t('auth.configure')}</button>`;
-        }
-    });
 
     if (pendingDevice && pendingDevice.status === 'pending') {
         const name = pendingDevice.provider;
@@ -2538,42 +2602,6 @@ async function submitToken(provider) {
     }
 }
 
-function showCustomProviderInput(provider) {
-    const actions = document.getElementById('actions-' + provider);
-    const details = document.getElementById('details-' + provider);
-    if (!actions || !details) return;
-
-    details.innerHTML = `
-    <div class="token-input-group" style="display:flex;flex-direction:column;gap:8px;">
-      <input type="text" id="customLabel-${provider}" placeholder="${t('auth.customLabelPlaceholder')}" style="width:100%;" />
-      <input type="text" id="customApiBase-${provider}" placeholder="${t('auth.customApiBasePlaceholder')}" style="width:100%;" />
-      <input type="password" id="customToken-${provider}" placeholder="${t('auth.pasteKey')}" style="width:100%;" />
-    </div>`;
-    actions.innerHTML = `
-      <button class="btn btn-sm btn-primary" onclick="submitCustomProvider('${provider}')">${t('save')}</button>
-      <button class="btn btn-sm" onclick="loadAuthStatus()">${t('cancel')}</button>`;
-    document.getElementById('customLabel-' + provider).focus();
-}
-
-async function submitCustomProvider(provider) {
-    const label = document.getElementById('customLabel-' + provider).value.trim();
-    const apiBase = document.getElementById('customApiBase-' + provider).value.trim();
-    const token = document.getElementById('customToken-' + provider).value.trim();
-    if (!token) { showStatus(t('status.tokenEmpty'), 'error'); return; }
-    if (!label) { showStatus('Provider name is required', 'error'); return; }
-    try {
-        const res = await fetch('/api/auth/login', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ provider, token, api_base: apiBase, label }),
-        });
-        if (!res.ok) throw new Error(await res.text());
-        showStatus(t('status.tokenSaved', { name: label }), 'success');
-        loadAuthStatus();
-    } catch (e) {
-        showStatus(t('status.loginFailed') + ': ' + e.message, 'error');
-    }
-}
 
 async function logoutProvider(provider) {
     try {
@@ -2594,14 +2622,27 @@ async function logoutProvider(provider) {
 // gatewayRunning declared at top of file (always true in embedded mode)
 
 function isModelAvailableGlobal(m) {
-    if (m.api_key) return true;
-    if (m.auth_method === 'oauth') {
-        const protocol = m.model ? m.model.split('/')[0] : '';
-        const providerName = protocol === 'google-antigravity' ? 'google-antigravity' : protocol;
-        const authInfo = authProviderMap[providerName];
+    // Resolve provider from model's provider field or protocol prefix
+    const provName = m.provider || (m.model ? m.model.split('/')[0] : '');
+    const providers = (configData && configData.provider_list) || [];
+    const prov = providers.find(p => p.name === provName);
+
+    // Check provider-level API key
+    if (prov && prov.api_key) return true;
+
+    // Check provider-level auth method
+    const authMethod = prov ? prov.auth_method : '';
+    if (authMethod === 'oauth') {
+        const authInfo = authProviderMap[provName];
         return !!(authInfo && authInfo.status === 'active');
     }
-    if (m.auth_method) return true;
+    if (authMethod) return true;
+
+    // Fallback: check auth store for the protocol
+    if (provName) {
+        const authInfo = authProviderMap[provName];
+        if (authInfo && authInfo.status === 'active') return true;
+    }
     return false;
 }
 
@@ -3976,14 +4017,18 @@ function saveRAG() {
     // Resolve model ID and base_url from selected model_name
     let modelId = f.model || 'text-embedding-3-small';
     const models = (configData && configData.model_list) || [];
+    const providersList = (configData && configData.provider_list) || [];
     const selectedModel = models.find(m => m.model_name === modelId);
     let baseUrl = f.base_url || '';
     if (selectedModel) {
         if (selectedModel.model) {
             modelId = selectedModel.model.replace(/^[^/]+\//, ''); // strip protocol prefix
         }
-        if (selectedModel.api_base) {
-            baseUrl = selectedModel.api_base;
+        // Resolve base_url from provider_list
+        const provName = selectedModel.provider || (selectedModel.model ? selectedModel.model.split('/')[0] : '');
+        const prov = providersList.find(p => p.name === provName);
+        if (prov && prov.api_base) {
+            baseUrl = prov.api_base;
         }
     }
 
@@ -4294,6 +4339,8 @@ function connectWhatsAppQR() {
                 qr.addData(data.code);
                 qr.make();
                 codeEl.innerHTML = qr.createSvgTag(5);
+                var svg = codeEl.querySelector('svg');
+                if (svg) { svg.style.maxWidth = '100%'; svg.style.height = 'auto'; }
                 statusEl.textContent = 'Scan with WhatsApp \u203A Linked Devices';
             } else if (data.event === 'success' || data.paired) {
                 codeEl.innerHTML = '<div class="badge badge-active" style="display:inline-block;padding:8px 16px;font-size:14px;">Connected</div>';

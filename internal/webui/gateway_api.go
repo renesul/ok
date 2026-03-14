@@ -9,6 +9,8 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+
+	"ok/internal/logger"
 )
 
 func registerGatewayAPI(mux *http.ServeMux, absPath string) {
@@ -24,6 +26,7 @@ func registerGatewayAPI(mux *http.ServeMux, absPath string) {
 
 	// POST /api/gateway/reload — trigger gateway restart with new config
 	mux.HandleFunc("POST /api/gateway/reload", func(w http.ResponseWriter, r *http.Request) {
+		logger.InfoC("webui.gateway", "Reload triggered")
 		if fn := getReloadFunc(); fn != nil {
 			fn()
 		}
@@ -33,6 +36,7 @@ func registerGatewayAPI(mux *http.ServeMux, absPath string) {
 
 	// DELETE /api/logs — delete all log files
 	mux.HandleFunc("DELETE /api/logs", func(w http.ResponseWriter, r *http.Request) {
+		logger.InfoC("webui.gateway", "Logs cleared")
 		entries, err := os.ReadDir(logDir)
 		if err != nil {
 			w.Header().Set("Content-Type", "application/json")

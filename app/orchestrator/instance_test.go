@@ -136,11 +136,14 @@ func TestNewAgentInstance_ResolveCandidatesFromModelListAlias(t *testing.T) {
 						Model:     tt.aliasName,
 					},
 				},
+				ProviderList: []config.ProviderConfig{
+					{Name: "test-prov", APIBase: tt.apiBase},
+				},
 				ModelList: []config.ModelConfig{
 					{
 						ModelName: tt.aliasName,
 						Model:     tt.modelName,
-						APIBase:   tt.apiBase,
+						Provider:  "test-prov",
 					},
 				},
 			}

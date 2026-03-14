@@ -3,12 +3,12 @@ package utils
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"os"
 	"path/filepath"
 	"sync"
 	"time"
 
+	"ok/internal/logger"
 )
 
 // State represents the persistent state for a workspace.
@@ -40,7 +40,7 @@ func NewManager(workspace string) *Manager {
 
 	// Create state directory if it doesn't exist
 	if err := os.MkdirAll(stateDir, 0o755); err != nil {
-		log.Fatalf("[FATAL] state: failed to create state directory: %v", err)
+		logger.FatalCF("state", "Failed to create state directory", map[string]any{"error": err.Error()})
 	}
 
 	sm := &Manager{
@@ -56,15 +56,15 @@ func NewManager(workspace string) *Manager {
 			if err := json.Unmarshal(data, sm.state); err == nil {
 				// Migrate to new location
 				if err := sm.saveAtomic(); err != nil {
-					log.Printf("[WARN] state: failed to save state: %v", err)
+					logger.WarnCF("state", "Failed to save state", map[string]any{"error": err.Error()})
 				}
-				log.Printf("[INFO] state: migrated state from %s to %s", oldStateFile, stateFile)
+				logger.InfoCF("state", "Migrated state", map[string]any{"from": oldStateFile, "to": stateFile})
 			}
 		}
 	} else {
 		// Load from new location
 		if err := sm.load(); err != nil {
-			log.Printf("[WARN] state: failed to load state: %v", err)
+			logger.WarnCF("state", "Failed to load state", map[string]any{"error": err.Error()})
 		}
 	}
 

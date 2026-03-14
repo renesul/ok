@@ -10,11 +10,14 @@ import (
 func TestCreateProviderReturnsCodexCliProviderForCodexCode(t *testing.T) {
 	cfg := config.DefaultConfig()
 	cfg.Agents.Defaults.Model = "test-codex"
+	cfg.ProviderList = []config.ProviderConfig{
+		{Name: "codex-cli", Workspace: "/tmp/workspace"},
+	}
 	cfg.ModelList = []config.ModelConfig{
 		{
 			ModelName: "test-codex",
 			Model:     "codex-cli/codex-model",
-			Workspace: "/tmp/workspace",
+			Provider:  "codex-cli",
 		},
 	}
 
@@ -31,11 +34,14 @@ func TestCreateProviderReturnsCodexCliProviderForCodexCode(t *testing.T) {
 func TestCreateProviderReturnsClaudeCliProviderForClaudeCli(t *testing.T) {
 	cfg := config.DefaultConfig()
 	cfg.Agents.Defaults.Model = "test-claude-cli"
+	cfg.ProviderList = []config.ProviderConfig{
+		{Name: "claude-cli", Workspace: "/tmp/workspace"},
+	}
 	cfg.ModelList = []config.ModelConfig{
 		{
 			ModelName: "test-claude-cli",
 			Model:     "claude-cli/claude-sonnet",
-			Workspace: "/tmp/workspace",
+			Provider:  "claude-cli",
 		},
 	}
 
@@ -64,11 +70,14 @@ func TestCreateProviderReturnsClaudeProviderForAnthropicOAuth(t *testing.T) {
 
 	cfg := config.DefaultConfig()
 	cfg.Agents.Defaults.Model = "test-claude-oauth"
+	cfg.ProviderList = []config.ProviderConfig{
+		{Name: "anthropic", AuthMethod: "oauth"},
+	}
 	cfg.ModelList = []config.ModelConfig{
 		{
-			ModelName:  "test-claude-oauth",
-			Model:      "anthropic/claude-sonnet-4.6",
-			AuthMethod: "oauth",
+			ModelName: "test-claude-oauth",
+			Model:     "anthropic/claude-sonnet-4.6",
+			Provider:  "anthropic",
 		},
 	}
 

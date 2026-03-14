@@ -8,6 +8,8 @@ package config
 import (
 	"os"
 	"path/filepath"
+
+	"ok/internal/logger"
 )
 
 // DefaultConfig returns the default configuration for OK.
@@ -20,6 +22,7 @@ func DefaultConfig() *Config {
 	} else {
 		userHome, err := os.UserHomeDir()
 		if err != nil {
+			logger.WarnCF("config", "UserHomeDir failed, falling back to \".\"", map[string]any{"error": err.Error()})
 			userHome = "."
 		}
 		homePath = filepath.Join(userHome, ".ok")
@@ -82,16 +85,25 @@ func DefaultConfig() *Config {
 				},
 			},
 		},
+		ProviderList: []ProviderConfig{
+			{Name: "openai", APIBase: "https://api.openai.com/v1"},
+			{Name: "groq", APIBase: "https://api.groq.com/openai/v1"},
+		},
 		ModelList: []ModelConfig{
 			{
 				ModelName: "default",
 				Model:     "openai/gpt-4.1-mini",
-				APIBase:   "https://api.openai.com/v1",
+				Provider:  "openai",
 			},
 			{
 				ModelName: "embedding",
 				Model:     "openai/text-embedding-3-small",
-				APIBase:   "https://api.openai.com/v1",
+				Provider:  "openai",
+			},
+			{
+				ModelName: "transcription",
+				Model:     "groq/whisper-large-v3-turbo",
+				Provider:  "groq",
 			},
 		},
 		Gateway: GatewayConfig{

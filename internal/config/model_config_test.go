@@ -15,8 +15,8 @@ import (
 func TestGetModelConfig_Found(t *testing.T) {
 	cfg := &Config{
 		ModelList: []ModelConfig{
-			{ModelName: "test-model", Model: "openai/gpt-4o", APIKey: "key1"},
-			{ModelName: "other-model", Model: "anthropic/claude", APIKey: "key2"},
+			{ModelName: "test-model", Model: "openai/gpt-4o", Provider: "openai"},
+			{ModelName: "other-model", Model: "anthropic/claude", Provider: "anthropic"},
 		},
 	}
 
@@ -32,7 +32,7 @@ func TestGetModelConfig_Found(t *testing.T) {
 func TestGetModelConfig_NotFound(t *testing.T) {
 	cfg := &Config{
 		ModelList: []ModelConfig{
-			{ModelName: "test-model", Model: "openai/gpt-4o", APIKey: "key1"},
+			{ModelName: "test-model", Model: "openai/gpt-4o", Provider: "openai"},
 		},
 	}
 
@@ -56,9 +56,9 @@ func TestGetModelConfig_EmptyList(t *testing.T) {
 func TestGetModelConfig_RoundRobin(t *testing.T) {
 	cfg := &Config{
 		ModelList: []ModelConfig{
-			{ModelName: "lb-model", Model: "openai/gpt-4o-1", APIKey: "key1"},
-			{ModelName: "lb-model", Model: "openai/gpt-4o-2", APIKey: "key2"},
-			{ModelName: "lb-model", Model: "openai/gpt-4o-3", APIKey: "key3"},
+			{ModelName: "lb-model", Model: "openai/gpt-4o-1", Provider: "openai"},
+			{ModelName: "lb-model", Model: "openai/gpt-4o-2", Provider: "openai"},
+			{ModelName: "lb-model", Model: "openai/gpt-4o-3", Provider: "openai"},
 		},
 	}
 
@@ -83,8 +83,8 @@ func TestGetModelConfig_RoundRobin(t *testing.T) {
 func TestGetModelConfig_Concurrent(t *testing.T) {
 	cfg := &Config{
 		ModelList: []ModelConfig{
-			{ModelName: "concurrent-model", Model: "openai/gpt-4o-1", APIKey: "key1"},
-			{ModelName: "concurrent-model", Model: "openai/gpt-4o-2", APIKey: "key2"},
+			{ModelName: "concurrent-model", Model: "openai/gpt-4o-1", Provider: "openai"},
+			{ModelName: "concurrent-model", Model: "openai/gpt-4o-2", Provider: "openai"},
 		},
 	}
 
@@ -195,7 +195,7 @@ func TestFullConfig_JSON_BackwardCompat(t *testing.T) {
 			{
 				"model_name": "gpt4",
 				"model": "openai/gpt-4o",
-				"api_key": "test-key"
+				"provider": "openai"
 			}
 		]
 	}`
@@ -212,7 +212,7 @@ func TestFullConfig_JSON_BackwardCompat(t *testing.T) {
 			{
 				"model_name": "gpt4",
 				"model": "openai/gpt-4o",
-				"api_key": "test-key"
+				"provider": "openai"
 			}
 		]
 	}`
@@ -329,8 +329,8 @@ func TestConfig_ValidateModelList(t *testing.T) {
 			name: "duplicate model_name for load balancing",
 			config: &Config{
 				ModelList: []ModelConfig{
-					{ModelName: "gpt-4", Model: "openai/gpt-4o", APIKey: "key1"},
-					{ModelName: "gpt-4", Model: "openai/gpt-4-turbo", APIKey: "key2"},
+					{ModelName: "gpt-4", Model: "openai/gpt-4o", Provider: "openai"},
+					{ModelName: "gpt-4", Model: "openai/gpt-4-turbo", Provider: "openai"},
 				},
 			},
 			wantErr: false, // Changed: duplicates are allowed for load balancing
@@ -368,7 +368,7 @@ func TestModelConfig_RequestTimeoutParsing(t *testing.T) {
 	jsonData := `{
 		"model_name": "slow-local",
 		"model": "openai/local-model",
-		"api_base": "http://localhost:11434/v1",
+		"provider": "local",
 		"request_timeout": 300
 	}`
 
@@ -386,7 +386,7 @@ func TestModelConfig_RequestTimeoutDefaultZeroValue(t *testing.T) {
 	jsonData := `{
 		"model_name": "default-timeout",
 		"model": "openai/gpt-4o",
-		"api_key": "test-key"
+		"provider": "openai"
 	}`
 
 	var cfg ModelConfig

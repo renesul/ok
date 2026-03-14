@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"ok/internal/logger"
 	anthropicprovider "ok/providers/anthropic"
 )
 
@@ -12,6 +13,7 @@ type ClaudeProvider struct {
 }
 
 func NewClaudeProvider(token string) *ClaudeProvider {
+	logger.DebugC("provider.claude", "Creating Claude provider")
 	return &ClaudeProvider{
 		delegate: anthropicprovider.NewProvider(token),
 	}
@@ -44,8 +46,16 @@ func newClaudeProviderWithDelegate(delegate *anthropicprovider.Provider) *Claude
 func (p *ClaudeProvider) Chat(
 	ctx context.Context, messages []Message, tools []ToolDefinition, model string, options map[string]any,
 ) (*LLMResponse, error) {
+	logger.DebugCF("provider.claude", "Chat request", map[string]any{
+		"model":    model,
+		"messages": len(messages),
+	})
 	resp, err := p.delegate.Chat(ctx, messages, tools, model, options)
 	if err != nil {
+		logger.ErrorCF("provider.claude", "Chat failed", map[string]any{
+			"model": model,
+			"error": err.Error(),
+		})
 		return nil, err
 	}
 	return resp, nil

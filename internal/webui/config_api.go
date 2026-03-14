@@ -4,10 +4,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 
 	"ok/internal/config"
+	"ok/internal/logger"
 )
 
 func registerConfigAPI(mux *http.ServeMux, absPath string) {
@@ -25,7 +25,7 @@ func registerConfigAPI(mux *http.ServeMux, absPath string) {
 		enc := json.NewEncoder(w)
 		enc.SetIndent("", "  ")
 		if err := enc.Encode(resp); err != nil {
-			log.Printf("Failed to encode response: %v", err)
+			logger.ErrorC("config-api", fmt.Sprintf("Failed to encode response: %v", err))
 		}
 	})
 
@@ -37,17 +37,20 @@ func registerConfigAPI(mux *http.ServeMux, absPath string) {
 		}
 		defer r.Body.Close()
 
-		var cfg config.Config
-		if err := json.Unmarshal(body, &cfg); err != nil {
-			http.Error(w, fmt.Sprintf("Invalid JSON: %v", err), http.StatusBadRequest)
-			return
-		}
-
-		if err := config.SaveConfig(absPath, &cfg); err != nil {
+		err = config.WithConfigLock(func() error {
+			var cfg config.Config
+			if err := json.Unmarshal(body, &cfg); err != nil {
+				return fmt.Errorf("invalid JSON: %w", err)
+			}
+			return config.SaveConfig(absPath, &cfg)
+		})
+		if err != nil {
+			logger.ErrorCF("config-api", "Config save failed", map[string]any{"error": err.Error()})
 			http.Error(w, fmt.Sprintf("Failed to save config: %v", err), http.StatusInternalServerError)
 			return
 		}
 
+		logger.InfoC("config-api", "Config saved")
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(map[string]string{"status": "ok"})
 	})

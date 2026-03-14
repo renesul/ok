@@ -7,6 +7,8 @@ import (
 	"sync"
 
 	copilot "github.com/github/copilot-sdk/go"
+
+	"ok/internal/logger"
 )
 
 type GitHubCopilotProvider struct {
@@ -34,6 +36,11 @@ func NewGitHubCopilotProvider(uri string, connectMode string, model string) (*Gi
 			CLIUrl: uri,
 		})
 		if err := client.Start(context.Background()); err != nil {
+			logger.ErrorCF("provider.copilot", "Connection failed", map[string]any{
+				"uri":  uri,
+				"mode": connectMode,
+				"error": err.Error(),
+			})
 			return nil, fmt.Errorf(
 				"can't connect to Github Copilot: %w; `https://github.com/github/copilot-sdk/blob/main/docs/getting-started.md#connecting-to-an-external-cli-server` for details",
 				err,
@@ -49,6 +56,11 @@ func NewGitHubCopilotProvider(uri string, connectMode string, model string) (*Gi
 			return nil, fmt.Errorf("create session failed: %w", err)
 		}
 
+		logger.InfoCF("provider.copilot", "Connected to GitHub Copilot", map[string]any{
+			"uri":   uri,
+			"mode":  connectMode,
+			"model": model,
+		})
 		return &GitHubCopilotProvider{
 			uri:         uri,
 			connectMode: connectMode,
@@ -63,6 +75,7 @@ func NewGitHubCopilotProvider(uri string, connectMode string, model string) (*Gi
 func (p *GitHubCopilotProvider) Close() {
 	p.mu.Lock()
 	defer p.mu.Unlock()
+	logger.DebugC("provider.copilot", "Closing GitHub Copilot provider")
 	if p.client != nil {
 		p.client.Stop()
 		p.client = nil
@@ -105,6 +118,9 @@ func (p *GitHubCopilotProvider) Chat(
 		Prompt: string(fullcontent),
 	})
 	if err != nil {
+		logger.ErrorCF("provider.copilot", "Chat failed", map[string]any{
+			"error": err.Error(),
+		})
 		return nil, fmt.Errorf("failed to send message to copilot: %w", err)
 	}
 

@@ -351,7 +351,11 @@ func (c *SlackChannel) handleMessageEvent(ev *slackevents.MessageEvent) {
 				continue
 			}
 			mediaPaths = append(mediaPaths, storeMedia(localPath, file.Name))
-			content += fmt.Sprintf("\n[file: %s]", file.Name)
+			if utils.IsAudioFile(file.Name, file.Filetype) {
+				content += "\n[audio]"
+			} else {
+				content += fmt.Sprintf("\n[file: %s]", file.Name)
+			}
 		}
 	}
 

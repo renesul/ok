@@ -4,6 +4,8 @@ import (
 	"context"
 	"regexp"
 	"strings"
+
+	"ok/internal/logger"
 )
 
 // Common patterns in Go HTTP error messages
@@ -138,6 +140,11 @@ func ClassifyError(err error, provider, model string) *FailoverError {
 	// Try HTTP status code extraction first.
 	if status := extractHTTPStatus(msg); status > 0 {
 		if reason := classifyByStatus(status); reason != "" {
+			logger.DebugCF("error-classify", "Error classified", map[string]any{
+				"reason":   string(reason),
+				"provider": provider,
+				"model":    model,
+			})
 			return &FailoverError{
 				Reason:   reason,
 				Provider: provider,
@@ -150,6 +157,11 @@ func ClassifyError(err error, provider, model string) *FailoverError {
 
 	// Message pattern matching (priority order from OpenClaw).
 	if reason := classifyByMessage(msg); reason != "" {
+		logger.DebugCF("error-classify", "Error classified", map[string]any{
+			"reason":   string(reason),
+			"provider": provider,
+			"model":    model,
+		})
 		return &FailoverError{
 			Reason:   reason,
 			Provider: provider,
@@ -158,6 +170,10 @@ func ClassifyError(err error, provider, model string) *FailoverError {
 		}
 	}
 
+	logger.DebugCF("error-classify", "Error not classified", map[string]any{
+		"provider": provider,
+		"model":    model,
+	})
 	return nil
 }
 

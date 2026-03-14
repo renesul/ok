@@ -35,29 +35,29 @@ func TestDetectTranscriber(t *testing.T) {
 			wantNil: true,
 		},
 		{
-			name: "groq via model list",
+			name: "groq via provider list",
 			cfg: &config.Config{
-				ModelList: []config.ModelConfig{
-					{Model: "openai/gpt-4o", APIKey: "sk-openai"},
-					{Model: "groq/llama-3.3-70b", APIKey: "sk-groq-model"},
+				ProviderList: []config.ProviderConfig{
+					{Name: "openai", APIKey: "sk-openai"},
+					{Name: "groq", APIKey: "sk-groq-model"},
 				},
 			},
 			wantName: "groq",
 		},
 		{
-			name: "groq model list entry without key is skipped",
+			name: "groq provider without key is skipped",
 			cfg: &config.Config{
-				ModelList: []config.ModelConfig{
-					{Model: "groq/llama-3.3-70b", APIKey: ""},
+				ProviderList: []config.ProviderConfig{
+					{Name: "groq", APIKey: ""},
 				},
 			},
 			wantNil: true,
 		},
 		{
-			name: "model list with groq key takes priority",
+			name: "groq provider with key",
 			cfg: &config.Config{
-				ModelList: []config.ModelConfig{
-					{Model: "groq/llama-3.3-70b", APIKey: "sk-groq-model"},
+				ProviderList: []config.ProviderConfig{
+					{Name: "groq", APIKey: "sk-groq-model"},
 				},
 			},
 			wantName: "groq",

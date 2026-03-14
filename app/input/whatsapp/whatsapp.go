@@ -33,6 +33,7 @@ import (
 	"ok/internal/config"
 	"ok/internal/identity"
 	"ok/internal/logger"
+	"ok/internal/media"
 	"ok/internal/utils"
 )
 
@@ -511,11 +512,46 @@ func (c *WhatsAppChannel) handleIncoming(evt *events.Message) {
 	}
 	content = utils.SanitizeMessageContent(content)
 
-	if content == "" {
-		return
+	// Audio/voice message download
+	var mediaPaths []string
+	scope := channels.BuildMediaScope("whatsapp", chatID, evt.Info.ID)
+	storeMedia := func(localPath, filename string) string {
+		if store := c.GetMediaStore(); store != nil {
+			ref, err := store.Store(localPath, media.MediaMeta{
+				Filename: filename,
+				Source:   "whatsapp",
+			}, scope)
+			if err == nil {
+				return ref
+			}
+		}
+		return localPath
 	}
 
-	var mediaPaths []string
+	if audio := evt.Message.GetAudioMessage(); audio != nil {
+		data, err := c.client.Download(c.runCtx, audio)
+		if err == nil {
+			ext := ".ogg"
+			if audio.GetMimetype() == "audio/mp4" {
+				ext = ".m4a"
+			}
+			tmpPath := filepath.Join(os.TempDir(), "ok_media", fmt.Sprintf("wa_%s%s", evt.Info.ID, ext))
+			os.MkdirAll(filepath.Dir(tmpPath), 0o755)
+			if err := os.WriteFile(tmpPath, data, 0o644); err == nil {
+				mediaPaths = append(mediaPaths, storeMedia(tmpPath, "voice"+ext))
+				if content != "" {
+					content += "\n"
+				}
+				content += "[voice]"
+			}
+		} else {
+			logger.WarnCF("whatsapp", "Failed to download audio", map[string]any{"error": err.Error()})
+		}
+	}
+
+	if content == "" && len(mediaPaths) == 0 {
+		return
+	}
 
 	metadata := make(map[string]string)
 	metadata["message_id"] = evt.Info.ID

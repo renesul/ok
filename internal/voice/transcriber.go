@@ -10,7 +10,6 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"strings"
 	"time"
 
 	"ok/internal/config"
@@ -166,11 +165,9 @@ func (t *GroqTranscriber) Name() string {
 // DetectTranscriber inspects cfg and returns the appropriate Transcriber, or
 // nil if no supported transcription provider is configured.
 func DetectTranscriber(cfg *config.Config) Transcriber {
-	// Fall back to any model-list entry that uses the groq/ protocol.
-	for _, mc := range cfg.ModelList {
-		if strings.HasPrefix(mc.Model, "groq/") && mc.APIKey != "" {
-			return NewGroqTranscriber(mc.APIKey)
-		}
+	// Check provider_list for groq with an explicit API key.
+	if prov := cfg.GetProviderConfig("groq"); prov != nil && prov.APIKey != "" {
+		return NewGroqTranscriber(prov.APIKey)
 	}
 	return nil
 }

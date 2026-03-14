@@ -683,7 +683,7 @@ body {
 .provider-actions {
     margin-top: 16px; padding-top: 14px;
     border-top: 1px solid var(--border-subtle);
-    display: flex; gap: 8px;
+    display: flex; gap: 8px; flex-wrap: wrap;
 }
 .device-code-box {
     background: var(--bg-elevated); border: 1px solid var(--border);

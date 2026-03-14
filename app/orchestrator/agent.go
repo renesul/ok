@@ -103,7 +103,9 @@ func NewAgentLoop(
 	// Initialize RAG if configured
 	ragBaseURL := cfg.RAG.BaseURL
 	if ragBaseURL == "" && len(cfg.ModelList) > 0 {
-		ragBaseURL = cfg.ModelList[0].APIBase
+		if prov, err := cfg.ResolveModelProvider(&cfg.ModelList[0]); err == nil {
+			ragBaseURL = prov.APIBase
+		}
 	}
 	if cfg.RAG.Enabled && ragBaseURL != "" && cfg.RAG.Model != "" {
 		if defaultAgent != nil {

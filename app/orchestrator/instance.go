@@ -1,8 +1,6 @@
 package orchestrator
 
 import (
-	"fmt"
-	"log"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -15,6 +13,7 @@ import (
 	"ok/app/routing"
 	"ok/app/types"
 	"ok/internal/config"
+	"ok/internal/logger"
 	"ok/providers"
 )
 
@@ -85,7 +84,7 @@ func NewAgentInstance(
 	if cfg.Tools.IsToolEnabled("exec") {
 		execTool, err := tools.NewExecToolWithConfig(workspace, restrict, cfg)
 		if err != nil {
-			log.Fatalf("Critical error: unable to initialize exec tool: %v", err)
+			logger.FatalCF("agent", "Unable to initialize exec tool", map[string]any{"error": err.Error()})
 		}
 		toolsRegistry.Register(execTool)
 	}
@@ -206,10 +205,19 @@ func NewAgentInstance(
 			})
 			lightCandidates = resolved
 		} else {
-			log.Printf("routing: light_model %q not found in model_list — routing disabled for agent %q",
-				rc.LightModel, agentID)
+			logger.WarnCF("agent", "Routing disabled: light_model not found", map[string]any{
+				"light_model": rc.LightModel,
+				"agent":       agentID,
+			})
 		}
 	}
+
+	logger.InfoCF("agent", "Agent instance created", map[string]any{
+		"agent_id":   agentID,
+		"model":      model,
+		"workspace":  workspace,
+		"candidates": len(candidates),
+	})
 
 	return &AgentInstance{
 		ID:                        agentID,
@@ -271,7 +279,7 @@ func compilePatterns(patterns []string) []*regexp.Regexp {
 	for _, p := range patterns {
 		re, err := regexp.Compile(p)
 		if err != nil {
-			fmt.Printf("Warning: invalid path pattern %q: %v\n", p, err)
+			logger.WarnCF("agent", "Invalid path pattern", map[string]any{"pattern": p, "error": err.Error()})
 			continue
 		}
 		compiled = append(compiled, re)

@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"strings"
+	"sync"
 	"sync/atomic"
 
 	"github.com/caarlos0/env/v11"
@@ -11,6 +13,16 @@ import (
 	"ok/internal/utils"
 	"ok/internal/logger"
 )
+
+// configMu protects read-modify-write cycles on config.json against race conditions.
+var configMu sync.Mutex
+
+// WithConfigLock serializes read-modify-write operations on the config file.
+func WithConfigLock(fn func() error) error {
+	configMu.Lock()
+	defer configMu.Unlock()
+	return fn()
+}
 
 // rrCounter is a global counter for round-robin load balancing across models.
 var rrCounter atomic.Uint64
@@ -49,12 +61,13 @@ func (f *FlexibleStringSlice) UnmarshalJSON(data []byte) error {
 }
 
 type Config struct {
-	Debug     bool            `json:"debug" env:"OK_DEBUG"`
-	Agents    AgentsConfig    `json:"agents"`
-	Session   SessionConfig   `json:"session,omitempty"`
-	Channels  ChannelsConfig `json:"channels"`
-	ModelList []ModelConfig  `json:"model_list"`
-	Gateway   GatewayConfig   `json:"gateway"`
+	Debug        bool             `json:"debug" env:"OK_DEBUG"`
+	Agents       AgentsConfig     `json:"agents"`
+	Session      SessionConfig    `json:"session,omitempty"`
+	Channels     ChannelsConfig   `json:"channels"`
+	ProviderList []ProviderConfig `json:"provider_list"`
+	ModelList    []ModelConfig    `json:"model_list"`
+	Gateway      GatewayConfig    `json:"gateway"`
 	Tools     ToolsConfig     `json:"tools"`
 	Heartbeat HeartbeatConfig `json:"heartbeat"`
 	Devices   DevicesConfig   `json:"devices"`
@@ -317,24 +330,26 @@ type DevicesConfig struct {
 	MonitorUSB bool `json:"monitor_usb" env:"OK_DEVICES_MONITOR_USB"`
 }
 
-// ModelConfig represents a model-centric provider configuration.
-// It allows adding new providers (especially OpenAI-compatible ones) via configuration only.
+// ProviderConfig represents a connectivity/authentication configuration for an LLM provider.
+// Models reference a provider by name (FK) to inherit connectivity settings.
+type ProviderConfig struct {
+	Name        string `json:"name"`                     // "openai", "anthropic", etc.
+	APIBase     string `json:"api_base,omitempty"`       // URL base
+	APIKey      string `json:"api_key,omitempty"`        // Explicit API key (alternative to auth store)
+	AuthMethod  string `json:"auth_method,omitempty"`    // oauth, token
+	ConnectMode string `json:"connect_mode,omitempty"`   // stdio, grpc
+	Workspace   string `json:"workspace,omitempty"`      // For CLI-based providers
+}
+
+// ModelConfig represents a model configuration that references a provider for connectivity.
 // The model field uses protocol prefix format: [protocol/]model-identifier
 // Supported protocols: openai, anthropic, antigravity, claude-cli, codex-cli, github-copilot
 // Default protocol is "openai" if no prefix is specified.
 type ModelConfig struct {
 	// Required fields
-	ModelName string `json:"model_name"` // User-facing alias for the model
-	Model     string `json:"model"`      // Protocol/model-identifier (e.g., "openai/gpt-4o", "anthropic/claude-sonnet-4.6")
-
-	// HTTP-based providers
-	APIBase string `json:"api_base,omitempty"` // API endpoint URL
-	APIKey  string `json:"api_key"`            // API authentication key
-
-	// Special providers (CLI-based, OAuth, etc.)
-	AuthMethod  string `json:"auth_method,omitempty"`  // Authentication method: oauth, token
-	ConnectMode string `json:"connect_mode,omitempty"` // Connection mode: stdio, grpc
-	Workspace   string `json:"workspace,omitempty"`    // Workspace path for CLI-based providers
+	ModelName string `json:"model_name"`          // User-facing alias for the model
+	Model     string `json:"model"`               // Protocol/model-identifier (e.g., "openai/gpt-4o", "anthropic/claude-sonnet-4.6")
+	Provider  string `json:"provider,omitempty"`   // FK → ProviderConfig.Name
 
 	// Optional optimizations
 	RPM            int    `json:"rpm,omitempty"`              // Requests per minute limit
@@ -492,28 +507,35 @@ func LoadConfig(path string) (*Config, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		if os.IsNotExist(err) {
+			logger.DebugCF("config", "Config file not found, using defaults", map[string]any{"path": path})
 			return cfg, nil
 		}
+		logger.ErrorCF("config", "Config file read error", map[string]any{"path": path, "error": err.Error()})
 		return nil, err
 	}
 
-	// Pre-scan the JSON to check whether the user provided model_list entries.
+	// Pre-scan the JSON to check whether the user provided model_list/provider_list entries.
 	// Go's JSON decoder reuses existing slice backing-array elements rather than
 	// zero-initializing them, so fields absent from the user's JSON (e.g. api_base)
 	// would silently inherit values from the DefaultConfig template at the same
-	// index position. We only reset cfg.ModelList when the user actually provides
+	// index position. We only reset slices when the user actually provides
 	// entries; when count is 0 we keep DefaultConfig's built-in list as fallback.
 	var tmp struct {
-		ModelList json.RawMessage `json:"model_list"`
+		ProviderList json.RawMessage `json:"provider_list"`
+		ModelList    json.RawMessage `json:"model_list"`
 	}
 	if err := json.Unmarshal(data, &tmp); err != nil {
 		return nil, err
+	}
+	if len(tmp.ProviderList) > 2 { // "[]" is 2 bytes
+		cfg.ProviderList = nil
 	}
 	if len(tmp.ModelList) > 2 { // "[]" is 2 bytes
 		cfg.ModelList = nil
 	}
 
 	if err := json.Unmarshal(data, cfg); err != nil {
+		logger.ErrorCF("config", "Config parse error", map[string]any{"path": path, "error": err.Error()})
 		return nil, err
 	}
 
@@ -570,7 +592,11 @@ func SaveConfig(path string, cfg *Config) error {
 	}
 
 	// Use unified atomic write utility with explicit sync for flash storage reliability.
-	return utils.WriteFileAtomic(path, data, 0o600)
+	if err := utils.WriteFileAtomic(path, data, 0o600); err != nil {
+		return err
+	}
+	logger.DebugCF("config", "Config saved", map[string]any{"path": path})
+	return nil
 }
 
 func (c *Config) WorkspacePath() string {
@@ -629,6 +655,40 @@ func (c *Config) ValidateModelList() error {
 		}
 	}
 	return nil
+}
+
+// GetProviderConfig returns the ProviderConfig with the given name, or nil if not found.
+func (c *Config) GetProviderConfig(name string) *ProviderConfig {
+	for i := range c.ProviderList {
+		if c.ProviderList[i].Name == name {
+			return &c.ProviderList[i]
+		}
+	}
+	return nil
+}
+
+// ResolveModelProvider finds the ProviderConfig for a model.
+// It looks up m.Provider in ProviderList first, then falls back to deriving
+// from the protocol prefix of m.Model (backward compat).
+func (c *Config) ResolveModelProvider(m *ModelConfig) (*ProviderConfig, error) {
+	if m.Provider != "" {
+		if p := c.GetProviderConfig(m.Provider); p != nil {
+			return p, nil
+		}
+		return nil, fmt.Errorf("provider %q not found in provider_list (referenced by model %q)", m.Provider, m.ModelName)
+	}
+
+	// Derive from model protocol prefix
+	protocol := "openai"
+	if prefix, _, found := strings.Cut(m.Model, "/"); found {
+		protocol = prefix
+	}
+	if p := c.GetProviderConfig(protocol); p != nil {
+		return p, nil
+	}
+
+	// Return a synthetic provider with just the name so the factory can use defaults
+	return &ProviderConfig{Name: protocol}, nil
 }
 
 func (t *ToolsConfig) IsToolEnabled(name string) bool {

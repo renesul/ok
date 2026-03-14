@@ -3,6 +3,8 @@ package providers
 import (
 	"encoding/json"
 	"strings"
+
+	"ok/internal/logger"
 )
 
 // extractToolCallsFromText parses tool call JSON from response text.
@@ -33,8 +35,15 @@ func extractToolCallsFromText(text string) []ToolCall {
 	}
 
 	if err := json.Unmarshal([]byte(jsonStr), &wrapper); err != nil {
+		logger.WarnCF("tool-extract", "JSON parse error", map[string]any{
+			"error": err.Error(),
+		})
 		return nil
 	}
+
+	logger.DebugCF("tool-extract", "Tool calls extracted", map[string]any{
+		"count": len(wrapper.ToolCalls),
+	})
 
 	var result []ToolCall
 	for _, tc := range wrapper.ToolCalls {

@@ -10,6 +10,7 @@ import (
 	"context"
 	"time"
 
+	"ok/internal/logger"
 	"ok/providers/openai_compat"
 )
 
@@ -18,6 +19,9 @@ type HTTPProvider struct {
 }
 
 func NewHTTPProvider(apiKey, apiBase, proxy string) *HTTPProvider {
+	logger.DebugCF("provider.http", "Creating HTTP provider", map[string]any{
+		"api_base": apiBase,
+	})
 	return &HTTPProvider{
 		delegate: openai_compat.NewProvider(apiKey, apiBase, proxy),
 	}
@@ -49,6 +53,10 @@ func (p *HTTPProvider) Chat(
 	model string,
 	options map[string]any,
 ) (*LLMResponse, error) {
+	logger.DebugCF("provider.http", "Chat request", map[string]any{
+		"model":    model,
+		"messages": len(messages),
+	})
 	return p.delegate.Chat(ctx, messages, tools, model, options)
 }
 

@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"strings"
 	"time"
+
+	"ok/internal/logger"
 )
 
 // FallbackChain orchestrates model fallback across multiple candidates.
@@ -107,6 +109,10 @@ func (fc *FallbackChain) Execute(
 		return nil, fmt.Errorf("fallback: no candidates configured")
 	}
 
+	logger.DebugCF("fallback", "Starting fallback chain", map[string]any{
+		"candidates": len(candidates),
+	})
+
 	result := &FallbackResult{
 		Attempts: make([]FallbackAttempt, 0, len(candidates)),
 	}
@@ -120,6 +126,11 @@ func (fc *FallbackChain) Execute(
 		// Check cooldown.
 		if !fc.cooldown.IsAvailable(candidate.Provider) {
 			remaining := fc.cooldown.CooldownRemaining(candidate.Provider)
+			logger.WarnCF("fallback", "Skipping provider in cooldown", map[string]any{
+				"provider":  candidate.Provider,
+				"model":     candidate.Model,
+				"remaining": remaining.Round(time.Second).String(),
+			})
 			result.Attempts = append(result.Attempts, FallbackAttempt{
 				Provider: candidate.Provider,
 				Model:    candidate.Model,
@@ -145,11 +156,21 @@ func (fc *FallbackChain) Execute(
 			result.Response = resp
 			result.Provider = candidate.Provider
 			result.Model = candidate.Model
+			logger.InfoCF("fallback", "Provider succeeded", map[string]any{
+				"provider":    candidate.Provider,
+				"model":       candidate.Model,
+				"attempt":     i + 1,
+				"duration_ms": elapsed.Milliseconds(),
+			})
 			return result, nil
 		}
 
 		// Context cancellation: abort immediately, no fallback.
 		if ctx.Err() == context.Canceled {
+			logger.WarnCF("fallback", "Fallback aborted: context cancelled", map[string]any{
+				"provider": candidate.Provider,
+				"model":    candidate.Model,
+			})
 			result.Attempts = append(result.Attempts, FallbackAttempt{
 				Provider: candidate.Provider,
 				Model:    candidate.Model,
@@ -164,6 +185,11 @@ func (fc *FallbackChain) Execute(
 
 		if failErr == nil {
 			// Unclassifiable error: do not fallback, return immediately.
+			logger.ErrorCF("fallback", "Unclassified error, aborting", map[string]any{
+				"provider": candidate.Provider,
+				"model":    candidate.Model,
+				"error":    err.Error(),
+			})
 			result.Attempts = append(result.Attempts, FallbackAttempt{
 				Provider: candidate.Provider,
 				Model:    candidate.Model,
@@ -176,6 +202,11 @@ func (fc *FallbackChain) Execute(
 
 		// Non-retriable error: abort immediately.
 		if !failErr.IsRetriable() {
+			logger.ErrorCF("fallback", "Non-retriable error", map[string]any{
+				"provider": candidate.Provider,
+				"model":    candidate.Model,
+				"reason":   string(failErr.Reason),
+			})
 			result.Attempts = append(result.Attempts, FallbackAttempt{
 				Provider: candidate.Provider,
 				Model:    candidate.Model,
@@ -187,6 +218,12 @@ func (fc *FallbackChain) Execute(
 		}
 
 		// Retriable error: mark failure and continue to next candidate.
+		logger.WarnCF("fallback", "Retriable error, trying next", map[string]any{
+			"provider":    candidate.Provider,
+			"model":       candidate.Model,
+			"reason":      string(failErr.Reason),
+			"duration_ms": elapsed.Milliseconds(),
+		})
 		fc.cooldown.MarkFailure(candidate.Provider, failErr.Reason)
 		result.Attempts = append(result.Attempts, FallbackAttempt{
 			Provider: candidate.Provider,
@@ -198,11 +235,17 @@ func (fc *FallbackChain) Execute(
 
 		// If this was the last candidate, return aggregate error.
 		if i == len(candidates)-1 {
+			logger.ErrorCF("fallback", "All candidates exhausted", map[string]any{
+				"total_attempts": len(result.Attempts),
+			})
 			return nil, &FallbackExhaustedError{Attempts: result.Attempts}
 		}
 	}
 
 	// All candidates were skipped (all in cooldown).
+	logger.ErrorCF("fallback", "All candidates in cooldown", map[string]any{
+		"total_attempts": len(result.Attempts),
+	})
 	return nil, &FallbackExhaustedError{Attempts: result.Attempts}
 }
 
@@ -235,6 +278,10 @@ func (fc *FallbackChain) ExecuteImage(
 			result.Response = resp
 			result.Provider = candidate.Provider
 			result.Model = candidate.Model
+			logger.InfoCF("fallback", "Image provider succeeded", map[string]any{
+				"provider": candidate.Provider,
+				"model":    candidate.Model,
+			})
 			return result, nil
 		}
 
@@ -251,6 +298,11 @@ func (fc *FallbackChain) ExecuteImage(
 		// Image dimension/size errors are non-retriable.
 		errMsg := strings.ToLower(err.Error())
 		if IsImageDimensionError(errMsg) || IsImageSizeError(errMsg) {
+			logger.WarnCF("fallback", "Image non-retriable error", map[string]any{
+				"provider": candidate.Provider,
+				"model":    candidate.Model,
+				"error":    err.Error(),
+			})
 			result.Attempts = append(result.Attempts, FallbackAttempt{
 				Provider: candidate.Provider,
 				Model:    candidate.Model,
