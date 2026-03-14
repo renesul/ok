@@ -11,6 +11,7 @@ build/
 /ok
 /ok-test
 cmd/**/workspace
+internal/startup/workspace/
 
 # OK specific
 
