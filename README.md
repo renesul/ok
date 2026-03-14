@@ -24,8 +24,9 @@ Multi-channel AI assistant — one binary, zero config files to edit, everything
 
 ## ✨ Features
 
-- 🤖 **13+ LLM vendors** — OpenAI, Anthropic, Gemini, DeepSeek, Groq, Ollama, OpenRouter, and more
+- 🤖 **13+ LLM vendors** — OpenAI, Anthropic, Google Gemini, DeepSeek, Groq, Ollama, OpenRouter, and more
 - 💬 **5 chat channels** — Telegram, Discord, WhatsApp, Slack, built-in web chat
+- 🖼️ **Vision / image analysis** — dedicated image model routing (Gemini) on any channel that sends photos
 - 🎙️ **Voice transcription** — automatic audio-to-text via Groq/Whisper on all channels
 - 🖥️ **Web UI** — responsive config editor with i18n (EN/PT-BR/ES), real-time logs, test chat
 - 🧠 **RAG** — semantic long-term memory via vector embeddings, flat-file storage
@@ -35,6 +36,7 @@ Multi-channel AI assistant — one binary, zero config files to edit, everything
 - 🔄 **Smart fallback** — automatic load-balancing, cooldown, and failover across providers
 - ⏰ **Heartbeat & Cron** — scheduled tasks and periodic agent check-ins
 - 🧬 **Persona files** — customize identity, personality, and behavior via markdown
+- 🔗 **Integrations** — Email (IMAP/SMTP), Google Calendar, Home Assistant
 - 📦 **Single binary** — no CGO, no external dependencies
 
 ---
@@ -105,7 +107,7 @@ All vendors use the OpenAI-compatible HTTP protocol.
 |---|---|
 | OpenAI | `openai/` |
 | Anthropic | `anthropic/` |
-| Google Gemini | `gemini/` |
+| Google Gemini | `google/` |
 | DeepSeek | `deepseek/` |
 | Groq | `groq/` |
 | Mistral | `mistral/` |
@@ -136,10 +138,8 @@ Incoming Message (Telegram, Discord, WhatsApp, Slack, Web Chat)
     │
     ▼
  Channel Adapter (app/input/)
-    │
-    ▼
- Voice Transcription (Groq/Whisper, if audio)
-    │
+    │  ├─ audio → Voice Transcription (Groq/Whisper)
+    │  └─ image → Media Store (downloaded + base64)
     ▼
  Route Resolver (app/routing/)
     │
@@ -149,6 +149,11 @@ Incoming Message (Telegram, Discord, WhatsApp, Slack, Web Chat)
     ▼
  Context Assembly (persona files + RAG)
     │
+    ▼
+ Model Router
+    │  ├─ image detected → Image Provider (Gemini)
+    │  ├─ light message  → Light Model (optional)
+    │  └─ default        → Primary Provider
     ▼
  ReAct Loop (LLM → tool calls → observe → repeat)
     │
