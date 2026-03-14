@@ -84,6 +84,11 @@ func DefaultConfig() *Config {
 		},
 		ModelList: []ModelConfig{
 			{
+				ModelName: "default",
+				Model:     "openai/gpt-4.1-mini",
+				APIBase:   "https://api.openai.com/v1",
+			},
+			{
 				ModelName: "embedding",
 				Model:     "openai/text-embedding-3-small",
 				APIBase:   "https://api.openai.com/v1",
@@ -221,7 +226,7 @@ func DefaultConfig() *Config {
 		},
 		MCPServers: []MCPServerConfig{},
 		WebUI: WebUIConfig{
-			Enabled: false,
+			Enabled: true,
 			Host:    "127.0.0.1",
 			Port:    18800,
 		},
