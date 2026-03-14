@@ -25,12 +25,16 @@ Multi-channel AI assistant — one binary, zero config files to edit, everything
 ## ✨ Features
 
 - 🤖 **13+ LLM vendors** — OpenAI, Anthropic, Gemini, DeepSeek, Groq, Ollama, OpenRouter, and more
-- 💬 **4 chat channels** — Telegram, Discord, WhatsApp, Slack
+- 💬 **5 chat channels** — Telegram, Discord, WhatsApp, Slack, built-in web chat
+- 🎙️ **Voice transcription** — automatic audio-to-text via Groq/Whisper on all channels
 - 🖥️ **Web UI** — responsive config editor with i18n (EN/PT-BR/ES), real-time logs, test chat
 - 🧠 **RAG** — semantic long-term memory via vector embeddings, flat-file storage
 - 🔌 **MCP** — Model Context Protocol support (stdio + HTTP/SSE)
 - 🛠️ **Skills** — extensible skill system with built-in defaults
-- ⚡ **Agent loop** — ReAct planner + parallel tool execution + memory manager
+- ⚡ **Agent loop** — ReAct planner + parallel tool execution + sub-agent spawning
+- 🔄 **Smart fallback** — automatic load-balancing, cooldown, and failover across providers
+- ⏰ **Heartbeat & Cron** — scheduled tasks and periodic agent check-ins
+- 🧬 **Persona files** — customize identity, personality, and behavior via markdown
 - 📦 **Single binary** — no CGO, no external dependencies
 
 ---
@@ -48,7 +52,7 @@ ok -debug       # verbose logging
 
 1. Open **http://localhost:18800**
 2. Add your LLM API key
-3. Enable a channel (Telegram, Discord, WhatsApp, or Slack)
+3. Enable a channel (Telegram, Discord, WhatsApp, Slack) or use the built-in web chat
 4. Done — start chatting 🎉
 
 On first run, OK creates `~/.ok/` with a default config and workspace.
@@ -128,10 +132,13 @@ Multiple entries with the same `model_name` are automatically load-balanced (rou
 ### Message Flow
 
 ```
-Incoming Message (Telegram, Discord, WhatsApp, Slack)
+Incoming Message (Telegram, Discord, WhatsApp, Slack, Web Chat)
     │
     ▼
  Channel Adapter (app/input/)
+    │
+    ▼
+ Voice Transcription (Groq/Whisper, if audio)
     │
     ▼
  Route Resolver (app/routing/)
@@ -170,6 +177,10 @@ internal/                Infrastructure
   config/                Config loader + hot-reload
   logger/                Structured logging
   auth/                  Authentication
+  voice/                 Audio transcription (Groq/Whisper)
+  media/                 Media store with TTL cleanup
+  heartbeat/             Periodic agent check-ins
+  cron/                  Scheduled job execution
   skills/                Skill system
   webui/                 Web UI (embedded SPA)
   mcp/                   MCP client + server
@@ -180,11 +191,14 @@ internal/                Infrastructure
 ```
 ~/.ok/workspace/
 ├── sessions/            Conversation history
-├── memory/              Long-term memory
+├── memory/              Long-term memory (RAG-indexed)
 ├── skills/              Skill packages
-├── IDENTITY.md          Agent identity
-├── SOUL.md              Agent personality
-└── USER.md              User preferences
+├── IDENTITY.md          Agent identity and capabilities
+├── SOUL.md              Agent personality and behavior rules
+├── USER.md              User preferences
+├── AGENTS.md            Multi-agent configuration
+├── HEARTBEAT.md         Periodic task checklist
+└── TOOLS.md             Tool usage guidelines
 ```
 
 ---
