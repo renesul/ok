@@ -27,12 +27,12 @@ type ContextBuilder struct {
 	retriever     *memory.Retriever    // optional RAG retriever for semantic memory
 	ragCache      *RAGContextCache // caches formatted RAG context blocks
 
-	// Cache for system prompt to avoid rebuilding on every call.
+	// Cache for system prompt parts to avoid rebuilding on every call.
 	// This fixes issue #607: repeated reprocessing of the entire context.
 	// The cache auto-invalidates when workspace source files change (mtime check).
-	systemPromptMutex  sync.RWMutex
-	cachedSystemPrompt string
-	cachedAt           time.Time // max observed mtime across tracked paths at cache build time
+	systemPromptMutex sync.RWMutex
+	cachedParts       *promptParts // nil means no cache
+	cachedAt          time.Time    // max observed mtime across tracked paths at cache build time
 
 	// existedAtCache tracks which source file paths existed the last time the
 	// cache was built. This lets sourceFilesChanged detect files that are newly
@@ -81,7 +81,7 @@ func (cb *ContextBuilder) getIdentity() string {
 
 	return fmt.Sprintf(`# ok ✓
 
-You are ok, a helpful AI assistant.
+You are ok, a personal AI assistant.
 
 ## Workspace
 Your workspace is at: %s
@@ -91,56 +91,83 @@ Your workspace is at: %s
 
 ## Important Rules
 
-1. **ALWAYS use tools** - When you need to perform an action (schedule reminders, send messages, execute commands, etc.), you MUST call the appropriate tool. Do NOT just say you'll do it or pretend to do it.
+1. **Use tools** — When you need to perform an action, call the appropriate tool. Do not simulate or narrate actions you can actually execute.
 
-2. **Be helpful and accurate** - When using tools, briefly explain what you're doing.
+2. **Match the user's language** — Reply in the same language the user writes in. If they switch languages, follow.
 
-3. **Memory** - When interacting with me if something seems memorable, update %s/memory/MEMORY.md
+3. **Be concise** — Explain what you're doing briefly. One sentence before a tool call, not a paragraph.
 
-4. **Context summaries** - Conversation summaries provided as context are approximate references only. They may be incomplete or outdated. Always defer to explicit user instructions over summary content.`,
+4. **Memory** — When the user shares something worth remembering, update %s/memory/MEMORY.md. Don't memorize routine interactions.
+
+5. **Context summaries** — Conversation summaries provided as context are approximate. Always defer to explicit user instructions over summary content.
+
+6. **Safety** — Never execute destructive operations without explicit user confirmation. Flag risks before acting.`,
 		workspacePath, workspacePath, workspacePath, workspacePath, workspacePath)
 }
 
-func (cb *ContextBuilder) BuildSystemPrompt() string {
-	parts := []string{}
+// promptParts holds the two halves of the system prompt, split by volatility
+// so that LLM-side prompt caching (Anthropic ephemeral, OpenAI prefix) can
+// cache the stable core independently of the more-frequently-changing memory.
+type promptParts struct {
+	core   string // identity + persona + skills — rarely changes
+	memory string // MEMORY.md context — changes occasionally
+}
 
-	// Core identity section
-	parts = append(parts, cb.getIdentity())
+// combined returns the full system prompt as a single string (used by tests
+// and any code that doesn't need the split).
+func (p *promptParts) combined() string {
+	if p.memory == "" {
+		return p.core
+	}
+	return p.core + "\n\n---\n\n" + p.memory
+}
 
-	// Persona files (IDENTITY.md, SOUL.md, USER.md, AGENTS.md)
+// buildPromptParts builds the two prompt halves from disk.
+func (cb *ContextBuilder) buildPromptParts() *promptParts {
+	// --- Core: identity + persona + skills (rarely changes) ---
+	coreParts := []string{cb.getIdentity()}
+
 	persona := cb.personaLoader.Load()
 	if section := persona.BuildPromptSection(); section != "" {
-		parts = append(parts, section)
+		coreParts = append(coreParts, section)
 	}
 
-	// Skills - show summary, AI can read full content with read_file tool
 	skillsSummary := cb.skillsLoader.BuildSkillsSummary()
 	if skillsSummary != "" {
-		parts = append(parts, fmt.Sprintf(`# Skills
+		coreParts = append(coreParts, fmt.Sprintf(`# Skills
 
 The following skills extend your capabilities. To use a skill, read its SKILL.md file using the read_file tool.
 
 %s`, skillsSummary))
 	}
 
-	// Memory context
+	// --- Memory: changes more often ---
 	memoryContext := cb.memory.GetMemoryContext()
+	mem := ""
 	if memoryContext != "" {
-		parts = append(parts, "# Memory\n\n"+memoryContext)
+		mem = "# Memory\n\n" + memoryContext
 	}
 
-	// Join with "---" separator
-	return strings.Join(parts, "\n\n---\n\n")
+	return &promptParts{
+		core:   strings.Join(coreParts, "\n\n---\n\n"),
+		memory: mem,
+	}
 }
 
-// BuildSystemPromptWithCache returns the cached system prompt if available
-// and source files haven't changed, otherwise builds and caches it.
+// BuildSystemPrompt returns the full system prompt as a single string.
+// Kept for backward compatibility (tests, LoadBootstrapFiles, etc.).
+func (cb *ContextBuilder) BuildSystemPrompt() string {
+	return cb.buildPromptParts().combined()
+}
+
+// buildPromptPartsWithCache returns the cached prompt parts if available
+// and source files haven't changed, otherwise builds and caches them.
 // Source file changes are detected via mtime checks (cheap stat calls).
-func (cb *ContextBuilder) BuildSystemPromptWithCache() string {
+func (cb *ContextBuilder) buildPromptPartsWithCache() *promptParts {
 	// Try read lock first — fast path when cache is valid
 	cb.systemPromptMutex.RLock()
-	if cb.cachedSystemPrompt != "" && !cb.sourceFilesChangedLocked() {
-		result := cb.cachedSystemPrompt
+	if cb.cachedParts != nil && !cb.sourceFilesChangedLocked() {
+		result := cb.cachedParts
 		cb.systemPromptMutex.RUnlock()
 		return result
 	}
@@ -151,8 +178,8 @@ func (cb *ContextBuilder) BuildSystemPromptWithCache() string {
 	defer cb.systemPromptMutex.Unlock()
 
 	// Double-check: another goroutine may have rebuilt while we waited
-	if cb.cachedSystemPrompt != "" && !cb.sourceFilesChangedLocked() {
-		return cb.cachedSystemPrompt
+	if cb.cachedParts != nil && !cb.sourceFilesChangedLocked() {
+		return cb.cachedParts
 	}
 
 	// Snapshot the baseline (existence + max mtime) BEFORE building the prompt.
@@ -162,18 +189,25 @@ func (cb *ContextBuilder) BuildSystemPromptWithCache() string {
 	// rebuild. The alternative (baseline after build) risks caching stale
 	// content with a too-new baseline, making the staleness invisible.
 	baseline := cb.buildCacheBaseline()
-	prompt := cb.BuildSystemPrompt()
-	cb.cachedSystemPrompt = prompt
+	parts := cb.buildPromptParts()
+	cb.cachedParts = parts
 	cb.cachedAt = baseline.maxMtime
 	cb.existedAtCache = baseline.existed
 	cb.skillFilesAtCache = baseline.skillFiles
 
 	logger.DebugCF("agent", "System prompt cached",
 		map[string]any{
-			"length": len(prompt),
+			"core_len":   len(parts.core),
+			"memory_len": len(parts.memory),
 		})
 
-	return prompt
+	return parts
+}
+
+// BuildSystemPromptWithCache returns the full cached system prompt as a single
+// string. Used by tests and any code that doesn't need the core/memory split.
+func (cb *ContextBuilder) BuildSystemPromptWithCache() string {
+	return cb.buildPromptPartsWithCache().combined()
 }
 
 // InvalidateCache clears the cached system prompt.
@@ -183,7 +217,7 @@ func (cb *ContextBuilder) InvalidateCache() {
 	cb.systemPromptMutex.Lock()
 	defer cb.systemPromptMutex.Unlock()
 
-	cb.cachedSystemPrompt = ""
+	cb.cachedParts = nil
 	cb.cachedAt = time.Time{}
 	cb.existedAtCache = nil
 	cb.skillFilesAtCache = nil
@@ -440,44 +474,54 @@ func (cb *ContextBuilder) BuildMessages(
 ) []providers.Message {
 	messages := []providers.Message{}
 
-	// The static part (identity, bootstrap, skills, memory) is cached locally to
-	// avoid repeated file I/O and string building on every call (fixes issue #607).
-	// Dynamic parts (time, session, summary) are appended per request.
+	// The system prompt is split into blocks ordered by volatility (most stable
+	// first) to maximize LLM-side prompt caching:
+	//   Block 0: core (identity+persona+skills) — rarely changes    → ephemeral
+	//   Block 1: memory                         — changes sometimes → ephemeral
+	//   Block 2: summary                        — stable per window → ephemeral
+	//   Block 3: dynamic (time/session)         — changes every req → no cache
+	//   Block 4: RAG                            — changes every req → no cache
+	//
+	// Anthropic caches by prefix: everything identical from the start is reused.
+	// Putting stable content first means even when memory/summary change, the
+	// core block stays cached. Up to 4 ephemeral breakpoints are allowed.
+	//
 	// Everything is sent as a single system message for provider compatibility:
 	// - Anthropic adapter extracts messages[0] (Role=="system") and maps its content
-	//   to the top-level "system" parameter in the Messages API request. A single
-	//   contiguous system block makes this extraction straightforward.
+	//   to the top-level "system" parameter in the Messages API request.
 	// - Codex maps only the first system message to its instructions field.
 	// - OpenAI-compat passes messages through as-is.
-	staticPrompt := cb.BuildSystemPromptWithCache()
+	parts := cb.buildPromptPartsWithCache()
 
-	// Build short dynamic context (time, runtime, session) — changes per request
-	dynamicCtx := cb.buildDynamicContext(channel, chatID)
-
-	// Compose a single system message: static (cached) + dynamic + optional summary.
-	// Keeping all system content in one message ensures every provider adapter can
-	// extract it correctly (Anthropic adapter -> top-level system param,
-	// Codex -> instructions field).
-	//
-	// SystemParts carries the same content as structured blocks so that
-	// cache-aware adapters (Anthropic) can set per-block cache_control.
-	// The static block is marked "ephemeral" — its prefix hash is stable
-	// across requests, enabling LLM-side KV cache reuse.
-	stringParts := []string{staticPrompt, dynamicCtx}
-
+	stringParts := []string{parts.core}
 	contentBlocks := []providers.ContentBlock{
-		{Type: "text", Text: staticPrompt, CacheControl: &providers.CacheControl{Type: "ephemeral"}},
-		{Type: "text", Text: dynamicCtx},
+		{Type: "text", Text: parts.core, CacheControl: &providers.CacheControl{Type: "ephemeral"}},
 	}
 
+	// Memory block — changes occasionally (when user saves something)
+	if parts.memory != "" {
+		stringParts = append(stringParts, parts.memory)
+		contentBlocks = append(contentBlocks, providers.ContentBlock{
+			Type: "text", Text: parts.memory, CacheControl: &providers.CacheControl{Type: "ephemeral"},
+		})
+	}
+
+	// Summary block — stable within a summarization window
 	if summary != "" {
 		summaryText := fmt.Sprintf(
 			"CONTEXT_SUMMARY: The following is an approximate summary of prior conversation "+
 				"for reference only. It may be incomplete or outdated — always defer to explicit instructions.\n\n%s",
 			summary)
 		stringParts = append(stringParts, summaryText)
-		contentBlocks = append(contentBlocks, providers.ContentBlock{Type: "text", Text: summaryText})
+		contentBlocks = append(contentBlocks, providers.ContentBlock{
+			Type: "text", Text: summaryText, CacheControl: &providers.CacheControl{Type: "ephemeral"},
+		})
 	}
+
+	// Dynamic context — changes every request (time, runtime, session)
+	dynamicCtx := cb.buildDynamicContext(channel, chatID)
+	stringParts = append(stringParts, dynamicCtx)
+	contentBlocks = append(contentBlocks, providers.ContentBlock{Type: "text", Text: dynamicCtx})
 
 	// RAG: retrieve relevant past interactions for the current message
 	if cb.retriever != nil && strings.TrimSpace(currentMessage) != "" {
@@ -491,15 +535,16 @@ func (cb *ContextBuilder) BuildMessages(
 	fullSystemPrompt := strings.Join(stringParts, "\n\n---\n\n")
 
 	// Log system prompt summary for debugging (debug mode only).
-	// Read cachedSystemPrompt under lock to avoid a data race with
-	// concurrent InvalidateCache / BuildSystemPromptWithCache writes.
+	// Read cachedParts under lock to avoid a data race with
+	// concurrent InvalidateCache / buildPromptPartsWithCache writes.
 	cb.systemPromptMutex.RLock()
-	isCached := cb.cachedSystemPrompt != ""
+	isCached := cb.cachedParts != nil
 	cb.systemPromptMutex.RUnlock()
 
 	logger.DebugCF("agent", "System prompt built",
 		map[string]any{
-			"static_chars":  len(staticPrompt),
+			"core_chars":    len(parts.core),
+			"memory_chars":  len(parts.memory),
 			"dynamic_chars": len(dynamicCtx),
 			"total_chars":   len(fullSystemPrompt),
 			"has_summary":   summary != "",

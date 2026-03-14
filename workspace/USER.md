@@ -1,21 +1,16 @@
 # User
 
-Information about user goes here.
+<!-- Fill in what you'd like OK to know about you. Delete what you don't need. -->
 
 ## Preferences
+- Language: (e.g., English, Português)
+- Timezone: (e.g., America/Sao_Paulo)
+- Communication style: (casual / formal / technical)
 
-- Communication style: (casual/formal)
-- Timezone: (your timezone)
-- Language: (your preferred language)
-
-## Personal Information
-
+## Context
 - Name: (optional)
-- Location: (optional)
-- Occupation: (optional)
+- Role: (e.g., developer, student, manager)
+- Main interests: (e.g., Go, AI, DevOps)
 
-## Learning Goals
-
-- What the user wants to learn from AI
-- Preferred interaction style
-- Areas of interest
+## Notes
+<!-- Anything else OK should know — workflows, tools you use, pet peeves, etc. -->

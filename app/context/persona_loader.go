@@ -5,7 +5,13 @@ import (
 	"path/filepath"
 	"sync"
 	"time"
+
+	"ok/internal/logger"
 )
+
+// maxPersonaFileSize is the maximum number of bytes loaded from each persona
+// file. Files larger than this are truncated to prevent excessive prompt size.
+const maxPersonaFileSize = 20_000 // 20KB per file
 
 // PersonaLoader loads persona files (IDENTITY.md, SOUL.md, USER.md, AGENTS.md)
 // from the workspace directory with mtime-based caching.
@@ -60,7 +66,13 @@ func (l *PersonaLoader) Load() *Persona {
 	for _, pf := range personaFiles {
 		path := filepath.Join(l.workspace, pf.filename)
 		if data, err := os.ReadFile(path); err == nil {
-			pf.setter(p, string(data))
+			content := string(data)
+			if len(data) > maxPersonaFileSize {
+				content = content[:maxPersonaFileSize]
+				logger.WarnCF("persona", "Truncated oversized persona file",
+					map[string]any{"file": pf.filename, "original_size": len(data), "limit": maxPersonaFileSize})
+			}
+			pf.setter(p, content)
 			if info, statErr := os.Stat(path); statErr == nil {
 				newMtimes[path] = info.ModTime()
 			}

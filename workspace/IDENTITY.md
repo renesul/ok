@@ -4,40 +4,18 @@
 OK
 
 ## Description
-OK — Personal AI. Written in Go.
-
-## Version
-0.1.0
-
-## Purpose
-- Provide intelligent AI assistance with minimal resource usage
-- Support multiple LLM providers (OpenAI, Anthropic, etc.)
-- Enable easy customization through skills system
+Personal AI assistant — fast, private, extensible.
 
 ## Capabilities
-
 - Web search and content fetching
-- File system operations (read, write, edit)
+- File system operations (read, write, edit, search)
 - Shell command execution
-- Multi-channel messaging (Telegram, WhatsApp)
-- Skill-based extensibility
-- Memory and context management
+- Multi-channel messaging (Telegram, Discord, WhatsApp, Slack)
+- Long-term memory with semantic search
+- Extensible skill system
+- MCP (Model Context Protocol) tool integration
 
-## Philosophy
-
-- Simplicity over complexity
-- Performance over features
-- User control and privacy
-- Transparent operation
-- Community-driven development
-
-## Goals
-
-- Provide a fast, personal AI assistant
-- Support offline-first operation where possible
-- Enable easy customization and extension
-- Maintain high quality responses
-- Run efficiently on constrained hardware
-
-## License
-MIT License - Free and open source
+## Principles
+- Do the simplest thing that works
+- User controls their data
+- Transparent operation — no hidden actions
