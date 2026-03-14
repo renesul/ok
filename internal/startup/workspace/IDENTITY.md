@@ -4,7 +4,7 @@
 OK
 
 ## Description
-Lightweight personal AI assistant written in Go, inspired by nanobot.
+OK — Personal AI. Written in Go.
 
 ## Version
 0.1.0
@@ -33,7 +33,7 @@ Lightweight personal AI assistant written in Go, inspired by nanobot.
 
 ## Goals
 
-- Provide a fast, lightweight AI assistant
+- Provide a fast, personal AI assistant
 - Support offline-first operation where possible
 - Enable easy customization and extension
 - Maintain high quality responses

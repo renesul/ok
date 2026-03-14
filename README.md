@@ -5,7 +5,7 @@
 <h1 align="center">OK</h1>
 
 <p align="center">
-  <b>Lightweight personal AI assistant — single binary, zero config files to edit</b>
+  <b>Personal AI — single binary, zero config files to edit</b>
 </p>
 
 <p align="center">
@@ -17,7 +17,7 @@
 
 ---
 
-OK connects LLMs to messaging apps. One binary, no CLI to learn — everything is configured through the embedded web UI.
+OK — Personal AI. Connects LLMs to messaging apps. One binary, no CLI to learn — everything is configured through the embedded web UI.
 
 - **14 LLM vendors** — OpenAI, Anthropic, Gemini, DeepSeek, Groq, Ollama, OpenRouter, and more
 - **4 chat channels** — Telegram, Discord, WhatsApp, Slack

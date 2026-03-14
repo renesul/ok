@@ -23,7 +23,7 @@ Build flags: `CGO_ENABLED=0`, Go flags: `-v -tags stdjson`. Version info injecte
 
 ## Architecture
 
-OK is a Go-based AI assistant framework that connects LLMs to messaging channels (Telegram, Discord, Slack, WhatsApp, WebSocket chat). Single binary, no CGO.
+OK — Personal AI. Go-based framework that connects LLMs to messaging channels (Telegram, Discord, Slack, WhatsApp, WebSocket chat). Single binary, no CGO.
 
 ### Layered Architecture (strict dependency direction: top imports bottom)
 
