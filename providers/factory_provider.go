@@ -87,7 +87,7 @@ func CreateProviderFromConfig(cfg *config.ModelConfig) (LLMProvider, string, err
 		}
 		apiBase := cfg.APIBase
 		if apiBase == "" {
-			apiBase = getDefaultAPIBase(protocol)
+			apiBase = GetDefaultAPIBase(protocol)
 		}
 		return NewHTTPProviderWithMaxTokensFieldAndRequestTimeout(
 			cfg.APIKey,
@@ -160,7 +160,7 @@ func CreateProviderFromConfig(cfg *config.ModelConfig) (LLMProvider, string, err
 		if cfg.AuthMethod == "token" && cfg.APIKey == "" {
 			apiBase := cfg.APIBase
 			if apiBase == "" {
-				apiBase = getDefaultAPIBase(protocol)
+				apiBase = GetDefaultAPIBase(protocol)
 			}
 			// For custom providers, try the auth store's APIBase
 			if apiBase == "" {
@@ -182,7 +182,7 @@ func CreateProviderFromConfig(cfg *config.ModelConfig) (LLMProvider, string, err
 		}
 		apiBase := cfg.APIBase
 		if apiBase == "" {
-			apiBase = getDefaultAPIBase(protocol)
+			apiBase = GetDefaultAPIBase(protocol)
 		}
 		if apiBase == "" {
 			return nil, "", fmt.Errorf("no default API base for protocol %q; please set api_base in model_list", protocol)
@@ -197,8 +197,8 @@ func CreateProviderFromConfig(cfg *config.ModelConfig) (LLMProvider, string, err
 	}
 }
 
-// getDefaultAPIBase returns the default API base URL for a given protocol.
-func getDefaultAPIBase(protocol string) string {
+// GetDefaultAPIBase returns the default API base URL for a given protocol.
+func GetDefaultAPIBase(protocol string) string {
 	switch protocol {
 	case "openai":
 		return "https://api.openai.com/v1"
@@ -214,6 +214,18 @@ func getDefaultAPIBase(protocol string) string {
 		return "https://api.mistral.ai/v1"
 	case "xai":
 		return "https://api.x.ai/v1"
+	case "gemini":
+		return "https://generativelanguage.googleapis.com/v1beta/openai/"
+	case "openrouter":
+		return "https://openrouter.ai/api/v1"
+	case "nvidia":
+		return "https://integrate.api.nvidia.com/v1"
+	case "cerebras":
+		return "https://api.cerebras.ai/v1"
+	case "together":
+		return "https://api.together.xyz/v1"
+	case "qwen", "qwen-portal":
+		return "https://dashscope.aliyuncs.com/compatible-mode/v1"
 	default:
 		return ""
 	}

@@ -568,16 +568,16 @@ func updateConfigAfterLogin(configPath, provider string, cred *auth.AuthCredenti
 		}
 
 	case "groq":
-		updateOrAddTokenModel(cfg, "groq", isGroqModel, "groq-llama", "groq/llama-4-scout-17b-16e-instruct", "https://api.groq.com/openai/v1")
+		updateOrAddTokenModel(cfg, "groq", isGroqModel, "groq-llama", "groq/llama-4-scout-17b-16e-instruct", providers.GetDefaultAPIBase("groq"))
 
 	case "deepseek":
-		updateOrAddTokenModel(cfg, "deepseek", isDeepSeekModel, "deepseek-chat", "deepseek/deepseek-chat", "https://api.deepseek.com/v1")
+		updateOrAddTokenModel(cfg, "deepseek", isDeepSeekModel, "deepseek-chat", "deepseek/deepseek-chat", providers.GetDefaultAPIBase("deepseek"))
 
 	case "mistral":
-		updateOrAddTokenModel(cfg, "mistral", isMistralModel, "mistral-medium", "mistral/mistral-medium-latest", "https://api.mistral.ai/v1")
+		updateOrAddTokenModel(cfg, "mistral", isMistralModel, "mistral-medium", "mistral/mistral-medium-latest", providers.GetDefaultAPIBase("mistral"))
 
 	case "xai":
-		updateOrAddTokenModel(cfg, "xai", isXAIModel, "grok-3-mini", "xai/grok-3-mini", "https://api.x.ai/v1")
+		updateOrAddTokenModel(cfg, "xai", isXAIModel, "grok-3-mini", "xai/grok-3-mini", providers.GetDefaultAPIBase("xai"))
 	}
 
 	if err := config.SaveConfig(configPath, cfg); err != nil {

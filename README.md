@@ -24,7 +24,7 @@ Multi-channel AI assistant — one binary, zero config files to edit, everything
 
 ## ✨ Features
 
-- 🤖 **14 LLM vendors** — OpenAI, Anthropic, Gemini, DeepSeek, Groq, Ollama, OpenRouter, and more
+- 🤖 **13+ LLM vendors** — OpenAI, Anthropic, Gemini, DeepSeek, Groq, Ollama, OpenRouter, and more
 - 💬 **4 chat channels** — Telegram, Discord, WhatsApp, Slack
 - 🖥️ **Web UI** — responsive config editor with i18n (EN/PT-BR/ES), real-time logs, test chat
 - 🧠 **RAG** — semantic long-term memory via vector embeddings, flat-file storage
@@ -69,10 +69,9 @@ On first run, OK creates `~/.ok/` with a default config and workspace.
 
 Config file: `~/.ok/config.json` — edit via web UI or directly.
 
-All fields overridable with `OK_` prefixed env vars:
+`OK_HOME` sets the base directory (default `~/.ok`):
 
 ```bash
-OK_AGENTS_DEFAULTS_MODEL=claude-sonnet-4.6 ok
 OK_HOME=/srv/ok ok
 ```
 
@@ -94,21 +93,31 @@ OK_HOME=/srv/ok ok
 
 ### Supported Vendors
 
-| Vendor | Prefix | Protocol |
-|---|---|---|
-| OpenAI | `openai/` | OpenAI |
-| Anthropic | `anthropic/` | Anthropic |
-| Google Gemini | `gemini/` | OpenAI |
-| DeepSeek | `deepseek/` | OpenAI |
-| Groq | `groq/` | OpenAI |
-| Ollama | `ollama/` | OpenAI |
-| OpenRouter | `openrouter/` | OpenAI |
-| NVIDIA | `nvidia/` | OpenAI |
-| Cerebras | `cerebras/` | OpenAI |
-| Qwen | `qwen/` | OpenAI |
-| Zhipu AI | `zhipu/` | OpenAI |
-| LiteLLM | `litellm/` | OpenAI |
-| vLLM | `vllm/` | OpenAI |
+All vendors use the OpenAI-compatible HTTP protocol.
+
+**Work out of the box** (just set `api_key`):
+
+| Vendor | Prefix |
+|---|---|
+| OpenAI | `openai/` |
+| Anthropic | `anthropic/` |
+| Google Gemini | `gemini/` |
+| DeepSeek | `deepseek/` |
+| Groq | `groq/` |
+| Mistral | `mistral/` |
+| xAI | `xai/` |
+| OpenRouter | `openrouter/` |
+| NVIDIA | `nvidia/` |
+| Cerebras | `cerebras/` |
+| Together | `together/` |
+| Qwen | `qwen/` |
+| Ollama | `ollama/` |
+
+**Any other OpenAI-compatible provider** — set `api_base` in the model config:
+
+```json
+{ "model_name": "my-model", "model": "custom/model-id", "api_key": "sk-...", "api_base": "https://my-provider.com/v1" }
+```
 
 Multiple entries with the same `model_name` are automatically load-balanced (round-robin).
 
