@@ -626,6 +626,20 @@ body {
 
 /* ── Channel form ────────────────────────────── */
 .channel-form { max-width: 660px; }
+
+/* ── Responsive form grid ───────────────────── */
+.form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0 24px;
+    align-items: start;
+}
+.form-grid > .form-section-title,
+.form-grid > .form-grid-full,
+.form-grid > div[style*="margin-top"] {
+    grid-column: 1 / -1;
+}
+.channel-form.form-grid { max-width: 960px; }
 .form-section-title {
     font-size: 13px; font-weight: 700; color: var(--text-secondary);
     margin: 32px 0 14px; padding-bottom: 8px;
@@ -1026,6 +1040,7 @@ body {
 /* Large desktop */
 @media (min-width: 1400px) {
     .channel-form { max-width: 700px; }
+    .channel-form.form-grid { max-width: 1060px; }
 }
 
 /* Standard desktop */
@@ -1035,6 +1050,7 @@ body {
 
 /* Tablet landscape */
 @media (max-width: 1024px) {
+    .form-grid { grid-template-columns: 1fr; }
     .channel-form { max-width: 100%; }
     .sub-tab-bar { padding: 0 16px; }
 }

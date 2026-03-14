@@ -2089,7 +2089,7 @@ function renderChannelForm(chKey) {
         html += `<div style="flex:1 1 300px; min-width:0;">`;
     }
 
-    html += `<div class="channel-form" id="chForm_${chKey}">`;
+    html += `<div class="channel-form form-grid" id="chForm_${chKey}">`;
 
     // Enabled toggle
     html += `<div class="toggle-row">`;
@@ -3208,7 +3208,7 @@ document.getElementById('chatInput').addEventListener('input', function() {
 
 function renderFormField(key, label, type, value, opts = {}) {
     const val = value !== undefined && value !== null ? value : '';
-    let h = '<div class="form-group">';
+    let h = type === 'textarea' ? '<div class="form-group form-grid-full">' : '<div class="form-group">';
     h += `<label class="form-label">${esc(label)}${opts.required ? ' *' : ''}</label>`;
     if (type === 'textarea') {
         h += `<textarea class="form-input" data-field="${key}" rows="${opts.rows || 3}" placeholder="${opts.placeholder || ''}">${esc(String(val))}</textarea>`;
@@ -3250,7 +3250,7 @@ function renderSelectField(key, label, options, value, opts = {}) {
 
 function renderArrayField(key, label, items, opts = {}) {
     const arr = items || [];
-    let h = '<div class="form-group">';
+    let h = '<div class="form-group form-grid-full">';
     h += `<label class="form-label">${esc(label)}</label>`;
     h += `<div class="array-editor" data-field="${key}" data-placeholder="${opts.placeholder || ''}">`;
     arr.forEach(v => {
@@ -3266,7 +3266,7 @@ function renderArrayField(key, label, items, opts = {}) {
 
 function renderKVEditor(key, label, map, opts = {}) {
     const entries = map ? Object.entries(map) : [];
-    let h = '<div class="form-group">';
+    let h = '<div class="form-group form-grid-full">';
     h += `<label class="form-label">${esc(label)}</label>`;
     h += `<div class="kv-editor" data-field="${key}">`;
     entries.forEach(([k, v]) => {
@@ -3517,7 +3517,7 @@ function renderAgents() {
     // ── Defaults section ──
     html += `<div class="form-section-title">${t('agents.defaults')}</div>`;
     html += `<div style="color:var(--text-muted);font-size:12px;margin-bottom:12px;">${t('agents.defaultsDesc')}</div>`;
-    html += '<div class="channel-form" id="agentDefaultsForm">';
+    html += '<div class="channel-form form-grid" id="agentDefaultsForm">';
     html += renderModelSelect('model_name', t('agents.modelName'), d.model_name || '', { allowEmpty: true, emptyLabel: '\u2014', hint: t('agents.modelNameHint') });
     html += renderFormField('workspace', t('field.workspace'), 'text', d.workspace || '', { placeholder: '~/.ok/workspace' });
     html += renderToggleField('restrict_to_workspace', t('agents.restrictWorkspace'), d.restrict_to_workspace);
@@ -3804,7 +3804,7 @@ function renderToolSettings() {
 
     let html = panelHeader(t('tools.title'), 'panelToolSettings');
     html += `<div class="panel-desc">${t('tools.desc')}</div>`;
-    html += '<div class="channel-form" id="toolSettingsForm">';
+    html += '<div class="channel-form form-grid" id="toolSettingsForm">';
 
     // Quick toggles
     html += `<div class="form-section-title">${t('tools.toggles')}</div>`;
@@ -3815,7 +3815,7 @@ function renderToolSettings() {
         ['spawn', 'Spawn'], ['spi', 'SPI (Hardware)'], ['subagent', 'Subagent'],
         ['web_fetch', 'Web Fetch'], ['write_file', 'Write File'],
     ];
-    html += '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:4px;">';
+    html += '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:4px;grid-column:1/-1;">';
     simpleTools.forEach(([key, label]) => {
         const enabled = tools[key] ? tools[key].enabled : false;
         html += renderToggleField('tool_' + key, label, enabled);
@@ -3934,7 +3934,7 @@ function renderRAG() {
 
     let html = panelHeader(t('rag.title'), 'panelRAG');
     html += `<div class="panel-desc">${t('rag.desc')}</div>`;
-    html += '<div class="channel-form" id="ragForm">';
+    html += '<div class="channel-form form-grid" id="ragForm">';
     html += renderToggleField('enabled', t('enabled'), rag.enabled);
 
     // Provider select — only connected providers
@@ -4012,7 +4012,7 @@ function renderGateway() {
     const gw = configData.gateway || {};
     let html = panelHeader(t('gateway.title'), 'panelGateway');
     html += `<div class="panel-desc">${t('gateway.desc')}</div>`;
-    html += '<div class="channel-form" id="gatewayForm">';
+    html += '<div class="channel-form form-grid" id="gatewayForm">';
     html += renderFormField('host', t('gateway.host'), 'text', gw.host || '127.0.0.1', { placeholder: '127.0.0.1' });
     html += renderFormField('port', t('gateway.port'), 'number', gw.port || 18790, { min: 1, max: 65535 });
     html += renderFormField('proxy', t('gateway.proxy'), 'text', configData.proxy || '', { placeholder: 'http://proxy:port', hint: t('gateway.proxyHint') });
@@ -4062,7 +4062,7 @@ function renderHeartbeat() {
     const hb = configData.heartbeat || {};
     let html = panelHeader(t('heartbeat.title'), 'panelHeartbeat');
     html += `<div class="panel-desc">${t('heartbeat.desc')}</div>`;
-    html += '<div class="channel-form" id="heartbeatForm">';
+    html += '<div class="channel-form form-grid" id="heartbeatForm">';
     html += renderToggleField('enabled', t('enabled'), hb.enabled);
     html += renderFormField('interval', t('heartbeat.interval'), 'number', hb.interval || 30, { min: 5, hint: t('heartbeat.intervalHint') });
     html += `<div style="margin-top:20px;"><button class="btn btn-primary" onclick="saveHeartbeat()">${t('save')}</button></div>`;
@@ -4086,7 +4086,7 @@ function renderDevices() {
     const dev = configData.devices || {};
     let html = panelHeader(t('devices.title'), 'panelDevices');
     html += `<div class="panel-desc">${t('devices.desc')}</div>`;
-    html += '<div class="channel-form" id="devicesForm">';
+    html += '<div class="channel-form form-grid" id="devicesForm">';
     html += renderToggleField('enabled', t('enabled'), dev.enabled);
     html += renderToggleField('monitor_usb', t('devices.monitorUsb'), dev.monitor_usb);
     html += `<div style="margin-top:20px;"><button class="btn btn-primary" onclick="saveDevices()">${t('save')}</button></div>`;
@@ -4130,7 +4130,7 @@ function renderRouting() {
 
     let html = panelHeader(t('routing.title'), 'panelRouting');
     html += `<div class="panel-desc">${t('routing.desc')}</div>`;
-    html += '<div class="channel-form" id="routingForm">';
+    html += '<div class="channel-form form-grid" id="routingForm">';
     html += renderToggleField('enabled', t('enabled'), routing.enabled);
     html += renderModelSelect('light_model', t('routing.lightModel'), routing.light_model || '', { allowEmpty: true, emptyLabel: '—' });
     html += renderFormField('threshold', t('routing.threshold'), 'number', routing.threshold !== undefined ? routing.threshold : 0.3, { min: 0, max: 1, step: 0.01, hint: t('routing.thresholdHint') });
@@ -4159,7 +4159,7 @@ function renderWebSearch() {
 
     let html = panelHeader(t('webSearch.title'), 'panelWebSearch');
     html += `<div class="panel-desc">${t('webSearch.desc')}</div>`;
-    html += '<div class="channel-form" id="webSearchForm">';
+    html += '<div class="channel-form form-grid" id="webSearchForm">';
 
     // Global settings
     html += `<div class="form-section-title">${t('webSearch.global')}</div>`;
@@ -4220,7 +4220,7 @@ function renderSummarization() {
     const d = (configData.agents && configData.agents.defaults) || {};
     let html = panelHeader(t('summarization.title'), 'panelSummarization');
     html += `<div class="panel-desc">${t('summarization.desc')}</div>`;
-    html += '<div class="channel-form" id="summarizationForm">';
+    html += '<div class="channel-form form-grid" id="summarizationForm">';
     html += renderFormField('summarize_message_threshold', t('agents.summarizeThreshold'), 'number', d.summarize_message_threshold || 20, { min: 1, hint: t('agents.summarizeThresholdHint') });
     html += renderFormField('summarize_token_percent', t('agents.summarizeTokenPct'), 'number', d.summarize_token_percent || 75, { min: 1, max: 100 });
     html += `<div style="margin-top:20px;"><button class="btn btn-primary" onclick="saveSummarization()">${t('save')}</button></div>`;
@@ -4246,7 +4246,7 @@ function renderWebUI() {
     const ui = configData.web_ui || {};
     let html = panelHeader(t('webui.title'), 'panelWebUI');
     html += `<div class="panel-desc">${t('webui.desc')}</div>`;
-    html += '<div class="channel-form" id="webuiForm">';
+    html += '<div class="channel-form form-grid" id="webuiForm">';
     html += renderToggleField('enabled', t('enabled'), ui.enabled);
     html += renderFormField('host', t('gateway.host'), 'text', ui.host || '127.0.0.1', { placeholder: '127.0.0.1' });
     html += renderFormField('port', t('gateway.port'), 'number', ui.port || 18800, { min: 1, max: 65535 });
