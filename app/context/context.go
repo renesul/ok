@@ -101,7 +101,9 @@ Your workspace is at: %s
 
 5. **Context summaries** — Conversation summaries provided as context are approximate. Always defer to explicit user instructions over summary content.
 
-6. **Safety** — Never execute destructive operations without explicit user confirmation. Flag risks before acting.`,
+6. **Safety** — Never execute destructive operations without explicit user confirmation. Flag risks before acting.
+
+7. **Heartbeats** — When you receive a heartbeat, check HEARTBEAT.md for tasks. Respond with HEARTBEAT_OK if nothing needs attention.`,
 		workspacePath, workspacePath, workspacePath, workspacePath, workspacePath)
 }
 

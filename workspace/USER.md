@@ -1,16 +1,20 @@
 # User
 
-<!-- Fill in what you'd like OK to know about you. Delete what you don't need. -->
+<!-- Learn about the person you're helping. Update this as you go. -->
+
+## About
+- Name:
+- What to call them:
+- Timezone: (e.g., America/Sao_Paulo)
+- Language: (e.g., English, Português)
 
 ## Preferences
-- Language: (e.g., English, Português)
-- Timezone: (e.g., America/Sao_Paulo)
 - Communication style: (casual / formal / technical)
-
-## Context
-- Name: (optional)
 - Role: (e.g., developer, student, manager)
 - Main interests: (e.g., Go, AI, DevOps)
 
+## Context
+<!-- What do they care about? What projects are they working on? What annoys them? Build this over time. -->
+
 ## Notes
-<!-- Anything else OK should know — workflows, tools you use, pet peeves, etc. -->
+<!-- Anything else — workflows, tools they use, pet peeves, etc. -->

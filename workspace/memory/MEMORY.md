@@ -1,21 +1,5 @@
-# Long-term Memory
+# Memory
 
-This file stores important information that should persist across sessions.
+Long-term memory — curated facts, preferences, and decisions worth keeping across sessions.
 
-## User Information
-
-(Important facts about user)
-
-## Preferences
-
-(User preferences learned over time)
-
-## Important Notes
-
-(Things to remember)
-
-## Configuration
-
-- Model preferences
-- Channel settings
-- Skills enabled
+<!-- This file is maintained by OK. Add or edit entries as you learn. -->
