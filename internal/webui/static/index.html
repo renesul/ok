@@ -73,6 +73,10 @@
                         <svg class="rail-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M6.5 2v3M6.5 9v5M11.5 2v7M11.5 13v1"/><circle cx="6.5" cy="7" r="2"/><circle cx="11.5" cy="11" r="2"/></svg>
                         <span>Execution</span>
                     </button>
+                    <button class="rail-btn" data-tab="integrations" title="Integrations">
+                        <svg class="rail-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M7 3v3M13 3v3M7 14v3M13 14v3M3 7h3M14 7h3M3 13h3M14 13h3"/><rect x="6" y="6" width="8" height="8" rx="1.5"/></svg>
+                        <span>Integrations</span>
+                    </button>
                     <button class="rail-btn" data-tab="memory" title="Memory">
                         <svg class="rail-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M2 4h12M2 8h8M2 12h10"/><circle cx="13" cy="10" r="2"/></svg>
                         <span>Memory</span>
@@ -230,6 +234,16 @@
                                 <button class="btn btn-sm btn-primary" onclick="showTokenInput('xai')" data-i18n="auth.loginToken">Login (API Token)</button>
                             </div>
                         </div>
+                        <div class="provider-card" id="card-google">
+                            <div class="provider-card-header">
+                                <span class="provider-name">Google</span>
+                                <span class="provider-badge badge-none" id="badge-google" data-i18n="auth.notLoggedIn">Not logged in</span>
+                            </div>
+                            <div id="details-google"></div>
+                            <div class="provider-actions" id="actions-google">
+                                <button class="btn btn-sm btn-primary" onclick="showTokenInput('google')" data-i18n="auth.loginToken">Login (API Key)</button>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -255,6 +269,11 @@
                 <div class="content-panel" id="panelHeartbeat"></div>
                 <div class="content-panel" id="panelDevices"></div>
                 <div class="content-panel" id="panelDebug"></div>
+
+                <!-- Integration Panels -->
+                <div class="content-panel" id="panelEmailConfig"></div>
+                <div class="content-panel" id="panelCalendarConfig"></div>
+                <div class="content-panel" id="panelHAConfig"></div>
 
                 <!-- New Panels -->
                 <div class="content-panel" id="panelRouting"></div>

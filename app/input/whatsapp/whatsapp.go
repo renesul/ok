@@ -528,6 +528,28 @@ func (c *WhatsAppChannel) handleIncoming(evt *events.Message) {
 		return localPath
 	}
 
+	if img := evt.Message.GetImageMessage(); img != nil {
+		data, err := c.client.Download(c.runCtx, img)
+		if err == nil {
+			ext := ".jpg"
+			if mt := img.GetMimetype(); mt == "image/png" {
+				ext = ".png"
+			} else if mt == "image/webp" {
+				ext = ".webp"
+			}
+			tmpPath := filepath.Join(os.TempDir(), "ok_media", fmt.Sprintf("wa_%s%s", evt.Info.ID, ext))
+			os.MkdirAll(filepath.Dir(tmpPath), 0o755)
+			if err := os.WriteFile(tmpPath, data, 0o644); err == nil {
+				mediaPaths = append(mediaPaths, storeMedia(tmpPath, "photo"+ext))
+				if img.GetCaption() != "" && content == "" {
+					content = img.GetCaption()
+				}
+			}
+		} else {
+			logger.WarnCF("whatsapp", "Failed to download image", map[string]any{"error": err.Error()})
+		}
+	}
+
 	if audio := evt.Message.GetAudioMessage(); audio != nil {
 		data, err := c.client.Download(c.runCtx, audio)
 		if err == nil {

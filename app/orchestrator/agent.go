@@ -430,6 +430,35 @@ func (al *AgentLoop) SetTranscriber(t voice.Transcriber) {
 	al.transcriber = t
 }
 
+// RegisterIntegrationTools registers tools for configured external integrations
+// (email, calendar, home assistant). Called after NewAgentLoop, once config is finalized.
+func (al *AgentLoop) RegisterIntegrationTools() {
+	cfg := al.cfg
+
+	if cfg.Integrations.Email.Enabled {
+		tool := tools.NewEmailTool(cfg.Integrations.Email)
+		al.RegisterTool(tool)
+		logger.InfoCF("agent", "Email tool registered", map[string]any{
+			"imap_host": cfg.Integrations.Email.IMAPHost,
+			"smtp_host": cfg.Integrations.Email.SMTPHost,
+		})
+	}
+
+	if cfg.Integrations.Calendar.Enabled {
+		tool := tools.NewCalendarTool(cfg.Integrations.Calendar)
+		al.RegisterTool(tool)
+		logger.InfoCF("agent", "Calendar tool registered", nil)
+	}
+
+	if cfg.Integrations.HomeAssistant.Enabled {
+		tool := tools.NewHomeAssistantTool(cfg.Integrations.HomeAssistant)
+		al.RegisterTool(tool)
+		logger.InfoCF("agent", "Home Assistant tool registered", map[string]any{
+			"url": cfg.Integrations.HomeAssistant.URL,
+		})
+	}
+}
+
 var audioAnnotationRe = regexp.MustCompile(`\[(voice|audio)(?::[^\]]*)?\]`)
 
 // transcribeAudioInMessage resolves audio media refs, transcribes them, and

@@ -36,6 +36,7 @@ func DefaultConfig() *Config {
 				RestrictToWorkspace:       true,
 				Provider:                  "",
 				Model:                     "",
+				ImageModel:                "image",
 				MaxTokens:                 32768,
 				Temperature:               nil, // nil means use provider default
 				MaxToolIterations:         50,
@@ -88,12 +89,18 @@ func DefaultConfig() *Config {
 		ProviderList: []ProviderConfig{
 			{Name: "openai", APIBase: "https://api.openai.com/v1"},
 			{Name: "groq", APIBase: "https://api.groq.com/openai/v1"},
+			{Name: "google", APIBase: "https://generativelanguage.googleapis.com/v1beta/openai/"},
 		},
 		ModelList: []ModelConfig{
 			{
 				ModelName: "default",
 				Model:     "openai/gpt-4.1-mini",
 				Provider:  "openai",
+			},
+			{
+				ModelName: "image",
+				Model:     "openai/gemini-2.5-flash",
+				Provider:  "google",
 			},
 			{
 				ModelName: "embedding",

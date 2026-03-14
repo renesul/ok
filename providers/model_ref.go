@@ -51,8 +51,8 @@ func NormalizeProvider(provider string) string {
 		return "anthropic"
 	case "glm":
 		return "zhipu"
-	case "google":
-		return "gemini"
+	case "gemini":
+		return "google"
 	}
 
 	return p

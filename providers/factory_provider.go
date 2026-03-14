@@ -216,7 +216,7 @@ func GetDefaultAPIBase(protocol string) string {
 		return "https://api.mistral.ai/v1"
 	case "xai":
 		return "https://api.x.ai/v1"
-	case "gemini":
+	case "google":
 		return "https://generativelanguage.googleapis.com/v1beta/openai/"
 	case "openrouter":
 		return "https://openrouter.ai/api/v1"

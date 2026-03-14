@@ -68,13 +68,57 @@ type Config struct {
 	ProviderList []ProviderConfig `json:"provider_list"`
 	ModelList    []ModelConfig    `json:"model_list"`
 	Gateway      GatewayConfig    `json:"gateway"`
-	Tools     ToolsConfig     `json:"tools"`
-	Heartbeat HeartbeatConfig `json:"heartbeat"`
-	Devices   DevicesConfig   `json:"devices"`
-	RAG        RAGConfig         `json:"rag,omitempty"`
-	MCPServers []MCPServerConfig `json:"mcp_servers,omitempty"`
-	WebUI      WebUIConfig       `json:"web_ui,omitempty"`
-	Proxy      string            `json:"proxy,omitempty" env:"OK_PROXY"`
+	Tools        ToolsConfig      `json:"tools"`
+	Heartbeat    HeartbeatConfig  `json:"heartbeat"`
+	Devices      DevicesConfig    `json:"devices"`
+	RAG          RAGConfig        `json:"rag,omitempty"`
+	MCPServers   []MCPServerConfig `json:"mcp_servers,omitempty"`
+	WebUI        WebUIConfig      `json:"web_ui,omitempty"`
+	Integrations IntegrationsConfig `json:"integrations,omitempty"`
+	Proxy        string           `json:"proxy,omitempty" env:"OK_PROXY"`
+}
+
+// IntegrationsConfig holds configuration for external service integrations.
+type IntegrationsConfig struct {
+	Email         EmailConfig         `json:"email,omitempty"`
+	Calendar      CalendarConfig      `json:"calendar,omitempty"`
+	HomeAssistant HomeAssistantConfig `json:"home_assistant,omitempty"`
+}
+
+// EmailConfig configures IMAP/SMTP email integration.
+type EmailConfig struct {
+	Enabled  bool   `json:"enabled"            env:"OK_EMAIL_ENABLED"`
+	IMAPHost string `json:"imap_host"          env:"OK_EMAIL_IMAP_HOST"`
+	IMAPPort int    `json:"imap_port"          env:"OK_EMAIL_IMAP_PORT"`
+	IMAPTLS  bool   `json:"imap_tls"           env:"OK_EMAIL_IMAP_TLS"`
+	SMTPHost string `json:"smtp_host"          env:"OK_EMAIL_SMTP_HOST"`
+	SMTPPort int    `json:"smtp_port"          env:"OK_EMAIL_SMTP_PORT"`
+	Username string `json:"username"           env:"OK_EMAIL_USERNAME"`
+	Password string `json:"password"           env:"OK_EMAIL_PASSWORD"`
+	FromName string `json:"from_name,omitempty" env:"OK_EMAIL_FROM_NAME"`
+	MaxFetch int    `json:"max_fetch,omitempty"` // max emails per read, default 10
+}
+
+// CalendarConfig configures Google Calendar and Microsoft Outlook integration.
+type CalendarConfig struct {
+	Enabled bool `json:"enabled" env:"OK_CALENDAR_ENABLED"`
+
+	// Google Calendar
+	GoogleEnabled  bool   `json:"google_enabled"   env:"OK_CALENDAR_GOOGLE_ENABLED"`
+	GoogleAPIKey   string `json:"google_api_key"   env:"OK_CALENDAR_GOOGLE_API_KEY"`
+	GoogleCalendarID string `json:"google_calendar_id" env:"OK_CALENDAR_GOOGLE_CALENDAR_ID"` // default: "primary"
+
+	// Microsoft Outlook (Graph API)
+	OutlookEnabled      bool   `json:"outlook_enabled"       env:"OK_CALENDAR_OUTLOOK_ENABLED"`
+	OutlookAccessToken  string `json:"outlook_access_token"  env:"OK_CALENDAR_OUTLOOK_ACCESS_TOKEN"`
+	OutlookCalendarID   string `json:"outlook_calendar_id"   env:"OK_CALENDAR_OUTLOOK_CALENDAR_ID"` // default: "primary" (me/calendar)
+}
+
+// HomeAssistantConfig configures Home Assistant REST API integration.
+type HomeAssistantConfig struct {
+	Enabled bool   `json:"enabled" env:"OK_HA_ENABLED"`
+	URL     string `json:"url"     env:"OK_HA_URL"`   // e.g. http://homeassistant.local:8123
+	Token   string `json:"token"   env:"OK_HA_TOKEN"` // Long-lived access token
 }
 
 // WebUIConfig configures the embedded web UI served alongside the gateway.

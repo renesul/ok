@@ -71,7 +71,8 @@ func TestNormalizeProvider(t *testing.T) {
 		{"gpt", "openai"},
 		{"claude", "anthropic"},
 		{"glm", "zhipu"},
-		{"google", "gemini"},
+		{"gemini", "google"},
+		{"google", "google"},
 		{"groq", "groq"},
 		{"", ""},
 	}

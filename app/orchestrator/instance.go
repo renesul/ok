@@ -48,6 +48,15 @@ type AgentInstance struct {
 	// LightCandidates holds the resolved provider candidates for the light model.
 	// Pre-computed at agent creation to avoid repeated model_list lookups at runtime.
 	LightCandidates []providers.FallbackCandidate
+
+	// ImageModel is the model used when the user message contains images.
+	// If empty, the primary model is used for all messages.
+	ImageModel string
+	// ImageCandidates holds the resolved provider candidates for the image model.
+	ImageCandidates []providers.FallbackCandidate
+	// ImageProvider is the actual LLM provider instance for the image model.
+	// May differ from the primary Provider (e.g. Gemini vs OpenAI).
+	ImageProvider providers.LLMProvider
 }
 
 // NewAgentInstance creates an agent instance from config.
@@ -191,6 +200,49 @@ func NewAgentInstance(
 
 	candidates := providers.ResolveCandidatesWithLookup(modelCfg, defaults.Provider, resolveFromModelList)
 
+	// Image model setup: pre-resolve image model candidates and create its provider.
+	var imageModel string
+	var imageCandidates []providers.FallbackCandidate
+	var imageProvider providers.LLMProvider
+	if defaults.ImageModel != "" {
+		imageModelCfg := providers.ModelConfig{
+			Primary:   defaults.ImageModel,
+			Fallbacks: defaults.ImageModelFallbacks,
+		}
+		resolved := providers.ResolveCandidatesWithLookup(imageModelCfg, defaults.Provider, resolveFromModelList)
+		if len(resolved) > 0 {
+			imageModel = defaults.ImageModel
+			imageCandidates = resolved
+			// Create a dedicated provider instance for the image model so it can use
+			// a different API base / key than the primary chat provider.
+			if mc, err := cfg.GetModelConfig(defaults.ImageModel); err != nil {
+				logger.WarnCF("agent", "Image model config not found", map[string]any{"image_model": defaults.ImageModel, "error": err.Error()})
+			} else if mc != nil {
+				if pc, err := cfg.ResolveModelProvider(mc); err != nil {
+					logger.WarnCF("agent", "Image model provider not resolved", map[string]any{"image_model": defaults.ImageModel, "error": err.Error()})
+				} else if pc != nil {
+					if p, _, err := providers.CreateProviderFromModelAndProvider(mc, pc); err == nil {
+						imageProvider = p
+						logger.InfoCF("agent", "Image provider created", map[string]any{
+							"image_model": defaults.ImageModel,
+							"provider":    pc.Name,
+						})
+					} else {
+						logger.WarnCF("agent", "Failed to create image provider, falling back to primary", map[string]any{
+							"image_model": defaults.ImageModel,
+							"error":       err.Error(),
+						})
+					}
+				}
+			}
+		} else {
+			logger.WarnCF("agent", "Image model not found, images will use primary model", map[string]any{
+				"image_model": defaults.ImageModel,
+				"agent":       agentID,
+			})
+		}
+	}
+
 	// Model routing setup: pre-resolve light model candidates at creation time
 	// to avoid repeated model_list lookups on every incoming message.
 	var router *routing.Router
@@ -241,6 +293,9 @@ func NewAgentInstance(
 		Candidates:                candidates,
 		Router:                    router,
 		LightCandidates:           lightCandidates,
+		ImageModel:                imageModel,
+		ImageCandidates:           imageCandidates,
+		ImageProvider:             imageProvider,
 	}
 }
 

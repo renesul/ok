@@ -145,7 +145,7 @@ func registerAuthAPI(mux *http.ServeMux, absPath string) {
 			handleTokenLogin(w, req.Token, absPath, "anthropic")
 		case "google-antigravity", "antigravity":
 			handleGoogleAntigravityLogin(w, r, absPath)
-		case "groq", "deepseek", "mistral", "xai":
+		case "groq", "deepseek", "mistral", "xai", "google":
 			handleTokenLogin(w, req.Token, absPath, req.Provider)
 		default:
 			if strings.HasPrefix(req.Provider, "custom-") && req.Token != "" {
@@ -528,6 +528,10 @@ func updateConfigAfterLogin(configPath, provider string, cred *auth.AuthCredenti
 		case "xai":
 			ensureProvider(cfg, "xai", providers.GetDefaultAPIBase("xai"), "token")
 			ensureModel(cfg, isXAIModel, "grok-3-mini", "xai/grok-3-mini", "xai")
+
+		case "google":
+			ensureProvider(cfg, "google", providers.GetDefaultAPIBase("google"), "token")
+			ensureImageModel(cfg, "image", "openai/gemini-2.5-flash", "google")
 		}
 
 		return config.SaveConfig(configPath, cfg)
@@ -636,4 +640,20 @@ func ensureModel(cfg *config.Config, isModel func(string) bool, modelName, model
 	if cfg.Agents.Defaults.ModelName == "" && modelName != "transcription" && modelName != "embedding" {
 		cfg.Agents.Defaults.ModelName = modelName
 	}
+}
+
+// ensureImageModel ensures the named model slot exists for vision use, without touching the default chat model.
+func ensureImageModel(cfg *config.Config, modelName, model, provider string) {
+	for i := range cfg.ModelList {
+		if cfg.ModelList[i].ModelName == modelName {
+			cfg.ModelList[i].Model = model
+			cfg.ModelList[i].Provider = provider
+			return
+		}
+	}
+	cfg.ModelList = append(cfg.ModelList, config.ModelConfig{
+		ModelName: modelName,
+		Model:     model,
+		Provider:  provider,
+	})
 }

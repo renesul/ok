@@ -1448,6 +1448,11 @@ const tabDefs = {
         { panel: 'panelSkills', label: 'Skills', icon: '<svg class="si" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M8 2l2 4h4l-3 3 1 4-4-2-4 2 1-4-3-3h4z"/></svg>' },
         { panel: 'panelWebSearch', label: 'Web Search', icon: '<svg class="si" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="7" cy="7" r="4"/><path d="M10 10l3 3"/></svg>' },
     ],
+    integrations: [
+        { panel: 'panelEmailConfig', label: 'Email', icon: '<svg class="si" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="2" y="3" width="12" height="10" rx="1.5"/><path d="M2 6l6 4 6-4"/></svg>' },
+        { panel: 'panelCalendarConfig', label: 'Calendar', icon: '<svg class="si" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="2" y="3" width="12" height="11" rx="1.5"/><path d="M5 2v2M11 2v2M2 7h12"/></svg>' },
+        { panel: 'panelHAConfig', label: 'Home Assistant', icon: '<svg class="si" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M2 8L8 2l6 6v6H2z"/><path d="M6 14v-5h4v5"/></svg>' },
+    ],
     memory: [
         { panel: 'panelRAG', label: 'RAG', icon: '<svg class="si" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M2 4h12M2 8h8M2 12h10"/><circle cx="13" cy="10" r="2"/></svg>' },
         { panel: 'panelSummarization', label: 'Summarization', icon: '<svg class="si" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M3 3h10M3 6h8M3 9h6M3 12h4"/></svg>' },
@@ -1468,7 +1473,7 @@ const tabDefs = {
 };
 
 // Track which sub-tab was last active per group
-const lastSubTab = { input: 'panelCh_telegram', routing: 'panelSession', planning: 'panelAuth', execution: 'panelToolSettings', memory: 'panelRAG', orchestrator: 'panelAgents', system: 'panelGateway' };
+const lastSubTab = { input: 'panelCh_telegram', routing: 'panelSession', planning: 'panelAuth', execution: 'panelToolSettings', integrations: 'panelEmailConfig', memory: 'panelRAG', orchestrator: 'panelAgents', system: 'panelGateway' };
 
 // ── Hash routing ────────────────────────────────────
 // Maps panel IDs to short URL hashes and vice versa.
@@ -1527,6 +1532,9 @@ function activatePanel(panelId) {
     if (panelId === 'panelSummarization') renderSummarization();
     // panelAgentDefaults merged into panelAgents
     if (panelId === 'panelWebUI') renderWebUI();
+    if (panelId === 'panelEmailConfig') renderEmailConfig();
+    if (panelId === 'panelCalendarConfig') renderCalendarConfig();
+    if (panelId === 'panelHAConfig') renderHAConfig();
     if (panelId.startsWith('panelCh_')) {
         renderChannelForm(panelId.replace('panelCh_', ''));
     }
@@ -1717,9 +1725,22 @@ function renderModels() {
         return;
     }
 
-    const primaryModelName = (configData.agents && configData.agents.defaults)
-        ? (configData.agents.defaults.model_name || configData.agents.defaults.model || '')
-        : '';
+    const defaults = (configData.agents && configData.agents.defaults) || {};
+    const primaryModelName = defaults.model_name || defaults.model || '';
+    const imageModelName   = defaults.image_model || '';
+    const audioModelName   = defaults.transcription_model || '';
+    const embedModelName   = defaults.embedding_model || '';
+
+    // role determined by model_name slot OR by agent defaults pointers
+    function modelRoles(m) {
+        const roles = [];
+        const mn = m.model_name;
+        if (mn === primaryModelName)             roles.push({ label: 'Chat', cls: 'badge-primary' });
+        if (mn === imageModelName || mn === 'image') roles.push({ label: 'Image', cls: 'badge-image' });
+        if (mn === audioModelName || mn === 'transcription') roles.push({ label: 'Audio', cls: 'badge-audio' });
+        if (mn === embedModelName || mn === 'embedding')     roles.push({ label: 'Embedding', cls: 'badge-embed' });
+        return roles;
+    }
 
     // Build index array sorted: primary first, then the rest in original order
     const indices = configData.model_list.map((_, i) => i);
@@ -1736,31 +1757,47 @@ function renderModels() {
         const m = configData.model_list[idx];
         const available = isModelAvailable(m);
         const isPrimary = m.model_name === primaryModelName;
-        const protocol = m.model ? m.model.split('/')[0] : '';
+        const isImage   = m.model_name === imageModelName || m.model_name === 'image';
+        const isAudio   = m.model_name === audioModelName || m.model_name === 'transcription';
+        const isEmbed   = m.model_name === embedModelName || m.model_name === 'embedding';
+        const protocol  = m.model ? m.model.split('/')[0] : '';
+        const roles     = modelRoles(m);
 
         html += `<div class="model-card ${available ? '' : 'unavailable'}">`;
         html += `<div class="model-card-head">`;
         html += `<div class="model-name">${esc(m.model_name)}`;
         if (protocol) html += ` <span class="model-protocol">${esc(protocol)}</span>`;
         html += `</div>`;
-        if (isPrimary) html += `<span class="badge-primary">${t('models.primary')}</span>`;
-        else if (!available) html += `<span class="badge-nokey">${t('models.noKey')}</span>`;
+        html += `<div class="model-badges">`;
+        if (roles.length > 0) {
+            roles.forEach(r => { html += `<span class="${r.cls}">${r.label}</span>`; });
+        } else if (!available) {
+            html += `<span class="badge-nokey">${t('models.noKey')}</span>`;
+        }
+        html += `</div>`;
         html += `</div>`;
 
         html += `<div class="model-detail"><strong>Model:</strong> ${esc(m.model || '-')}</div>`;
-        if (m.provider) html += `<div class="model-detail"><strong>Provider:</strong> <span class="model-protocol">${esc(m.provider)}</span></div>`;
+        if (m.provider) {
+            const provLabel = (PROVIDER_INFO[m.provider] && PROVIDER_INFO[m.provider].label) || m.provider;
+            html += `<div class="model-detail"><strong>Provider:</strong> <span class="model-protocol">${esc(provLabel)}</span></div>`;
+        }
 
         html += `<div class="model-actions">`;
         html += `<button class="btn btn-sm" onclick="showEditModelModal(${idx})">${t('edit')}</button>`;
         if (available) {
             html += `<button class="btn btn-sm" id="testBtn_${idx}" onclick="testModel(${idx})">${t('models.test')}</button>`;
         }
-        const isEmbedding = m.model_name === 'embedding';
-        const isTranscription = m.model_name === 'transcription';
-        if (available && !isPrimary && !isEmbedding && !isTranscription) {
+        if (available && !isPrimary && !isImage && !isAudio && !isEmbed) {
             html += `<button class="btn btn-sm btn-success" onclick="setPrimaryModel(${idx})">${t('models.setPrimary')}</button>`;
         }
-        const isBuiltin = m.model_name === 'default' || m.model_name === 'embedding' || m.model_name === 'transcription';
+        if (available && !isImage) {
+            html += `<button class="btn btn-sm" onclick="setRoleModel('image_model',${idx})" title="Use for image messages">Set Image</button>`;
+        }
+        if (available && !isAudio) {
+            html += `<button class="btn btn-sm" onclick="setRoleModel('transcription_model',${idx})" title="Use for audio transcription">Set Audio</button>`;
+        }
+        const isBuiltin = m.model_name === 'default' || m.model_name === 'embedding' || m.model_name === 'transcription' || m.model_name === 'image' || m.model_name === 'audio';
         if (!isBuiltin) {
             html += `<button class="btn btn-sm btn-danger" onclick="deleteModel(${idx})">${t('delete')}</button>`;
         }
@@ -1769,6 +1806,14 @@ function renderModels() {
     grid.innerHTML = html;
     updateOnboarding();
     updateStatusIndicator();
+}
+
+function setRoleModel(roleKey, idx) {
+    if (!configData || !configData.model_list[idx]) return;
+    if (!configData.agents) configData.agents = {};
+    if (!configData.agents.defaults) configData.agents.defaults = {};
+    configData.agents.defaults[roleKey] = configData.model_list[idx].model_name;
+    saveConfig().then(renderModels);
 }
 
 function setPrimaryModel(idx) {
@@ -1829,6 +1874,7 @@ const PROVIDER_INFO = {
     deepseek:             { label: 'DeepSeek',           apiBase: 'https://api.deepseek.com/v1',    prefix: 'deepseek/' },
     mistral:              { label: 'Mistral',            apiBase: 'https://api.mistral.ai/v1',      prefix: 'mistral/' },
     xai:                  { label: 'xAI',                apiBase: 'https://api.x.ai/v1',            prefix: 'xai/' },
+    google:               { label: 'Google',             apiBase: 'https://generativelanguage.googleapis.com/v1beta/openai/', prefix: 'google/' },
     'google-antigravity': { label: 'Google Antigravity', apiBase: '',                                prefix: 'antigravity/' },
 };
 
@@ -2425,7 +2471,7 @@ function renderAuthStatus(providersList, pendingDevice) {
     providersList.forEach(p => { providerMap[p.provider] = p; });
 
 
-    ['openai', 'anthropic', 'google-antigravity', 'groq', 'deepseek', 'mistral', 'xai'].forEach(name => {
+    ['openai', 'anthropic', 'google-antigravity', 'groq', 'deepseek', 'mistral', 'xai', 'google'].forEach(name => {
         const badge = document.getElementById('badge-' + name);
         const details = document.getElementById('details-' + name);
         const actions = document.getElementById('actions-' + name);
@@ -4543,6 +4589,152 @@ async function installSkill(slug, registry, btn) {
         showStatus(t('skills.installFailed', { msg: e.message }), 'error');
         if (btn) { btn.disabled = false; btn.textContent = t('skills.install'); }
     }
+}
+
+// ── Email Config Panel ───────────────────────────────
+function renderEmailConfig() {
+    const panel = document.getElementById('panelEmailConfig');
+    if (!configData) return;
+    const email = (configData.integrations && configData.integrations.email) || {};
+
+    let html = panelHeader('Email (IMAP / SMTP)', 'panelEmailConfig');
+    html += '<div class="panel-desc">Connect any IMAP/SMTP mailbox. The agent can read, search, and send emails.</div>';
+    html += '<div class="channel-form form-grid" id="emailConfigForm">';
+
+    html += renderToggleField('email_enabled', 'Enabled', !!email.enabled);
+
+    html += '<div class="form-section-title">Incoming (IMAP)</div>';
+    html += renderFormField('email_imap_host', 'IMAP Host', 'text', email.imap_host || '', { placeholder: 'imap.gmail.com' });
+    html += renderFormField('email_imap_port', 'IMAP Port', 'number', email.imap_port || 993, { min: 1, max: 65535 });
+    html += renderToggleField('email_imap_tls', 'TLS / SSL', email.imap_tls !== false);
+
+    html += '<div class="form-section-title">Outgoing (SMTP)</div>';
+    html += renderFormField('email_smtp_host', 'SMTP Host', 'text', email.smtp_host || '', { placeholder: 'smtp.gmail.com' });
+    html += renderFormField('email_smtp_port', 'SMTP Port', 'number', email.smtp_port || 587, { min: 1, max: 65535 });
+
+    html += '<div class="form-section-title">Credentials</div>';
+    html += renderFormField('email_username', 'Username / Email', 'text', email.username || '', { placeholder: 'you@gmail.com' });
+    html += renderFormField('email_password', 'Password / App Password', 'password', email.password || '', { placeholder: 'App password or OAuth token' });
+    html += renderFormField('email_from_name', 'Display Name', 'text', email.from_name || '', { placeholder: 'Your Name' });
+    html += renderFormField('email_max_fetch', 'Max emails to fetch', 'number', email.max_fetch || 10, { min: 1, max: 100 });
+
+    html += '<div class="form-section-title">Gmail hint</div>';
+    html += '<div class="panel-desc" style="grid-column:1/-1;font-size:12px;">For Gmail: enable IMAP in Gmail settings and use an <strong>App Password</strong> (Google Account → Security → 2-Step Verification → App Passwords). IMAP host: <code>imap.gmail.com:993</code>, SMTP host: <code>smtp.gmail.com:587</code>.</div>';
+
+    html += `<div style="margin-top:20px;"><button class="btn btn-primary" onclick="saveEmailConfig()">Save</button></div>`;
+    html += '</div>';
+
+    panel.innerHTML = html;
+}
+
+function saveEmailConfig() {
+    if (!configData) return;
+    const form = document.getElementById('emailConfigForm');
+    const f = collectFormFields(form);
+
+    if (!configData.integrations) configData.integrations = {};
+    if (!configData.integrations.email) configData.integrations.email = {};
+    const e = configData.integrations.email;
+
+    e.enabled    = !!f.email_enabled;
+    e.imap_host  = f.email_imap_host || '';
+    e.imap_port  = parseInt(f.email_imap_port) || 993;
+    e.imap_tls   = !!f.email_imap_tls;
+    e.smtp_host  = f.email_smtp_host || '';
+    e.smtp_port  = parseInt(f.email_smtp_port) || 587;
+    e.username   = f.email_username || '';
+    e.password   = f.email_password || '';
+    e.from_name  = f.email_from_name || '';
+    e.max_fetch  = parseInt(f.email_max_fetch) || 10;
+
+    saveConfig().then(() => showStatus('Email config saved', 'success'));
+}
+
+// ── Calendar Config Panel ────────────────────────────
+function renderCalendarConfig() {
+    const panel = document.getElementById('panelCalendarConfig');
+    if (!configData) return;
+    const cal = (configData.integrations && configData.integrations.calendar) || {};
+
+    let html = panelHeader('Calendar (Google / Outlook)', 'panelCalendarConfig');
+    html += '<div class="panel-desc">Connect Google Calendar and/or Microsoft Outlook. The agent can list, create, and delete events.</div>';
+    html += '<div class="channel-form form-grid" id="calendarConfigForm">';
+
+    html += renderToggleField('cal_enabled', 'Enabled', !!cal.enabled);
+
+    html += '<div class="form-section-title">Google Calendar</div>';
+    html += renderToggleField('cal_google_enabled', 'Enable Google Calendar', !!cal.google_enabled);
+    html += renderFormField('cal_google_api_key', 'API Key or OAuth Token', 'password', cal.google_api_key || '', { placeholder: 'AIza... or Bearer token' });
+    html += renderFormField('cal_google_calendar_id', 'Calendar ID', 'text', cal.google_calendar_id || '', { placeholder: 'primary' });
+    html += '<div class="panel-desc" style="grid-column:1/-1;font-size:12px;">Get an API key at <strong>console.cloud.google.com</strong> → Credentials → API Key (Calendar API). For write access use an OAuth2 access token instead.</div>';
+
+    html += '<div class="form-section-title">Microsoft Outlook</div>';
+    html += renderToggleField('cal_outlook_enabled', 'Enable Outlook Calendar', !!cal.outlook_enabled);
+    html += renderFormField('cal_outlook_token', 'Access Token', 'password', cal.outlook_access_token || '', { placeholder: 'eyJ...' });
+    html += renderFormField('cal_outlook_calendar_id', 'Calendar ID (optional)', 'text', cal.outlook_calendar_id || '', { placeholder: 'leave blank for primary' });
+    html += '<div class="panel-desc" style="grid-column:1/-1;font-size:12px;">Get a token via Azure AD with <code>Calendars.ReadWrite</code> scope, or use the Graph Explorer for testing.</div>';
+
+    html += `<div style="margin-top:20px;"><button class="btn btn-primary" onclick="saveCalendarConfig()">Save</button></div>`;
+    html += '</div>';
+
+    panel.innerHTML = html;
+}
+
+function saveCalendarConfig() {
+    if (!configData) return;
+    const form = document.getElementById('calendarConfigForm');
+    const f = collectFormFields(form);
+
+    if (!configData.integrations) configData.integrations = {};
+    if (!configData.integrations.calendar) configData.integrations.calendar = {};
+    const c = configData.integrations.calendar;
+
+    c.enabled             = !!f.cal_enabled;
+    c.google_enabled      = !!f.cal_google_enabled;
+    c.google_api_key      = f.cal_google_api_key || '';
+    c.google_calendar_id  = f.cal_google_calendar_id || '';
+    c.outlook_enabled     = !!f.cal_outlook_enabled;
+    c.outlook_access_token = f.cal_outlook_token || '';
+    c.outlook_calendar_id = f.cal_outlook_calendar_id || '';
+
+    saveConfig().then(() => showStatus('Calendar config saved', 'success'));
+}
+
+// ── Home Assistant Config Panel ──────────────────────
+function renderHAConfig() {
+    const panel = document.getElementById('panelHAConfig');
+    if (!configData) return;
+    const ha = (configData.integrations && configData.integrations.home_assistant) || {};
+
+    let html = panelHeader('Home Assistant', 'panelHAConfig');
+    html += '<div class="panel-desc">Connect to your Home Assistant instance to control lights, switches, climate, and more.</div>';
+    html += '<div class="channel-form form-grid" id="haConfigForm">';
+
+    html += renderToggleField('ha_enabled', 'Enabled', !!ha.enabled);
+    html += renderFormField('ha_url', 'Home Assistant URL', 'text', ha.url || '', { placeholder: 'http://homeassistant.local:8123' });
+    html += renderFormField('ha_token', 'Long-Lived Access Token', 'password', ha.token || '', { placeholder: 'eyJhbGc...' });
+    html += '<div class="panel-desc" style="grid-column:1/-1;font-size:12px;">Generate a token in Home Assistant → Profile (bottom-left) → Long-Lived Access Tokens → Create Token. The URL can be local or your Nabu Casa remote URL.</div>';
+
+    html += `<div style="margin-top:20px;"><button class="btn btn-primary" onclick="saveHAConfig()">Save</button></div>`;
+    html += '</div>';
+
+    panel.innerHTML = html;
+}
+
+function saveHAConfig() {
+    if (!configData) return;
+    const form = document.getElementById('haConfigForm');
+    const f = collectFormFields(form);
+
+    if (!configData.integrations) configData.integrations = {};
+    if (!configData.integrations.home_assistant) configData.integrations.home_assistant = {};
+    const ha = configData.integrations.home_assistant;
+
+    ha.enabled = !!f.ha_enabled;
+    ha.url     = f.ha_url || '';
+    ha.token   = f.ha_token || '';
+
+    saveConfig().then(() => showStatus('Home Assistant config saved', 'success'));
 }
 
 // ── Init ────────────────────────────────────────────

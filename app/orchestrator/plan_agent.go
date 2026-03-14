@@ -37,6 +37,19 @@ func (a *AgentInstance) GetLightCandidates() []providers.FallbackCandidate {
 	return a.LightCandidates
 }
 
+// GetImageModel implements planning.PlanAgent.
+func (a *AgentInstance) GetImageModel() string { return a.ImageModel }
+
+// GetImageCandidates implements planning.PlanAgent.
+func (a *AgentInstance) GetImageCandidates() []providers.FallbackCandidate {
+	return a.ImageCandidates
+}
+
+// GetImageProvider implements planning.PlanAgent.
+func (a *AgentInstance) GetImageProvider() providers.LLMProvider {
+	return a.ImageProvider
+}
+
 // GetRouter implements planning.PlanAgent.
 func (a *AgentInstance) GetRouter() types.ModelRouter {
 	if a.Router == nil {

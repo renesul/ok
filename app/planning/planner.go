@@ -33,6 +33,9 @@ type PlanAgent interface {
 	GetCandidates() []providers.FallbackCandidate
 	GetLightCandidates() []providers.FallbackCandidate
 	GetRouter() types.ModelRouter
+	GetImageModel() string
+	GetImageCandidates() []providers.FallbackCandidate
+	GetImageProvider() providers.LLMProvider
 }
 
 // ToolExec is the tool execution interface used by the planner.
@@ -105,6 +108,34 @@ func (p *Planner) Run(
 
 	activeCandidates, activeModel := p.selectCandidates(agent, opts.UserMessage, messages)
 
+	// Use a dedicated provider instance when the image model was selected.
+	activeProvider := agent.GetProvider()
+	if agent.GetImageProvider() != nil && agent.GetImageModel() != "" && hasImageMedia(messages) {
+		activeProvider = agent.GetImageProvider()
+		// For image requests, strip conversation history to avoid contamination from
+		// previous responses that may have incorrectly denied vision capability.
+		// Keep only: system message + last user message (with image).
+		var systemMsg *providers.Message
+		var lastUserMsg *providers.Message
+		for i := range messages {
+			if messages[i].Role == "system" {
+				systemMsg = &messages[i]
+			} else if messages[i].Role == "user" {
+				lastUserMsg = &messages[i]
+			}
+		}
+		if lastUserMsg != nil {
+			if strings.TrimSpace(lastUserMsg.Content) == "" && len(lastUserMsg.Media) > 0 {
+				lastUserMsg.Content = "Descreva esta imagem em detalhes."
+			}
+			if systemMsg != nil {
+				messages = []providers.Message{*systemMsg, *lastUserMsg}
+			} else {
+				messages = []providers.Message{*lastUserMsg}
+			}
+		}
+	}
+
 	providerToolDefs := agent.GetToolDefs()
 
 	for iteration < agent.GetMaxIterations() {
@@ -159,7 +190,7 @@ func (p *Planner) Run(
 					ctx,
 					activeCandidates,
 					func(ctx context.Context, provider, model string) (*providers.LLMResponse, error) {
-						return agent.GetProvider().Chat(ctx, messages, providerToolDefs, model, llmOpts)
+						return activeProvider.Chat(ctx, messages, providerToolDefs, model, llmOpts)
 					},
 				)
 				if fbErr != nil {
@@ -175,7 +206,7 @@ func (p *Planner) Run(
 				}
 				return fbResult.Response, nil
 			}
-			return agent.GetProvider().Chat(ctx, messages, providerToolDefs, activeModel, llmOpts)
+			return activeProvider.Chat(ctx, messages, providerToolDefs, activeModel, llmOpts)
 		}
 
 		maxRetries := 2
@@ -343,11 +374,42 @@ func (p *Planner) Run(
 	return PlanResult{Content: finalContent, Iterations: iteration}, nil
 }
 
+// hasImageMedia returns true if the last user message in the history contains images.
+func hasImageMedia(messages []providers.Message) bool {
+	for i := len(messages) - 1; i >= 0; i-- {
+		msg := messages[i]
+		if msg.Role == "user" {
+			for _, m := range msg.Media {
+				if strings.HasPrefix(m, "data:image/") {
+					return true
+				}
+			}
+			return false
+		}
+	}
+	return false
+}
+
 func (p *Planner) selectCandidates(
 	agent PlanAgent,
 	userMsg string,
 	history []providers.Message,
 ) (candidates []providers.FallbackCandidate, model string) {
+	// Image routing: if the current message has images and an image model is configured, use it.
+	if agent.GetImageModel() != "" && len(agent.GetImageCandidates()) > 0 {
+		if hasImageMedia(history) {
+			imageCandidates := agent.GetImageCandidates()
+			imageModelID := imageCandidates[0].Model
+			logger.InfoCF("agent", "Model routing: image model selected",
+				map[string]any{
+					"agent_id":    agent.GetID(),
+					"image_model": agent.GetImageModel(),
+					"model_id":    imageModelID,
+				})
+			return imageCandidates, imageModelID
+		}
+	}
+
 	router := agent.GetRouter()
 	if router == nil || len(agent.GetLightCandidates()) == 0 {
 		return agent.GetCandidates(), agent.GetModel()

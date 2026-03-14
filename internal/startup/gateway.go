@@ -118,6 +118,7 @@ func runGateway(debug bool, sigChan <-chan os.Signal) (shutdownReason, error) {
 
 	if !setupMode {
 		agentLoop = agent.NewAgentLoop(cfg, msgBus, provider)
+		agentLoop.RegisterIntegrationTools()
 
 		// Print agent startup info
 		fmt.Println("\n📦 Agent Status:")

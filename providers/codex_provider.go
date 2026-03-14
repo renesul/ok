@@ -173,7 +173,6 @@ func resolveCodexModel(model string) (string, string) {
 		"glm",
 		"claude",
 		"anthropic",
-		"gemini",
 		"google",
 		"moonshot",
 		"kimi",
