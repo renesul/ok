@@ -1,36 +1,44 @@
-<p align="center">
-  <img src="assets/logo.svg" width="120" alt="OK logo" />
-</p>
+<div align="center">
 
-<h1 align="center">OK</h1>
+```
+  ██████╗ ██╗  ██╗
+ ██╔═══██╗██║ ██╔╝
+ ██║   ██║█████╔╝
+ ██║   ██║██╔═██╗
+ ╚██████╔╝██║  ██╗
+  ╚═════╝ ╚═╝  ╚═╝
+```
 
-<p align="center">
-  <b>Personal AI — single binary, zero config files to edit</b>
-</p>
+### **Personal AI**
 
-<p align="center">
-  <img src="https://img.shields.io/badge/Go-1.25.7-00ADD8?logo=go&logoColor=white" alt="Go 1.25.7" />
-  <img src="https://img.shields.io/badge/License-MIT-blue" alt="MIT License" />
-  <img src="https://img.shields.io/badge/Platform-linux%2Famd64%20%7C%20linux%2Farm64-lightgrey" alt="Platforms" />
-  <img src="https://img.shields.io/badge/CGO-disabled-green" alt="Zero CGO" />
-</p>
+Multi-channel AI assistant — one binary, zero config files to edit, everything through the web UI.
+
+[![Go 1.25+](https://img.shields.io/badge/Go-1.25+-00ADD8?style=for-the-badge&logo=go&logoColor=white)](https://go.dev)
+[![Platform](https://img.shields.io/badge/Platform-Linux%20amd64%20%7C%20arm64-lightgrey?style=for-the-badge)](/)
+[![CGO](https://img.shields.io/badge/CGO-disabled-green?style=for-the-badge)](/)
+[![License](https://img.shields.io/badge/License-MIT-blue?style=for-the-badge)](LICENSE)
+
+</div>
 
 ---
 
-OK — Personal AI. Connects LLMs to messaging apps. One binary, no CLI to learn — everything is configured through the embedded web UI.
+## ✨ Features
 
-- **14 LLM vendors** — OpenAI, Anthropic, Gemini, DeepSeek, Groq, Ollama, OpenRouter, and more
-- **4 chat channels** — Telegram, Discord, WhatsApp, Slack
-- **Web UI** — responsive multi-column config editor with i18n (EN/PT-BR/ES), real-time logs, test chat
-- **RAG** — semantic long-term memory via vector embeddings, flat-file storage
-- **MCP** — Model Context Protocol support (stdio + HTTP/SSE)
-- **Skills** — extensible skill system with built-in defaults
-- **Agent loop** — ReAct planner + parallel tool execution + memory manager
+- 🤖 **14 LLM vendors** — OpenAI, Anthropic, Gemini, DeepSeek, Groq, Ollama, OpenRouter, and more
+- 💬 **4 chat channels** — Telegram, Discord, WhatsApp, Slack
+- 🖥️ **Web UI** — responsive config editor with i18n (EN/PT-BR/ES), real-time logs, test chat
+- 🧠 **RAG** — semantic long-term memory via vector embeddings, flat-file storage
+- 🔌 **MCP** — Model Context Protocol support (stdio + HTTP/SSE)
+- 🛠️ **Skills** — extensible skill system with built-in defaults
+- ⚡ **Agent loop** — ReAct planner + parallel tool execution + memory manager
+- 📦 **Single binary** — no CGO, no external dependencies
 
-## Quick Start
+---
+
+## 🚀 Quick Start
 
 ```bash
-git clone https://github.com/renesul/ok.git && cd ok
+git clone https://github.com/renesul/OK.git && cd OK
 make build && make install
 
 ok              # starts gateway + web UI on http://localhost:18800
@@ -38,9 +46,26 @@ ok -version     # show version info
 ok -debug       # verbose logging
 ```
 
-On first run, OK creates `~/.ok/` with a default config and workspace. Open the web UI to add your API keys and enable channels.
+1. Open **http://localhost:18800**
+2. Add your LLM API key
+3. Enable a channel (Telegram, Discord, WhatsApp, or Slack)
+4. Done — start chatting 🎉
 
-## Configuration
+On first run, OK creates `~/.ok/` with a default config and workspace.
+
+---
+
+## 📋 Requirements
+
+| Requirement | Details |
+|---|---|
+| **Go** | 1.25+ |
+| **CGO** | Disabled (pure Go) |
+| **OS** | Linux amd64/arm64 |
+
+---
+
+## ⚙️ Configuration
 
 Config file: `~/.ok/config.json` — edit via web UI or directly.
 
@@ -50,6 +75,8 @@ All fields overridable with `OK_` prefixed env vars:
 OK_AGENTS_DEFAULTS_MODEL=claude-sonnet-4.6 ok
 OK_HOME=/srv/ok ok
 ```
+
+> **Everything else** (models, channels, agents, skills, MCP servers, RAG) is configured through the web UI.
 
 ### Minimal Config
 
@@ -68,7 +95,7 @@ OK_HOME=/srv/ok ok
 ### Supported Vendors
 
 | Vendor | Prefix | Protocol |
-|--------|--------|----------|
+|---|---|---|
 | OpenAI | `openai/` | OpenAI |
 | Anthropic | `anthropic/` | Anthropic |
 | Google Gemini | `gemini/` | OpenAI |
@@ -85,57 +112,124 @@ OK_HOME=/srv/ok ok
 
 Multiple entries with the same `model_name` are automatically load-balanced (round-robin).
 
+---
+
+## 🏗️ Architecture
+
+### Message Flow
+
+```
+Incoming Message (Telegram, Discord, WhatsApp, Slack)
+    │
+    ▼
+ Channel Adapter (app/input/)
+    │
+    ▼
+ Route Resolver (app/routing/)
+    │
+    ▼
+ Agent Instance (app/orchestrator/)
+    │
+    ▼
+ Context Assembly (persona files + RAG)
+    │
+    ▼
+ ReAct Loop (LLM → tool calls → observe → repeat)
+    │
+    ▼
+ Response → Channel
+```
+
+### Project Structure
+
+```
+main.go                  Entry point: flag parsing + gateway startup
+
+app/                     Business logic
+  orchestrator/          AgentLoop, AgentInstance, Registry
+  planning/              ReAct loop: LLM → tool calls → observe → repeat
+  execution/             Tool registry (~20 tools)
+  memory/                JSONL sessions, RAG (vector embeddings)
+  context/               System prompt assembly from persona files + RAG
+  routing/               Route resolver, model router
+  input/                 Channel adapters + message bus
+
+providers/               LLM backends (Anthropic native + OpenAI-compatible)
+
+internal/                Infrastructure
+  startup/               Gateway lifecycle, onboarding, graceful shutdown
+  config/                Config loader + hot-reload
+  logger/                Structured logging
+  auth/                  Authentication
+  skills/                Skill system
+  webui/                 Web UI (embedded SPA)
+  mcp/                   MCP client + server
+```
+
 ### Workspace
 
 ```
 ~/.ok/workspace/
-├── sessions/        # Conversation history
-├── memory/          # Long-term memory
-├── skills/          # Skill packages
-├── IDENTITY.md      # Agent identity
-├── SOUL.md          # Agent personality
-└── USER.md          # User preferences
+├── sessions/            Conversation history
+├── memory/              Long-term memory
+├── skills/              Skill packages
+├── IDENTITY.md          Agent identity
+├── SOUL.md              Agent personality
+└── USER.md              User preferences
 ```
 
-## Web UI
+---
 
-The web UI starts automatically with the gateway on port `18800`. From there you manage models, channels, agents, tools, MCP servers, RAG, and more.
-
-Forms use a responsive two-column grid layout on desktop, collapsing to single column on smaller screens.
-
-```json
-{ "web_ui": { "enabled": true, "host": "127.0.0.1", "port": 18800 } }
-```
-
-## Docker
+## 🐳 Docker
 
 ```bash
 docker build -t ok .
 docker run -d --name ok -v ~/.ok:/home/ok/.ok -p 18800:18800 ok
 ```
 
-## Architecture
+---
 
-Layered architecture under `app/`, strict dependency direction (top imports bottom):
+## 🧑‍💻 Development
 
-```
-main.go              — Entry point: flag parsing + gateway startup
-internal/startup/    — Gateway lifecycle, onboarding, graceful shutdown
-app/orchestrator/    — AgentLoop, AgentInstance, Registry
-app/planning/        — ReAct loop: LLM → tool calls → observe → repeat
-app/execution/       — Tool registry (~20 tools)
-app/memory/          — JSONL sessions, RAG (vector embeddings)
-app/context/         — System prompt assembly from persona files + RAG
-app/routing/         — Route resolver, model router
-app/input/           — Channel adapters + message bus
-providers/           — LLM backends (Anthropic native + OpenAI-compatible)
-internal/            — Config, logger, auth, skills, webui, MCP
+```bash
+make build          # Build binary (output: build/ok)
+make test           # Run all tests
+make lint           # Run golangci-lint
+make fmt            # Format code
+make check          # deps + fmt + vet + test (full CI check)
+make install        # Build and install to ~/.local/bin
+make generate       # Run go generate (required before build/test)
 ```
 
-## Credits
+---
+
+## 📦 Tech Stack
+
+| Component | Technology |
+|---|---|
+| **Language** | Go (pure, no CGO) |
+| **Storage** | Flat files (JSON, JSONL) |
+| **Embeddings** | Vector similarity (flat-file) |
+| **LLM Clients** | Anthropic native + OpenAI-compatible |
+| **MCP** | stdio + HTTP/SSE transport |
+| **Web UI** | Vanilla JS (embedded SPA) |
+
+---
+
+## 📄 Credits
 
 Fork of [PicoClaw](https://github.com/pico-claw/picoclaw), based on [OpenClaw](https://github.com/claw-project/openclaw).
 
-## License
+---
 
-[MIT](LICENSE)
+## 📄 License
+
+This project is licensed under the [MIT License](LICENSE).
+
+---
+
+<div align="center">
+
+Built with ❤️ using **Go**
+
+</div>
