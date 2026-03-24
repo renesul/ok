@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OK — Configuracoes</title>
+  <link rel="stylesheet" href="/static/css/theme.css">
+  <link rel="stylesheet" href="/static/css/agent.css">
+  <link rel="stylesheet" href="/static/css/profile.css">
+</head>
+<body>
+  <div class="console-layout">
+
+    <aside class="console-sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <span class="sidebar-logo">OK</span>
+        <span class="sidebar-badge">Config</span>
+      </div>
+
+      <nav class="config-nav">
+        <button class="nav-item active" data-section="soul">Personalidade</button>
+        <button class="nav-item" data-section="identity">Identidade</button>
+        <button class="nav-item" data-section="user">Usuario</button>
+        <button class="nav-item" data-section="environment">Ambiente</button>
+        <button class="nav-item" data-section="llm">LLM</button>
+        <button class="nav-item" data-section="embed">Embedding</button>
+        <button class="nav-item" data-section="channels">Canais</button>
+        <button class="nav-item" data-section="agent">Agent</button>
+        <button class="nav-item" data-section="scheduler">Scheduler</button>
+        <button class="nav-item" data-section="import">Import ChatGPT</button>
+        <button class="nav-item" data-section="system">Sistema</button>
+      </nav>
+
+      <div class="sidebar-footer">
+        <a href="/chat" class="sidebar-link">Chat</a>
+        <a href="/agent" class="sidebar-link">Agent</a>
+      </div>
+    </aside>
+
+    <main class="console-main">
+      <header class="console-header">
+        <button class="menu-toggle" id="menuToggle" type="button">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
+        </button>
+        <h1 class="console-title">Configuracoes</h1>
+      </header>
+
+      <div class="console-content">
+
+        <!-- Personalidade -->
+        <div class="config-panel active" id="panel-soul">
+          <h2 class="config-panel-title">Personalidade do Agent</h2>
+          <p class="config-desc">Define como o agent se comporta, responde e interage.</p>
+          <textarea class="config-textarea" id="soulText" rows="8" placeholder="Carregando..."></textarea>
+          <div class="config-actions">
+            <div class="config-status" id="soulStatus"></div>
+            <button class="btn-primary" id="saveSoul" type="button">Salvar</button>
+          </div>
+        </div>
+
+        <!-- Identity -->
+        <div class="config-panel" id="panel-identity">
+          <h2 class="config-panel-title">Identidade do Agent</h2>
+          <p class="config-desc">Nome, estilo e caracteristicas do agent.</p>
+          <textarea class="config-textarea" id="identityText" rows="4" placeholder="Carregando..."></textarea>
+          <div class="config-actions">
+            <div class="config-status" id="identityStatus"></div>
+            <button class="btn-primary" id="saveIdentity" type="button">Salvar</button>
+          </div>
+        </div>
+
+        <!-- User -->
+        <div class="config-panel" id="panel-user">
+          <h2 class="config-panel-title">Perfil do Usuario</h2>
+          <p class="config-desc">Informacoes sobre voce que ajudam o agent a responder melhor.</p>
+          <textarea class="config-textarea" id="userText" rows="4" placeholder="Carregando..."></textarea>
+          <div class="config-actions">
+            <div class="config-status" id="userStatus"></div>
+            <button class="btn-primary" id="saveUser" type="button">Salvar</button>
+          </div>
+        </div>
+
+        <!-- Environment -->
+        <div class="config-panel" id="panel-environment">
+          <h2 class="config-panel-title">Notas do Ambiente</h2>
+          <p class="config-desc">Informacoes sobre seu ambiente (IPs, dispositivos, preferencias).</p>
+          <textarea class="config-textarea" id="environmentText" rows="6" placeholder="Carregando..."></textarea>
+          <div class="config-actions">
+            <div class="config-status" id="environmentStatus"></div>
+            <button class="btn-primary" id="saveEnvironment" type="button">Salvar</button>
+          </div>
+        </div>
+
+        <!-- LLM -->
+        <div class="config-panel" id="panel-llm">
+          <h2 class="config-panel-title">LLM</h2>
+          <p class="config-desc">Configuracao do modelo de linguagem (editavel no .env)</p>
+          <div class="info-grid">
+            <div class="info-label">Base URL</div><div class="info-value" id="llmBaseUrl">—</div>
+            <div class="info-label">Modelo</div><div class="info-value" id="llmModel">—</div>
+            <div class="info-label">Status</div><div class="info-value" id="llmStatus">—</div>
+          </div>
+        </div>
+
+        <!-- Embedding -->
+        <div class="config-panel" id="panel-embed">
+          <h2 class="config-panel-title">Embedding</h2>
+          <p class="config-desc">Busca semantica para conversas (editavel no .env)</p>
+          <div class="info-grid">
+            <div class="info-label">Provider</div><div class="info-value" id="embedProvider">—</div>
+            <div class="info-label">Modelo</div><div class="info-value" id="embedModel">—</div>
+            <div class="info-label">Status</div><div class="info-value" id="embedStatus">—</div>
+          </div>
+        </div>
+
+        <!-- Canais -->
+        <div class="config-panel" id="panel-channels">
+          <h2 class="config-panel-title">Canais</h2>
+          <p class="config-desc">Plataformas de mensagem conectadas</p>
+          <div id="channelsList" class="channels-grid"></div>
+        </div>
+
+        <!-- Agent -->
+        <div class="config-panel" id="panel-agent">
+          <h2 class="config-panel-title">Configuracao do Agent</h2>
+          <p class="config-desc">Limites de execucao do agente.</p>
+
+          <h3 class="config-subtitle">Limites</h3>
+          <div class="limits-grid">
+            <div class="limit-field"><label class="limit-label" for="limit-steps">Max Steps</label><input type="number" class="form-input limit-input" id="limit-steps" min="1" max="20" value="6"></div>
+            <div class="limit-field"><label class="limit-label" for="limit-attempts">Max Attempts</label><input type="number" class="form-input limit-input" id="limit-attempts" min="1" max="50" value="4"></div>
+            <div class="limit-field"><label class="limit-label" for="limit-timeout">Timeout (ms)</label><input type="number" class="form-input limit-input" id="limit-timeout" min="5000" max="600000" step="1000" value="120000"></div>
+          </div>
+
+          <div class="config-actions">
+            <div class="config-status" id="agentConfigStatus"></div>
+            <button class="btn-primary" id="saveAgentConfig" type="button">Salvar</button>
+          </div>
+
+          <div class="config-divider"></div>
+
+          <h3 class="config-subtitle">Tools</h3>
+          <div id="toolsList"></div>
+        </div>
+
+        <!-- Scheduler -->
+        <div class="config-panel" id="panel-scheduler">
+          <h2 class="config-panel-title">Scheduler</h2>
+          <p class="config-desc">Tarefas automaticas</p>
+          <div id="jobsList"></div>
+          <div class="config-divider"></div>
+          <h3 class="config-subtitle">Novo Job</h3>
+          <form id="newJobForm" class="job-form">
+            <input class="form-input" name="name" placeholder="Nome" required>
+            <input class="form-input" name="task_type" placeholder="Tipo (ex: fetch_url)">
+            <input class="form-input" name="input" placeholder="Input (ex: acessar google.com)">
+            <input class="form-input" name="interval_seconds" type="number" placeholder="Intervalo (segundos)" min="60" value="120">
+            <button class="btn-primary" type="submit">Criar Job</button>
+          </form>
+          <div class="config-status" id="jobStatus"></div>
+        </div>
+
+        <!-- Import -->
+        <div class="config-panel" id="panel-import">
+          <h2 class="config-panel-title">Importar ChatGPT</h2>
+          <p class="config-desc">Importe conversas do ChatGPT (.zip)</p>
+          <form class="import-form" id="importForm">
+            <label class="import-label" id="importLabel">
+              <input type="file" name="file" accept=".zip" class="import-input" id="importFile">
+              <span class="import-text" id="importText">Selecionar arquivo ZIP</span>
+            </label>
+            <div class="config-status" id="importStatus"></div>
+            <button class="btn-primary" type="submit" id="importButton" disabled>Importar</button>
+          </form>
+        </div>
+
+        <!-- Sistema -->
+        <div class="config-panel" id="panel-system">
+          <h2 class="config-panel-title">Sistema</h2>
+          <p class="config-desc">Informacoes do servidor (editavel no .env)</p>
+          <div class="info-grid">
+            <div class="info-label">Porta</div><div class="info-value" id="serverPort">—</div>
+            <div class="info-label">Debug</div><div class="info-value" id="debugMode">—</div>
+          </div>
+        </div>
+
+      </div>
+    </main>
+
+  </div>
+
+  <script src="/static/js/profile.js"></script>
+</body>
+</html>

@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OK — Entrar</title>
+  <link rel="stylesheet" href="/static/css/theme.css">
+  <link rel="stylesheet" href="/static/css/profile.css">
+</head>
+<body>
+  <div class="login-page">
+    <div class="login-card">
+      <div class="login-logo">OK</div>
+      <p class="login-tagline">Seu assistente pessoal de IA</p>
+
+      <form class="login-form" id="loginForm" novalidate>
+        <div class="error-message" id="errorMessage"></div>
+        <input
+          class="form-input"
+          type="password"
+          name="password"
+          placeholder="Senha"
+          autocomplete="current-password"
+          required
+        >
+        <button class="btn-primary" type="submit">Entrar</button>
+      </form>
+
+      <p class="login-footer">&copy; 2026 OK</p>
+    </div>
+  </div>
+
+  <script src="/static/js/login.js"></script>
+</body>
+</html>

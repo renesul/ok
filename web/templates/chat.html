@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OK</title>
+  <link rel="stylesheet" href="/static/css/theme.css">
+  <link rel="stylesheet" href="/static/css/chat.css">
+</head>
+<body>
+  <div class="chat-layout">
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+    <aside class="chat-sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <span class="sidebar-logo">OK</span>
+        <button class="new-chat-btn" id="newChatButton" aria-label="Nova conversa" type="button">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+        </button>
+        <button class="sidebar-close" id="sidebarClose" aria-label="Fechar menu">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+        </button>
+      </div>
+
+      <div class="sidebar-search">
+        <input class="search-input" type="text" id="searchInput" placeholder="Buscar conversas..." autocomplete="off">
+      </div>
+
+      <nav class="sidebar-nav">
+        <div class="conversation-list" id="conversationList"></div>
+      </nav>
+
+      <div class="sidebar-footer">
+        <a href="/agent" class="sidebar-link">Agent</a>
+        <a href="/profile" class="sidebar-link">Perfil</a>
+        <button class="sidebar-link" id="logoutButton" type="button">Sair</button>
+      </div>
+    </aside>
+
+    <main class="chat-main">
+      <header class="chat-header">
+        <button class="menu-toggle" id="menuToggle" aria-label="Abrir menu" type="button">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
+        </button>
+        <h1 class="chat-title" id="chatTitle">OK</h1>
+      </header>
+
+      <div class="chat-messages" id="chatMessages">
+        <div class="chat-empty" id="chatEmpty">
+          <div class="chat-empty-logo">OK</div>
+          <p class="chat-empty-text">Selecione uma conversa</p>
+        </div>
+
+        <div class="health-report" id="healthReport" style="display: none">
+          <div class="health-report-title">Status dos servicos</div>
+          <div class="health-items" id="healthItems"></div>
+          <button class="health-dismiss" id="healthDismiss" type="button">Fechar</button>
+        </div>
+      </div>
+
+      <div class="chat-input-area" id="chatInputArea" style="display: none">
+        <form class="chat-input-form" id="chatInputForm">
+          <textarea class="chat-input" id="chatInput" placeholder="Digite uma mensagem..." rows="1" autocomplete="off"></textarea>
+          <button class="chat-send-btn" id="chatSendButton" type="submit" disabled aria-label="Enviar">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4z"/></svg>
+          </button>
+        </form>
+      </div>
+    </main>
+  </div>
+
+  <script src="/static/js/chat.js"></script>
+</body>
+</html>

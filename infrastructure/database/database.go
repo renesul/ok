@@ -33,7 +33,8 @@ func New(path string, debug bool) (*gorm.DB, error) {
 		return nil, fmt.Errorf("get underlying db: %w", err)
 	}
 
-	sqlDB.SetMaxOpenConns(1)
+	sqlDB.SetMaxOpenConns(5)
+	sqlDB.SetMaxIdleConns(2)
 
 	return db, nil
 }
