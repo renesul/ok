@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"os/signal"
@@ -10,6 +11,7 @@ import (
 
 	"github.com/renesul/ok/adapters"
 	"github.com/renesul/ok/application"
+	"github.com/renesul/ok/domain"
 	"github.com/renesul/ok/infrastructure/bootstrap"
 	"github.com/renesul/ok/infrastructure/database"
 	"github.com/renesul/ok/infrastructure/llm"
@@ -136,6 +138,29 @@ func run() error {
 	}
 
 	wsHandler := handler.NewWSHandler(comp.AgentService, comp.ConfirmManager, log)
+
+	// Global event handler: broadcasts ALL agent events to WebSocket clients
+	hub := wsHandler.Hub()
+	comp.AgentService.SetGlobalEventHandler(func(event domain.AgentEvent) {
+		// Update hub state for hydration
+		switch event.Type {
+		case "phase":
+			hub.SetPhase(event.Content)
+		case "stream":
+			if event.Tool == "shell" || event.Tool == "repl" {
+				hub.AppendTerminal(event.Content)
+			}
+		case "done":
+			hub.SetRunning(false)
+		case "message", "step":
+			// first event implies running
+		}
+		data, err := json.Marshal(event)
+		if err == nil {
+			hub.Broadcast(data)
+		}
+	})
+
 	app := apphttp.NewServer(authHandler, chatHandler, importHandler, healthHandler, agentHandler, schedulerHandler, wsHandler, sessionService, cfg, log)
 
 	go func() {

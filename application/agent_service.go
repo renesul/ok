@@ -31,9 +31,11 @@ type AgentService struct {
 	userProfile      string
 	environmentNotes string
 	limits           domain.AgentLimits
-	cachedPrompt     string
-	promptMu         sync.RWMutex
-	log              *zap.Logger
+	cachedPrompt       string
+	promptMu           sync.RWMutex
+	globalEventHandler func(domain.AgentEvent)
+	globalMu           sync.RWMutex
+	log                *zap.Logger
 }
 
 func NewAgentService(
@@ -64,18 +66,38 @@ func NewAgentService(
 	return s
 }
 
+// SetGlobalEventHandler registers a handler that receives ALL agent events
+// from every channel (chat, WebSocket, adapters). Used by WSHandler to broadcast.
+func (s *AgentService) SetGlobalEventHandler(fn func(domain.AgentEvent)) {
+	s.globalMu.Lock()
+	s.globalEventHandler = fn
+	s.globalMu.Unlock()
+}
+
+func (s *AgentService) emitGlobal(e domain.AgentEvent) {
+	s.globalMu.RLock()
+	fn := s.globalEventHandler
+	s.globalMu.RUnlock()
+	if fn != nil {
+		fn(e)
+	}
+}
+
 func (s *AgentService) Run(ctx context.Context, input string) (domain.AgentResponse, error) {
 	s.log.Debug("agent start", zap.String("input", input))
-	// Invalidate cached prompt so learned rules from previous runs are included
 	s.promptMu.Lock()
 	s.cachedPrompt = ""
 	s.promptMu.Unlock()
 	eng := s.buildEngine()
-	emitter := engine.NewBufferEmitter()
+	buf := engine.NewBufferEmitter()
+	emitter := engine.NewCallbackEmitter(func(e domain.AgentEvent) {
+		buf.Forward(e)
+		s.emitGlobal(e)
+	})
 	if err := eng.RunLoop(ctx, input, emitter); err != nil {
 		return domain.AgentResponse{}, err
 	}
-	return emitter.Response(), nil
+	return buf.Response(), nil
 }
 
 func (s *AgentService) RunStream(ctx context.Context, input string, onEvent domain.EventCallback) error {
@@ -87,6 +109,7 @@ func (s *AgentService) RunStream(ctx context.Context, input string, onEvent doma
 		if onEvent != nil {
 			onEvent(e)
 		}
+		s.emitGlobal(e)
 	}
 	eng := s.buildEngine()
 	emitter := engine.NewCallbackEmitter(emit)

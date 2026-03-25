@@ -38,6 +38,18 @@ func (e *BufferEmitter) EmitDiff(file, before, after string) {}
 func (e *BufferEmitter) EmitConfirm(id, tool, summary string) {}
 func (e *BufferEmitter) EmitStream(source, chunk string)      {}
 
+// Forward routes an AgentEvent to the appropriate buffer method
+func (e *BufferEmitter) Forward(event domain.AgentEvent) {
+	switch event.Type {
+	case "step":
+		e.EmitStep(event.Name, event.Tool, event.Status, event.ElapsedMs)
+	case "message":
+		e.EmitMessage(event.Content)
+	case "memory":
+		// memories come as single event, not array
+	}
+}
+
 func (e *BufferEmitter) Response() domain.AgentResponse {
 	return *e.response
 }
