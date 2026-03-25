@@ -1,7 +1,6 @@
 bin/ok
-data/ok.db
-data/test_ok.db
-data/.env
-data/.env.test
+data/
+tests/integration/data/
+coverage.out
 MEMORY.md
 CLAUDE.md
