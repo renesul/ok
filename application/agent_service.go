@@ -35,6 +35,7 @@ type AgentService struct {
 	promptMu           sync.RWMutex
 	globalEventHandler func(domain.AgentEvent)
 	globalMu           sync.RWMutex
+	skillRepo          domain.SkillRepository
 	log                *zap.Logger
 }
 
@@ -48,6 +49,7 @@ func NewAgentService(
 	memory *agentpkg.SQLiteMemory,
 	execRepo *agentpkg.ExecutionRepository,
 	configRepo *agentpkg.ConfigRepository,
+	skillRepo domain.SkillRepository,
 	log *zap.Logger,
 ) *AgentService {
 	s := &AgentService{
@@ -60,6 +62,7 @@ func NewAgentService(
 		memory:         memory,
 		execRepo:       execRepo,
 		configRepo:     configRepo,
+		skillRepo:      skillRepo,
 		log:            log.Named("service.agent"),
 	}
 	s.loadTemplates()
@@ -201,6 +204,19 @@ func (s *AgentService) BuildSystemPrompt() string {
 		}
 	}
 
+	if s.skillRepo != nil {
+		skills, _ := s.skillRepo.List()
+		if len(skills) > 0 {
+			var skillDescs []string
+			for _, sk := range skills {
+				skillDescs = append(skillDescs, fmt.Sprintf("- %s: %s", sk.Name, sk.Description))
+			}
+			parts = append(parts, "[SKILLS INSTALADAS] Voce possui as seguintes habilidades carregaveis na memoria:\n"+
+				strings.Join(skillDescs, "\n")+
+				"\nUse a tool 'skill_loader' para ler as regras de uma habilidade ANTES de executar a tarefa se sentir necessidade.")
+		}
+	}
+
 	parts = append(parts, "Current date and time: "+now)
 
 	parts = append(parts, fmt.Sprintf(`Available Tools:
@@ -228,6 +244,7 @@ TOOL SELECTION GUIDE (use the most specific tool for each request):
 - Read entire directory structure → folder_index
 - Complex tasks (subdivide into parts) → delegate
 - Memorize a rule or fact permanently → learn_rule
+- Load skill instructions before executing a task → skill_loader
 
 RULES:
 - RESPECT EXACTLY what the user requested (language, format, tool, tone).

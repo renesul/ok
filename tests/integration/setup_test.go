@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/gofiber/fiber/v2"
@@ -97,6 +98,12 @@ func TestMain(m *testing.M) {
 	planner.RegisterTool(agenttools.NewREPLTool(nil))
 	planner.RegisterTool(agenttools.NewWebSearchTool())
 	planner.RegisterTool(agenttools.NewLearnRuleTool(agentMemory))
+	planner.RegisterTool(agenttools.NewScheduleTaskTool(sched.NewJobRepository(testDB, log)))
+	planner.RegisterTool(agenttools.NewFileEditTool(nil))
+	planner.RegisterTool(agenttools.NewSkillCreatorTool(testCfg.AgentSandboxDir))
+	skillRepo := agent.NewFileSkillRepository(testCfg.AgentSandboxDir)
+	planner.RegisterTool(agenttools.NewSkillLoaderTool(skillRepo))
+	planner.RegisterTool(agenttools.NewConfigTool(agentConfigRepo))
 
 	llmConfig := llm.ClientConfig{
 		BaseURL: testCfg.LLMBaseURL,
@@ -109,7 +116,7 @@ func TestMain(m *testing.M) {
 		Model:   testCfg.LLMFastModel,
 	}
 
-	agentService := application.NewAgentService(testDB, llmClient, llmConfig, llmFastConfig, planner, agentExecutor, agentMemory, execRepo, agentConfigRepo, log)
+	agentService := application.NewAgentService(testDB, llmClient, llmConfig, llmFastConfig, planner, agentExecutor, agentMemory, execRepo, agentConfigRepo, nil, log)
 
 	llmConfigured := testCfg.LLMBaseURL != "" && testCfg.LLMAPIKey != "" && testCfg.LLMModel != ""
 	chatService := application.NewChatService(conversationRepository, messageRepository, embeddingService, agentService, llmConfigured, log)
@@ -175,6 +182,16 @@ func cleanupExecutions(t *testing.T) {
 func cleanupAudit(t *testing.T) {
 	t.Helper()
 	if _, err := testDB.Exec("DELETE FROM agent_audit"); err != nil { t.Fatalf("cleanup audit: %v", err) }
+}
+
+func cleanupSkills(t *testing.T) {
+	t.Helper()
+	os.RemoveAll(filepath.Join(testCfg.AgentSandboxDir, "skills"))
+}
+
+func cleanupConfig(t *testing.T) {
+	t.Helper()
+	testDB.Exec("DELETE FROM agent_config WHERE key LIKE 'test_%'")
 }
 
 func cleanupAll(t *testing.T) {

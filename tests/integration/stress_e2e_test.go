@@ -824,6 +824,102 @@ func TestStressE2E_Confirmation(t *testing.T) {
 }
 
 // ============================================================
+// BATERIA 16: Skills (8 cenarios)
+// ============================================================
+
+func TestStressE2E_SkillBattery(t *testing.T) {
+	skipWithoutLLM(t)
+	defer cleanupAll(t)
+	defer cleanupSkills(t)
+
+	prompts := []struct {
+		name     string
+		input    string
+		mustFind []string
+	}{
+		{"1_CreateSkill", "Crie uma skill chamada 'vendedor' com description 'Vende qualquer coisa' e content '# Regras: 1. Seja persuasivo'. Use a tool skill_creator com JSON.", []string{"sucesso", "vendedor", "salva", "auto-program", "SUCESSO"}},
+		{"2_LoadSkill", "Carregue a skill 'vendedor' usando a tool skill_loader. Me mostre o conteudo.", []string{"persuasivo", "Regras", "regras"}},
+		{"3_LoadNonexistent", "Carregue a skill 'fantasma_xyz' usando skill_loader.", []string{"nao encontrada", "não encontrada", "not found", "erro", "falhou", "fail"}},
+		{"4_CreateInvalidName", "Use skill_creator para criar skill com nome 'INVALID NAME!' description 'x' content 'x'", []string{"invalido", "inválido", "erro", "letras", "minusculas", "fail"}},
+		{"5_CreateEmptyContent", "Use skill_creator para criar skill com nome 'vazio' description '' content ''", []string{"obrigatorio", "obrigatório", "erro", "vazio", "empty", "required"}},
+		{"6_CreateAndChain", "Use skill_creator para criar skill 'math_expert' description 'Expert in math' content '# Always show detailed work'. Depois use skill_loader para carregar 'math_expert'.", []string{"math_expert", "Always show", "show detailed", "work"}},
+		{"7_OverwriteSkill", "Use skill_creator para criar skill 'vendedor' description 'Versao 2' content '# Nova versao atualizada'. Depois carregue com skill_loader.", []string{"Nova versao", "nova versao", "Versao 2", "atualizada"}},
+		{"8_CreateSpecialChars", "Use skill_creator com nome 'code_review' description 'Revisa codigo Go' content '# Regras de review: verificar erros e nomes descritivos'", []string{"sucesso", "code_review", "SUCESSO"}},
+	}
+
+	for _, p := range prompts {
+		t.Run(p.name, func(t *testing.T) {
+			resp, finalMsg := runAgentPrompt(t, p.input)
+			assertDone(t, resp)
+			assertContainsAny(t, finalMsg, p.mustFind)
+		})
+	}
+}
+
+// ============================================================
+// BATERIA 17: Browser Actions (8 cenarios)
+// ============================================================
+
+func TestStressE2E_BrowserActionsBattery(t *testing.T) {
+	skipWithoutLLM(t)
+	defer cleanupAll(t)
+
+	prompts := []struct {
+		name     string
+		input    string
+		mustFind []string
+	}{
+		{"1_BrowserText", "Use a tool browser com url https://example.com para extrair o texto da pagina. Retorne o conteudo.", []string{"example", "domain", "illustrative", "Example Domain"}},
+		{"2_BrowserJSBlocked", "Use browser em https://example.com com uma action js executando script 'document.cookie'. O que aconteceu?", []string{"bloqueado", "blocked", "cookie", "erro", "error", "script"}},
+		{"3_BrowserEmptyURL", "Use a tool browser com url vazia ''.", []string{"obrigatorio", "url", "erro", "error", "vazia", "empty"}},
+		{"4_BrowserLocalhostBlocked", "Use a tool browser para navegar em http://localhost:8080", []string{"bloqueada", "blocked", "interna", "erro", "error", "localhost"}},
+		{"5_BrowserPrivateIPBlocked", "Use a tool browser para acessar http://192.168.1.1", []string{"bloqueada", "blocked", "interna", "erro", "error", "192.168"}},
+		{"6_BrowserNoScheme", "Use a tool browser para acessar a url 'example.com' (sem http://)", []string{"http", "https", "erro", "error", "scheme", "protocolo", "deve comecar"}},
+		{"7_BrowserValidSite", "Use browser para acessar https://httpbin.org/html e retorne parte do texto extraido.", []string{"Herman", "Moby", "httpbin", "html", "text"}},
+		{"8_BrowserMultipleWords", "Use browser em https://example.com. Quantas palavras tem no texto da pagina aproximadamente?", []string{"example", "domain", "palavras", "words"}},
+	}
+
+	for _, p := range prompts {
+		t.Run(p.name, func(t *testing.T) {
+			resp, finalMsg := runAgentPrompt(t, p.input)
+			assertDone(t, resp)
+			assertContainsAny(t, finalMsg, p.mustFind)
+		})
+	}
+}
+
+// ============================================================
+// BATERIA 18: Config Tool (6 cenarios)
+// ============================================================
+
+func TestStressE2E_ConfigToolBattery(t *testing.T) {
+	skipWithoutLLM(t)
+	defer cleanupAll(t)
+	defer cleanupConfig(t)
+
+	prompts := []struct {
+		name     string
+		input    string
+		mustFind []string
+	}{
+		{"1_ConfigSet", "Use a tool config para definir a chave 'test_key' com valor 'test_value_42'. Confirme.", []string{"test_key", "test_value_42", "definid", "salv", "config", "set"}},
+		{"2_ConfigGet", "Use a tool config para ler a chave 'test_key'. Qual o valor?", []string{"test_value_42"}},
+		{"3_ConfigGetMissing", "Use a tool config para ler a chave 'chave_inexistente_xyz'. O que retornou?", []string{"nao encontrad", "não encontrad", "vazio", "empty", "não definid", "nao definid", "not found", "null", "nenhum"}},
+		{"4_ConfigUpdate", "Use a tool config para atualizar a chave 'test_key' para o valor 'novo_valor_99'.", []string{"test_key", "novo_valor_99", "atualiz", "salv", "definid", "set"}},
+		{"5_ConfigVerify", "Use a tool config para ler 'test_key'. Diga o valor atual.", []string{"novo_valor_99"}},
+		{"6_ConfigInvalid", "Use a tool config sem especificar nenhuma chave. O que acontece?", []string{"obrigat", "key", "erro", "error", "chave", "required"}},
+	}
+
+	for _, p := range prompts {
+		t.Run(p.name, func(t *testing.T) {
+			resp, finalMsg := runAgentPrompt(t, p.input)
+			assertDone(t, resp)
+			assertContainsAny(t, finalMsg, p.mustFind)
+		})
+	}
+}
+
+// ============================================================
 // HELPERS
 // ============================================================
 

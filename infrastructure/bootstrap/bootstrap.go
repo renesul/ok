@@ -80,6 +80,17 @@ func NewAgent(db *sql.DB, cfg *config.Config, log *zap.Logger) *Components {
 	execRepo := agent.NewExecutionRepository(db, log)
 	agentConfigRepo := agent.NewConfigRepository(db, log)
 
+	planner.RegisterTool(agenttools.NewSqlInspectorTool(agentConfigRepo))
+	planner.RegisterTool(agenttools.NewPythonRPATool(cfg.AgentSandboxDir, confirmManager))
+	planner.RegisterTool(agenttools.NewGmailReadTool(agentConfigRepo))
+	planner.RegisterTool(agenttools.NewGmailSendTool(agentConfigRepo))
+	planner.RegisterTool(agenttools.NewGCalManagerTool(agentConfigRepo))
+	planner.RegisterTool(agenttools.NewDockerReplicatorTool(confirmManager))
+	planner.RegisterTool(agenttools.NewConfigTool(agentConfigRepo))
+	planner.RegisterTool(agenttools.NewSkillCreatorTool(cfg.AgentSandboxDir))
+	skillRepo := agent.NewFileSkillRepository(cfg.AgentSandboxDir)
+	planner.RegisterTool(agenttools.NewSkillLoaderTool(skillRepo))
+
 	llmHeavy := llm.ClientConfig{
 		BaseURL:          cfg.LLMBaseURL,
 		APIKey:           cfg.LLMAPIKey,
@@ -104,7 +115,8 @@ func NewAgent(db *sql.DB, cfg *config.Config, log *zap.Logger) *Components {
 	agentService := application.NewAgentService(
 		db, llmClient, llmHeavy, llmFast,
 		planner, executor, agentMemory,
-		execRepo, agentConfigRepo, log,
+		execRepo, agentConfigRepo, skillRepo,
+		log,
 	)
 
 	subEngineRunner := func(ctx context.Context, input string) ([]string, error) {
