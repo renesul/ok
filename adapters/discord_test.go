@@ -94,3 +94,13 @@ func TestDiscordAdapter_HandleMessage_ProcessesOwner(t *testing.T) {
 		t.Errorf("Run() input = %q, want %q", mock.lastInput, "deploy prod")
 	}
 }
+
+func TestDiscordAdapter_HandleMessage_PanicRecovery(t *testing.T) {
+	runner := newPanickingRunner("banco corrompido")
+	a := newTestDiscord(runner, "owner1")
+	s := discordSession("bot123")
+	a.handleMessage(s, discordMsgCreate("owner1", "trigger panic"))
+	if !runner.called {
+		t.Fatal("expected Run() to be called before panic")
+	}
+}

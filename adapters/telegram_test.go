@@ -92,3 +92,24 @@ func TestTelegramAdapter_HandleMessage_ProcessesOwner(t *testing.T) {
 		t.Errorf("Run() input = %q, want %q", mock.lastInput, "listar tarefas")
 	}
 }
+
+func TestTelegramAdapter_HandleMessage_PanicRecovery(t *testing.T) {
+	runner := newPanickingRunner("banco corrompido")
+	a := newTestTelegram(runner, 123)
+	a.handleMessage(telegramMsg(123, "private", "trigger panic"))
+	if !runner.called {
+		t.Fatal("expected Run() to be called before panic")
+	}
+}
+
+func TestTelegramAdapter_HandleMessage_NilFrom(t *testing.T) {
+	mock := newMockRunner()
+	a := newTestTelegram(mock, 123)
+	msg := telegramMsg(0, "private", "hi")
+	msg.From = nil
+	// Should not panic on nil From
+	a.handleMessage(msg)
+	if mock.called {
+		t.Error("expected Run() NOT called for nil From")
+	}
+}

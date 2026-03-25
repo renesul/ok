@@ -7,11 +7,13 @@ import (
 )
 
 type mockAgentRunner struct {
-	called    bool
-	lastInput string
-	callCount int
-	response  domain.AgentResponse
-	err       error
+	called     bool
+	lastInput  string
+	callCount  int
+	response   domain.AgentResponse
+	err        error
+	panicOnRun bool
+	panicValue interface{}
 }
 
 func newMockRunner() *mockAgentRunner {
@@ -23,10 +25,20 @@ func newMockRunner() *mockAgentRunner {
 	}
 }
 
+func newPanickingRunner(val interface{}) *mockAgentRunner {
+	return &mockAgentRunner{
+		panicOnRun: true,
+		panicValue: val,
+	}
+}
+
 func (m *mockAgentRunner) Run(_ context.Context, input string) (domain.AgentResponse, error) {
 	m.called = true
 	m.lastInput = input
 	m.callCount++
+	if m.panicOnRun {
+		panic(m.panicValue)
+	}
 	return m.response, m.err
 }
 

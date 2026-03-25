@@ -1,6 +1,7 @@
 package adapters
 
 import (
+	"fmt"
 	"testing"
 
 	"go.mau.fi/whatsmeow/proto/waE2E"
@@ -114,5 +115,26 @@ func TestWhatsAppAdapter_HandleMessage_ProcessesOwner(t *testing.T) {
 	}
 	if mock.lastInput != "buscar clima" {
 		t.Errorf("Run() input = %q, want %q", mock.lastInput, "buscar clima")
+	}
+}
+
+func TestWhatsAppAdapter_HandleMessage_PanicRecovery(t *testing.T) {
+	runner := newPanickingRunner("banco corrompido")
+	a := newTestWhatsApp(runner, "5511999")
+	// Should NOT panic the test — defer recover() in handleMessage catches it
+	a.handleMessage(whatsappMsg("5511999", false, &waE2E.Message{Conversation: strPtr("trigger panic")}))
+	if !runner.called {
+		t.Fatal("expected Run() to be called before panic")
+	}
+}
+
+func TestWhatsAppAdapter_HandleMessage_AgentError(t *testing.T) {
+	mock := newMockRunner()
+	mock.err = fmt.Errorf("agent internal error")
+	a := newTestWhatsApp(mock, "5511999")
+	// Should not crash on agent error
+	a.handleMessage(whatsappMsg("5511999", false, &waE2E.Message{Conversation: strPtr("test error")}))
+	if !mock.called {
+		t.Fatal("expected Run() to be called")
 	}
 }
