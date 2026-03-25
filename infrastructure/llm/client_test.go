@@ -133,9 +133,9 @@ func TestReflect_ParseError(t *testing.T) {
 	srv := mockServer(200, chatResponse("not json at all"))
 	defer srv.Close()
 
-	r, _ := testClient().Reflect(context.Background(), testConfig(srv.URL), "sys", "ctx")
-	if r.Action != "continue" {
-		t.Errorf("expected fallback action='continue', got %q", r.Action)
+	_, err := testClient().Reflect(context.Background(), testConfig(srv.URL), "sys", "ctx")
+	if err == nil {
+		t.Errorf("expected error for malformed json, got nil")
 	}
 }
 
@@ -143,9 +143,9 @@ func TestReflect_HTTPError(t *testing.T) {
 	srv := mockServer(500, "internal error")
 	defer srv.Close()
 
-	r, _ := testClient().Reflect(context.Background(), testConfig(srv.URL), "sys", "ctx")
-	if r.Action != "continue" {
-		t.Errorf("expected fallback action='continue', got %q", r.Action)
+	_, err := testClient().Reflect(context.Background(), testConfig(srv.URL), "sys", "ctx")
+	if err == nil {
+		t.Errorf("expected error for http error, got nil")
 	}
 }
 
@@ -194,12 +194,9 @@ func TestCreatePlan_InvalidJSON(t *testing.T) {
 	srv := mockServer(200, chatResponse("just text, no plan"))
 	defer srv.Close()
 
-	p, err := testClient().CreatePlan(context.Background(), testConfig(srv.URL), "sys", "goal")
-	if err != nil {
-		t.Fatalf("unexpected error (should be nil): %v", err)
-	}
-	if len(p.Steps) != 0 {
-		t.Errorf("expected empty plan, got %d steps", len(p.Steps))
+	_, err := testClient().CreatePlan(context.Background(), testConfig(srv.URL), "sys", "goal")
+	if err == nil {
+		t.Fatal("expected error for invalid json, got nil")
 	}
 }
 

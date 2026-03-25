@@ -388,7 +388,7 @@ func (c *Client) CreatePlan(ctx context.Context, config ClientConfig, systemProm
 	var plan domain.ExecutionPlan
 	if err := json.Unmarshal([]byte(content), &plan); err != nil {
 		c.log.Debug("plan parse failed", zap.String("content", content), zap.Error(err))
-		return domain.ExecutionPlan{}, nil
+		return domain.ExecutionPlan{}, fmt.Errorf("plan parse error: %w", err)
 	}
 
 	return plan, nil
@@ -424,30 +424,30 @@ func (c *Client) Reflect(ctx context.Context, config ClientConfig, systemPrompt,
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
-		c.log.Debug("reflect request failed", zap.Error(err))
-		return domain.ReflectionResult{Action: "continue"}, nil
+		return domain.ReflectionResult{}, fmt.Errorf("reflect request failed: %w", err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return domain.ReflectionResult{Action: "continue"}, nil
+		respBody, _ := io.ReadAll(resp.Body)
+		return domain.ReflectionResult{}, fmt.Errorf("reflect error %d: %s", resp.StatusCode, string(respBody))
 	}
 
 	var result chatCompletionResponse
 	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
-		return domain.ReflectionResult{Action: "continue"}, nil
+		return domain.ReflectionResult{}, fmt.Errorf("decode response: %w", err)
 	}
 
 	if len(result.Choices) == 0 {
-		return domain.ReflectionResult{Action: "continue"}, nil
+		return domain.ReflectionResult{}, fmt.Errorf("no choices in response")
 	}
 
 	content := strings.TrimSpace(result.Choices[0].Message.Content)
 
 	var reflection domain.ReflectionResult
 	if err := json.Unmarshal([]byte(content), &reflection); err != nil {
-		c.log.Debug("reflect parse fallback", zap.String("content", content))
-		return domain.ReflectionResult{Action: "continue"}, nil
+		c.log.Debug("reflect parse fallback", zap.String("content", content), zap.Error(err))
+		return domain.ReflectionResult{}, fmt.Errorf("reflect parse error: %w", err)
 	}
 
 	return reflection, nil

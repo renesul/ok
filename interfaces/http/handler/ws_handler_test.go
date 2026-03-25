@@ -58,3 +58,65 @@ func TestWSHub_TerminalHistoryCap(t *testing.T) {
 		t.Errorf("terminal history = %d entries, want 100 (cap)", count)
 	}
 }
+
+func TestWSHub_PhaseTracking(t *testing.T) {
+	hub := NewWSHub()
+
+	hub.mu.Lock()
+	hub.currentPhase = "observe"
+	hub.mu.Unlock()
+
+	state := hub.HydrationState()
+	if state["phase"] != "observe" {
+		t.Errorf("phase = %q, want 'observe'", state["phase"])
+	}
+
+	hub.mu.Lock()
+	hub.currentPhase = "act"
+	hub.mu.Unlock()
+
+	state = hub.HydrationState()
+	if state["phase"] != "act" {
+		t.Errorf("phase after update = %q, want 'act'", state["phase"])
+	}
+}
+
+func TestWSHub_DoneResetsRunning(t *testing.T) {
+	hub := NewWSHub()
+
+	hub.mu.Lock()
+	hub.isRunning = true
+	hub.mu.Unlock()
+
+	state := hub.HydrationState()
+	if state["running"] != true {
+		t.Error("expected running=true before done")
+	}
+
+	hub.mu.Lock()
+	hub.isRunning = false
+	hub.mu.Unlock()
+
+	state = hub.HydrationState()
+	if state["running"] != false {
+		t.Error("expected running=false after done")
+	}
+}
+
+func TestWSHub_InitialState(t *testing.T) {
+	hub := NewWSHub()
+	state := hub.HydrationState()
+
+	if state["running"] != false {
+		t.Error("initial running should be false")
+	}
+	if state["phase"] != "" {
+		t.Errorf("initial phase should be empty, got %q", state["phase"])
+	}
+	if state["terminal_history"] != nil {
+		history := state["terminal_history"].([]string)
+		if len(history) != 0 {
+			t.Errorf("initial terminal_history should be empty, got %d", len(history))
+		}
+	}
+}

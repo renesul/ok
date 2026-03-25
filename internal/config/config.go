@@ -1,6 +1,7 @@
 package config
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/spf13/viper"
@@ -68,7 +69,11 @@ func LoadFrom(envFile string) (*Config, error) {
 	viper.SetDefault("DISCORD_OWNER_ID", "")
 
 	// .env is optional — env vars take precedence
-	_ = viper.ReadInConfig()
+	if err := viper.ReadInConfig(); err != nil {
+		if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
+			return nil, fmt.Errorf("failed to parse config file: %w", err)
+		}
+	}
 
 	cfg := &Config{}
 	if err := viper.Unmarshal(cfg); err != nil {

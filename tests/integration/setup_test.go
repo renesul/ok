@@ -72,8 +72,7 @@ func TestMain(m *testing.M) {
 	importService := application.NewImportService(conversationRepository, messageRepository, embeddingService, log)
 	// Agent (antes do chat)
 	planner := agent.NewDefaultPlanner(log)
-	planner.RegisterTool(&agenttools.EchoTool{})
-	planner.RegisterTool(agenttools.NewHTTPTool())
+	
 	agentExecutor := agent.NewDefaultExecutor(log)
 	agentMemory := agent.NewSQLiteMemory(testDB, log)
 	testAgentMemory = agentMemory
@@ -81,6 +80,24 @@ func TestMain(m *testing.M) {
 	testExecRepo = execRepo
 	agentConfigRepo := agent.NewConfigRepository(testDB, log)
 	testConfigRepo = agentConfigRepo
+
+	planner.RegisterTool(&agenttools.EchoTool{})
+	planner.RegisterTool(agenttools.NewHTTPTool())
+	planner.RegisterTool(agenttools.NewFileReadTool(testCfg.AgentSandboxDir))
+	planner.RegisterTool(agenttools.NewFileWriteTool(testCfg.AgentSandboxDir))
+	planner.RegisterTool(agenttools.NewShellToolWithConfirmation(nil))
+	planner.RegisterTool(&agenttools.JSONParseTool{})
+	planner.RegisterTool(&agenttools.Base64Tool{})
+	planner.RegisterTool(&agenttools.TimestampTool{})
+	planner.RegisterTool(&agenttools.MathTool{})
+	planner.RegisterTool(&agenttools.TextExtractTool{})
+	planner.RegisterTool(agenttools.NewIndexFolderTool(testCfg.AgentSandboxDir))
+	planner.RegisterTool(agenttools.NewSearchTool(testCfg.AgentSandboxDir))
+	planner.RegisterTool(agenttools.NewBrowserTool())
+	planner.RegisterTool(agenttools.NewREPLTool(nil))
+	planner.RegisterTool(agenttools.NewWebSearchTool())
+	planner.RegisterTool(agenttools.NewLearnRuleTool(agentMemory))
+
 	llmConfig := llm.ClientConfig{
 		BaseURL: testCfg.LLMBaseURL,
 		APIKey:  testCfg.LLMAPIKey,

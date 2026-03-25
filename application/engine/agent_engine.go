@@ -198,6 +198,7 @@ func (e *AgentEngine) RunLoop(ctx context.Context, input string, emitter Emitter
 		state.Attempts++
 
 		if reflectErr != nil {
+			e.log.Error("reflection API failed or returned malformed JSON", zap.Error(reflectErr))
 			agentpkg.AdvanceStep(state)
 			replansThisStep = 0
 			continue

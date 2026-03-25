@@ -120,9 +120,11 @@ func (r *mockMessageRepo) DeleteEmbeddings(_ context.Context, _ uint) error {
 // --- Mock JobRepository ---
 
 type mockJobRepo struct {
-	createCalled bool
-	lastJob      *domain.Job
-	createErr    error
+	createCalled  bool
+	updateCalled  bool
+	deleteCalled  bool
+	lastJob       *domain.Job
+	createErr     error
 	findByIDResult *domain.Job
 }
 
@@ -140,11 +142,14 @@ func (r *mockJobRepo) FindByID(_ context.Context, _ string) (*domain.Job, error)
 	return r.findByIDResult, nil
 }
 
-func (r *mockJobRepo) Update(_ context.Context, _ *domain.Job) error {
+func (r *mockJobRepo) Update(_ context.Context, j *domain.Job) error {
+	r.updateCalled = true
+	r.lastJob = j
 	return nil
 }
 
 func (r *mockJobRepo) Delete(_ context.Context, _ string) error {
+	r.deleteCalled = true
 	return nil
 }
 
