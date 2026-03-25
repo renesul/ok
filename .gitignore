@@ -1,6 +1,13 @@
-bin/ok
+bin/
 data/
 tests/integration/data/
 coverage.out
 MEMORY.md
 CLAUDE.md
+
+# Compiled binaries
+*.test
+*.exe
+*.out
+cli
+ok
