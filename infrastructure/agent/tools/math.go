@@ -12,7 +12,7 @@ import (
 type MathTool struct{}
 
 func (t *MathTool) Name() string        { return "math" }
-func (t *MathTool) Description() string { return "avalia expressoes matematicas simples (ex: 2+3*4)" }
+func (t *MathTool) Description() string { return "evaluates simple mathematical expressions (e.g. 2+3*4)" }
 func (t *MathTool) Safety() domain.ToolSafety          { return domain.ToolSafe }
 
 func (t *MathTool) Run(input string) (string, error) {

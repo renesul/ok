@@ -26,7 +26,7 @@ func NewDelegateTaskTool(runner SubEngineRunner) *DelegateTaskTool {
 
 func (t *DelegateTaskTool) Name() string { return "delegate" }
 func (t *DelegateTaskTool) Description() string {
-	return "Delega uma sub-tarefa para um sub-agente independente com janela de contexto limpa. Input JSON: {\"sub_task\":\"descricao\", \"context\":\"contexto adicional\"}. Use para tarefas complexas que se beneficiam de foco isolado. Max 3 delegacoes por execucao."
+	return "Delegates a sub-task to an independent sub-agent with a clean context window. Input JSON: {\"sub_task\":\"description\", \"context\":\"additional context\"}. Use for complex tasks that benefit from isolated focus. Max 3 delegations per execution."
 }
 func (t *DelegateTaskTool) Safety() domain.ToolSafety { return domain.ToolRestricted }
 

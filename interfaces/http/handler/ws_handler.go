@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"sync"
+	"time"
 
 	"github.com/gofiber/websocket/v2"
 	"github.com/renesul/ok/application"
@@ -48,6 +49,7 @@ type WSHandler struct {
 	confirmManager *agent.ConfirmationManager
 	hub            *WSHub
 	log            *zap.Logger
+	cancelMu       sync.Mutex
 	cancelFunc     context.CancelFunc
 }
 
@@ -107,17 +109,26 @@ func (h *WSHandler) Handle(c *websocket.Conn) {
 				h.confirmManager.Respond(cmd.ID, cmd.Approved)
 			}
 		case "cancel":
-			if h.cancelFunc != nil {
-				h.cancelFunc()
+			h.cancelMu.Lock()
+			fn := h.cancelFunc
+			h.cancelMu.Unlock()
+			if fn != nil {
+				fn()
 			}
 		}
 	}
 }
 
 func (h *WSHandler) runAgent(input string) {
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	h.cancelMu.Lock()
 	h.cancelFunc = cancel
-	defer func() { h.cancelFunc = nil }()
+	h.cancelMu.Unlock()
+	defer func() {
+		h.cancelMu.Lock()
+		h.cancelFunc = nil
+		h.cancelMu.Unlock()
+	}()
 
 	h.hub.mu.Lock()
 	h.hub.isRunning = true

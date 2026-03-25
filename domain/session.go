@@ -6,7 +6,7 @@ import (
 )
 
 type Session struct {
-	ID        string    `json:"-" gorm:"primaryKey;type:text"`
+	ID        string    `json:"-"`
 	ExpiresAt time.Time `json:"-"`
 	CreatedAt time.Time `json:"-"`
 }

@@ -7,18 +7,17 @@ import (
 	"os"
 	"strings"
 
-	"github.com/renesul/ok/application"
 	"go.uber.org/zap"
 )
 
 type CLIAdapter struct {
-	agentService *application.AgentService
-	log          *zap.Logger
+	agentRunner AgentRunner
+	log         *zap.Logger
 }
 
-func NewCLIAdapter(agentService *application.AgentService, log *zap.Logger) *CLIAdapter {
+func NewCLIAdapter(agentRunner AgentRunner, log *zap.Logger) *CLIAdapter {
 	return &CLIAdapter{
-		agentService: agentService,
+		agentRunner: agentRunner,
 		log:          log.Named("adapter.cli"),
 	}
 }
@@ -45,7 +44,7 @@ func (a *CLIAdapter) Run() {
 
 		a.log.Debug("cli input", zap.String("input", input))
 
-		resp, err := a.agentService.Run(context.Background(), input)
+		resp, err := a.agentRunner.Run(context.Background(), input)
 		if err != nil {
 			fmt.Printf("Erro: %s\n\n", err.Error())
 			continue

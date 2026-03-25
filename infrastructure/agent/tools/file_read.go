@@ -36,7 +36,7 @@ func NewFileReadTool(baseDir string) *FileReadTool {
 
 func (t *FileReadTool) Name() string { return "file_read" }
 func (t *FileReadTool) Description() string {
-	return "Le linhas de um arquivo no sandbox. Input JSON: {\"file\":\"nome\", \"start_line\":1, \"end_line\":100}. Para arquivos grandes, pagine com start_line/end_line. Max 500 linhas por chamada. Rejeita binarios."
+	return "Reads lines from a file in the sandbox. Input JSON: {\"file\":\"name\", \"start_line\":1, \"end_line\":100}. For large files, paginate with start_line/end_line. Max 500 lines per call. Rejects binaries."
 }
 func (t *FileReadTool) Safety() domain.ToolSafety { return domain.ToolSafe }
 
@@ -177,8 +177,14 @@ func safePath(baseDir, relativePath string) (string, error) {
 
 	full := filepath.Join(absBase, filepath.Clean(relativePath))
 
+	// Resolve symlinks se o arquivo existir para barrar escapes malignos
+	evaluated, err := filepath.EvalSymlinks(full)
+	if err == nil {
+		full = evaluated
+	}
+
 	if !strings.HasPrefix(full, absBase) {
-		return "", fmt.Errorf("path fora do sandbox")
+		return "", fmt.Errorf("path fora do sandbox (symlink escape detectado)")
 	}
 
 	return full, nil

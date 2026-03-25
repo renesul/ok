@@ -4,29 +4,30 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"time"
 
-	"github.com/renesul/ok/application"
 	"go.mau.fi/whatsmeow"
 	"go.mau.fi/whatsmeow/proto/waE2E"
 	"go.mau.fi/whatsmeow/store/sqlstore"
+	"go.mau.fi/whatsmeow/types"
 	"go.mau.fi/whatsmeow/types/events"
 	waLog "go.mau.fi/whatsmeow/util/log"
 	"go.uber.org/zap"
 
-	_ "github.com/glebarez/sqlite"
+	_ "github.com/glebarez/go-sqlite"
 )
 
 type WhatsAppAdapter struct {
-	agentService *application.AgentService
-	ownerNumber  string
-	dbPath       string
-	client       *whatsmeow.Client
-	log          *zap.Logger
+	agentRunner AgentRunner
+	ownerNumber string
+	dbPath      string
+	client      *whatsmeow.Client
+	log         *zap.Logger
 }
 
-func NewWhatsAppAdapter(agentService *application.AgentService, ownerNumber, dbPath string, log *zap.Logger) *WhatsAppAdapter {
+func NewWhatsAppAdapter(agentRunner AgentRunner, ownerNumber, dbPath string, log *zap.Logger) *WhatsAppAdapter {
 	return &WhatsAppAdapter{
-		agentService: agentService,
+		agentRunner: agentRunner,
 		ownerNumber:  ownerNumber,
 		dbPath:       dbPath,
 		log:          log.Named("adapter.whatsapp"),
@@ -99,6 +100,12 @@ func (a *WhatsAppAdapter) eventHandler(evt interface{}) {
 }
 
 func (a *WhatsAppAdapter) handleMessage(msg *events.Message) {
+	defer func() {
+		if r := recover(); r != nil {
+			a.log.Error("whatsapp panic recovered", zap.Any("panic", r))
+		}
+	}()
+
 	// Ignorar grupos
 	if msg.Info.IsGroup {
 		return
@@ -119,16 +126,31 @@ func (a *WhatsAppAdapter) handleMessage(msg *events.Message) {
 
 	a.log.Debug("whatsapp owner command", zap.String("text", text))
 
-	resp, err := a.agentService.Run(context.Background(), text)
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Minute)
+	defer cancel()
+	resp, err := a.agentRunner.Run(ctx, text)
 	if err != nil {
 		a.log.Debug("whatsapp agent error", zap.Error(err))
+		a.sendText(msg.Info.Chat, "⚠️ Erro interno: "+err.Error())
 		return
 	}
 
 	result := NormalizeResponse(resp)
 	a.log.Debug("whatsapp agent result", zap.String("result", result))
+	if result != "" {
+		a.sendText(msg.Info.Chat, result)
+	}
+}
 
-	// NAO envia resposta — modo passivo
+func (a *WhatsAppAdapter) sendText(to types.JID, text string) {
+	if a.client == nil {
+		return
+	}
+	conv := text
+	_, err := a.client.SendMessage(context.Background(), to, &waE2E.Message{Conversation: &conv})
+	if err != nil {
+		a.log.Debug("whatsapp send failed", zap.Error(err))
+	}
 }
 
 func extractText(msg *waE2E.Message) string {

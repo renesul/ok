@@ -30,7 +30,7 @@ func NewIndexFolderTool(baseDir string) *IndexFolderTool {
 }
 
 func (t *IndexFolderTool) Name() string                       { return "folder_index" }
-func (t *IndexFolderTool) Description() string                { return "varre diretorio recursivamente e retorna estrutura + conteudo dos arquivos" }
+func (t *IndexFolderTool) Description() string                { return "recursively scans directory and returns structure + file contents" }
 func (t *IndexFolderTool) Safety() domain.ToolSafety          { return domain.ToolRestricted }
 
 func (t *IndexFolderTool) Run(input string) (string, error) {

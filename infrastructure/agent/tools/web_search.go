@@ -32,7 +32,7 @@ func NewWebSearchTool() *WebSearchTool { return &WebSearchTool{} }
 
 func (t *WebSearchTool) Name() string { return "web_search" }
 func (t *WebSearchTool) Description() string {
-	return "pesquisa na internet via DuckDuckGo e retorna os top resultados. Input JSON: {\"query\":\"como fazer websocket em Go\"}. Use para buscar documentacao, solucoes de erros, exemplos de codigo."
+	return "searches the internet via DuckDuckGo and returns top results. Input JSON: {\"query\":\"how to use websocket in Go\"}. Use to find documentation, error solutions, code examples."
 }
 func (t *WebSearchTool) Safety() domain.ToolSafety { return domain.ToolRestricted }
 

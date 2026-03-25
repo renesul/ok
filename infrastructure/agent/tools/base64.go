@@ -11,7 +11,7 @@ import (
 type Base64Tool struct{}
 
 func (t *Base64Tool) Name() string        { return "base64" }
-func (t *Base64Tool) Description() string { return "codifica/decodifica base64 (action: encode|decode)" }
+func (t *Base64Tool) Description() string { return "encodes/decodes base64 (action: encode|decode)" }
 func (t *Base64Tool) Safety() domain.ToolSafety          { return domain.ToolSafe }
 
 type base64Input struct {

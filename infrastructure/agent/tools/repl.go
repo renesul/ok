@@ -8,13 +8,11 @@ import (
 	"io"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"strconv"
 	"sync"
 	"time"
 
 	"github.com/creack/pty/v2"
-	"github.com/google/uuid"
 	"github.com/renesul/ok/domain"
 	agent "github.com/renesul/ok/infrastructure/agent"
 )
@@ -45,7 +43,7 @@ func NewREPLTool(cm *agent.ConfirmationManager) *REPLTool {
 
 func (t *REPLTool) Name() string                       { return "repl" }
 func (t *REPLTool) Description() string {
-	return "executa scripts e retorna o output. Input JSON: {\"language\":\"node\", \"code\":\"console.log(42)\"}. Languages: python, node (JavaScript), bash. IMPORTANTE: use a linguagem que o usuario pediu explicitamente."
+	return "executes scripts and returns the output. Input JSON: {\"language\":\"node\", \"code\":\"console.log(42)\"}. Languages: python, node (JavaScript), bash. IMPORTANT: use the exact language requested by the user."
 }
 func (t *REPLTool) Safety() domain.ToolSafety          { return domain.ToolDangerous }
 
@@ -93,16 +91,22 @@ func (t *REPLTool) RunWithContext(ctx context.Context, input string) (string, er
 		}
 	}
 
-	tempFile := filepath.Join(os.TempDir(), fmt.Sprintf("ok_repl_%s%s", uuid.New().String()[:8], lang.ext))
-	if err := os.WriteFile(tempFile, []byte(req.Script), 0644); err != nil {
-		return "", fmt.Errorf("criar script temporario: %w", err)
+	tempFile, err := os.CreateTemp("", fmt.Sprintf("ok_repl_*%s", lang.ext))
+	if err != nil {
+		return "", fmt.Errorf("criar script temporario seguro: %w", err)
 	}
-	defer os.Remove(tempFile)
+	defer os.Remove(tempFile.Name())
+
+	if _, err := tempFile.Write([]byte(req.Script)); err != nil {
+		tempFile.Close()
+		return "", fmt.Errorf("escrever script: %w", err)
+	}
+	tempFile.Close()
 
 	execCtx, cancel := context.WithTimeout(ctx, replTimeout)
 	defer cancel()
 
-	cmd := exec.CommandContext(execCtx, lang.binary, tempFile)
+	cmd := exec.CommandContext(execCtx, lang.binary, tempFile.Name())
 
 	// Tentar PTY para output com cores ANSI
 	ptmx, ptyErr := pty.Start(cmd)

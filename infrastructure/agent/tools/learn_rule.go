@@ -17,7 +17,7 @@ func NewLearnRuleTool(memory *agent.SQLiteMemory) *LearnRuleTool {
 }
 
 func (t *LearnRuleTool) Name() string                       { return "learn_rule" }
-func (t *LearnRuleTool) Description() string                { return "grava uma regra permanente que o agente sempre obedecera (JSON: {\"rule\":\"...\"})" }
+func (t *LearnRuleTool) Description() string                { return "records a permanent rule that the agent must always obey (JSON: {\"rule\":\"...\"})" }
 func (t *LearnRuleTool) Safety() domain.ToolSafety          { return domain.ToolSafe }
 
 func (t *LearnRuleTool) Run(input string) (string, error) {

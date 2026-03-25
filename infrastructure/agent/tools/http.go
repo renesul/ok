@@ -31,7 +31,7 @@ func NewHTTPTool() *HTTPTool {
 }
 
 func (t *HTTPTool) Name() string        { return "http" }
-func (t *HTTPTool) Description() string { return "faz requisicao HTTP (GET/POST/PUT/DELETE com headers e body)" }
+func (t *HTTPTool) Description() string { return "makes HTTP requests (GET/POST/PUT/DELETE with headers and body)" }
 func (t *HTTPTool) Safety() domain.ToolSafety          { return domain.ToolRestricted }
 
 func (t *HTTPTool) Run(input string) (string, error) {

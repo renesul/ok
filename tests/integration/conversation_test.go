@@ -44,6 +44,9 @@ func TestListConversationsAfterImport(t *testing.T) {
 	json.NewDecoder(resp.Body).Decode(&conversations)
 
 	if len(conversations) != 2 {
+		for i, c := range conversations {
+			t.Logf("Conversation %d: %v", i, c)
+		}
 		t.Fatalf("expected 2 conversations, got %d", len(conversations))
 	}
 }

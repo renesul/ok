@@ -2,6 +2,7 @@ package bootstrap
 
 import (
 	"context"
+	"database/sql"
 
 	"github.com/renesul/ok/application"
 	"github.com/renesul/ok/application/engine"
@@ -13,11 +14,10 @@ import (
 	sched "github.com/renesul/ok/infrastructure/scheduler"
 	"github.com/renesul/ok/internal/config"
 	"go.uber.org/zap"
-	"gorm.io/gorm"
 )
 
 type Components struct {
-	DB                 *gorm.DB
+	DB                 *sql.DB
 	LLMClient          *llm.Client
 	EmbedClient        *embedding.Client
 	AgentService       *application.AgentService
@@ -28,7 +28,7 @@ type Components struct {
 	LLMFast            llm.ClientConfig
 }
 
-func NewAgent(db *gorm.DB, cfg *config.Config, log *zap.Logger) *Components {
+func NewAgent(db *sql.DB, cfg *config.Config, log *zap.Logger) *Components {
 	scrubber := security.NewSecretScrubber()
 
 	llmClient := llm.NewClient(log)

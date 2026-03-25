@@ -28,7 +28,7 @@ type BrowserTool struct{}
 func NewBrowserTool() *BrowserTool { return &BrowserTool{} }
 
 func (t *BrowserTool) Name() string                       { return "browser" }
-func (t *BrowserTool) Description() string                { return "abre pagina web com headless browser e retorna o texto renderizado" }
+func (t *BrowserTool) Description() string                { return "opens web page with headless browser and returns rendered text" }
 func (t *BrowserTool) Safety() domain.ToolSafety          { return domain.ToolRestricted }
 
 func (t *BrowserTool) Run(input string) (string, error) {
@@ -173,10 +173,15 @@ func validateURL(rawURL string) error {
 		return fmt.Errorf("url interna bloqueada: %s", host)
 	}
 
-	ip := net.ParseIP(host)
-	if ip != nil {
+	ips, lookupErr := net.LookupIP(host)
+	if lookupErr != nil {
+		// Se não conseguiu resolver o DNS, bloqueamos preventivamente
+		return fmt.Errorf("resolucao DNS falhou (ssrf prevention): %w", lookupErr)
+	}
+
+	for _, ip := range ips {
 		if ip.IsPrivate() || ip.IsLoopback() || ip.IsLinkLocalUnicast() {
-			return fmt.Errorf("url interna bloqueada: %s", host)
+			return fmt.Errorf("url interna bloqueada via resolucao DNS: %s -> %s", host, ip.String())
 		}
 	}
 

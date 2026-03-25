@@ -2,6 +2,7 @@ package integration
 
 import (
 	"bytes"
+	"database/sql"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -21,11 +22,10 @@ import (
 	"github.com/renesul/ok/interfaces/http/handler"
 	"github.com/renesul/ok/internal/config"
 	"go.uber.org/zap"
-	"gorm.io/gorm"
 )
 
 var (
-	testDB          *gorm.DB
+	testDB          *sql.DB
 	testApp         *fiber.App
 	testCfg         *config.Config
 	testAgentMemory *agent.SQLiteMemory
@@ -124,40 +124,40 @@ func TestMain(m *testing.M) {
 
 func cleanupSessions(t *testing.T) {
 	t.Helper()
-	testDB.Exec("DELETE FROM sessions")
+	if _, err := testDB.Exec("DELETE FROM sessions"); err != nil { t.Fatalf("cleanup sessions: %v", err) }
 }
 
 func cleanupJobs(t *testing.T) {
 	t.Helper()
-	testDB.Exec("DELETE FROM scheduled_jobs")
+	if _, err := testDB.Exec("DELETE FROM scheduled_jobs"); err != nil { t.Fatalf("cleanup jobs: %v", err) }
 }
 
 func cleanupFeedback(t *testing.T) {
 	t.Helper()
-	testDB.Exec("DELETE FROM agent_feedback")
+	if _, err := testDB.Exec("DELETE FROM agent_feedback"); err != nil { t.Fatalf("cleanup feedback: %v", err) }
 }
 
 func cleanupConversations(t *testing.T) {
 	t.Helper()
-	testDB.Exec("DELETE FROM message_embeddings")
-	testDB.Exec("DELETE FROM messages_fts")
-	testDB.Exec("DELETE FROM messages")
-	testDB.Exec("DELETE FROM conversations")
+	if _, err := testDB.Exec("DELETE FROM message_embeddings"); err != nil { t.Fatalf("cleanup embeddings: %v", err) }
+	if _, err := testDB.Exec("DELETE FROM messages_fts"); err != nil { t.Fatalf("cleanup fts: %v", err) }
+	if _, err := testDB.Exec("DELETE FROM messages"); err != nil { t.Fatalf("cleanup messages: %v", err) }
+	if _, err := testDB.Exec("DELETE FROM conversations"); err != nil { t.Fatalf("cleanup conversations: %v", err) }
 }
 
 func cleanupMemory(t *testing.T) {
 	t.Helper()
-	testDB.Exec("DELETE FROM agent_memory")
+	if _, err := testDB.Exec("DELETE FROM agent_memory"); err != nil { t.Fatalf("cleanup memory: %v", err) }
 }
 
 func cleanupExecutions(t *testing.T) {
 	t.Helper()
-	testDB.Exec("DELETE FROM agent_executions")
+	if _, err := testDB.Exec("DELETE FROM agent_executions"); err != nil { t.Fatalf("cleanup executions: %v", err) }
 }
 
 func cleanupAudit(t *testing.T) {
 	t.Helper()
-	testDB.Exec("DELETE FROM agent_audit")
+	if _, err := testDB.Exec("DELETE FROM agent_audit"); err != nil { t.Fatalf("cleanup audit: %v", err) }
 }
 
 func cleanupAll(t *testing.T) {

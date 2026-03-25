@@ -2,30 +2,31 @@ package agent
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"strings"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/renesul/ok/domain"
+	"github.com/renesul/ok/infrastructure/database"
 	"github.com/renesul/ok/infrastructure/embedding"
 	"github.com/renesul/ok/infrastructure/llm"
 	"github.com/renesul/ok/infrastructure/security"
 	"go.uber.org/zap"
-	"gorm.io/gorm"
 )
 
 const maxContentLength = 4000
 
 type SQLiteMemory struct {
-	db       *gorm.DB
+	db       *sql.DB
 	embed    *embedding.Client
 	vector   *VectorStore
 	scrubber *security.SecretScrubber
 	log      *zap.Logger
 }
 
-func NewSQLiteMemory(db *gorm.DB, log *zap.Logger) *SQLiteMemory {
+func NewSQLiteMemory(db *sql.DB, log *zap.Logger) *SQLiteMemory {
 	return &SQLiteMemory{
 		db:  db,
 		log: log.Named("agent.memory"),
@@ -48,7 +49,7 @@ func (m *SQLiteMemory) SetVectorStore(vs *VectorStore) {
 }
 
 // DB expoe o banco para uso em transacoes externas
-func (m *SQLiteMemory) DB() *gorm.DB {
+func (m *SQLiteMemory) DB() *sql.DB {
 	return m.db
 }
 
@@ -57,7 +58,7 @@ func (m *SQLiteMemory) Save(entry domain.MemoryEntry) error {
 }
 
 // SaveInTx salva uma memory entry usando uma transacao existente
-func (m *SQLiteMemory) SaveInTx(tx *gorm.DB, entry domain.MemoryEntry) error {
+func (m *SQLiteMemory) SaveInTx(tx database.Execer, entry domain.MemoryEntry) error {
 	if entry.ID == "" {
 		entry.ID = uuid.New().String()
 	}
@@ -76,10 +77,11 @@ func (m *SQLiteMemory) SaveInTx(tx *gorm.DB, entry domain.MemoryEntry) error {
 		content = m.scrubber.Scrub(content)
 	}
 
-	if err := tx.Exec(
+	_, err := tx.ExecContext(context.Background(),
 		"INSERT INTO agent_memory (id, content, category, created_at) VALUES (?, ?, ?, ?)",
 		entry.ID, content, category, entry.CreatedAt,
-	).Error; err != nil {
+	)
+	if err != nil {
 		return err
 	}
 
@@ -122,7 +124,7 @@ func (m *SQLiteMemory) SaveChunked(entry domain.MemoryEntry) error {
 }
 
 // SaveChunkedInTx salva conteudo grande em chunks dentro de uma transacao
-func (m *SQLiteMemory) SaveChunkedInTx(tx *gorm.DB, entry domain.MemoryEntry) error {
+func (m *SQLiteMemory) SaveChunkedInTx(tx database.Execer, entry domain.MemoryEntry) error {
 	if len(entry.Content) <= maxContentLength {
 		return m.SaveInTx(tx, entry)
 	}
@@ -236,33 +238,31 @@ func (m *SQLiteMemory) Search(query string, limit int) ([]domain.MemoryEntry, er
 
 	m.log.Debug("search memory", zap.String("query", query), zap.Int("limit", limit))
 
-	var rows []struct {
-		ID        string
-		Content   string
-		Category  string
-		CreatedAt time.Time
-	}
-
-	err := m.db.Raw(
-		"SELECT id, content, COALESCE(category, 'fact') as category, created_at FROM agent_memory WHERE content LIKE ? ORDER BY created_at DESC LIMIT ?",
-		"%"+query+"%", limit,
-	).Scan(&rows).Error
+	ftsQuery := `"` + strings.ReplaceAll(query, `"`, `""`) + `"`
+	rows, err := m.db.Query(
+		`SELECT m.id, m.content, COALESCE(m.category, 'fact') as category, m.created_at 
+		 FROM agent_memory m 
+		 JOIN agent_memory_fts f ON m.rowid = f.rowid 
+		 WHERE f.content MATCH ? 
+		 ORDER BY m.created_at DESC LIMIT ?`,
+		ftsQuery, limit,
+	)
 	if err != nil {
 		return nil, fmt.Errorf("search memory: %w", err)
 	}
+	defer rows.Close()
 
-	entries := make([]domain.MemoryEntry, len(rows))
-	for i, row := range rows {
-		entries[i] = domain.MemoryEntry{
-			ID:        row.ID,
-			Content:   row.Content,
-			Category:  row.Category,
-			CreatedAt: row.CreatedAt,
+	var entries []domain.MemoryEntry
+	for rows.Next() {
+		var e domain.MemoryEntry
+		if err := rows.Scan(&e.ID, &e.Content, &e.Category, &e.CreatedAt); err != nil {
+			return nil, fmt.Errorf("scan memory row: %w", err)
 		}
+		entries = append(entries, e)
 	}
 
 	m.log.Debug("memory results", zap.Int("count", len(entries)))
-	return entries, nil
+	return entries, rows.Err()
 }
 
 // SearchByCategory busca memorias filtradas por categoria
@@ -273,39 +273,41 @@ func (m *SQLiteMemory) SearchByCategory(query string, category string, limit int
 
 	m.log.Debug("search memory by category", zap.String("query", query), zap.String("category", category), zap.Int("limit", limit))
 
-	var rows []struct {
-		ID        string
-		Content   string
-		Category  string
-		CreatedAt time.Time
-	}
-
-	sql := "SELECT id, content, COALESCE(category, 'fact') as category, created_at FROM agent_memory WHERE COALESCE(category, 'fact') = ?"
-	args := []interface{}{category}
+	var q string
+	var args []interface{}
 
 	if query != "" {
-		sql += " AND content LIKE ?"
-		args = append(args, "%"+query+"%")
+		ftsQuery := `"` + strings.ReplaceAll(query, `"`, `""`) + `"`
+		q = `SELECT m.id, m.content, COALESCE(m.category, 'fact') as category, m.created_at 
+			 FROM agent_memory m 
+			 JOIN agent_memory_fts f ON m.rowid = f.rowid 
+			 WHERE COALESCE(m.category, 'fact') = ? AND f.content MATCH ? 
+			 ORDER BY m.created_at DESC LIMIT ?`
+		args = []interface{}{category, ftsQuery, limit}
+	} else {
+		q = `SELECT id, content, COALESCE(category, 'fact') as category, created_at 
+			 FROM agent_memory 
+			 WHERE COALESCE(category, 'fact') = ? 
+			 ORDER BY created_at DESC LIMIT ?`
+		args = []interface{}{category, limit}
 	}
-	sql += " ORDER BY created_at DESC LIMIT ?"
-	args = append(args, limit)
 
-	err := m.db.Raw(sql, args...).Scan(&rows).Error
+	rows, err := m.db.Query(q, args...)
 	if err != nil {
 		return nil, fmt.Errorf("search memory by category: %w", err)
 	}
+	defer rows.Close()
 
-	entries := make([]domain.MemoryEntry, len(rows))
-	for i, row := range rows {
-		entries[i] = domain.MemoryEntry{
-			ID:        row.ID,
-			Content:   row.Content,
-			Category:  row.Category,
-			CreatedAt: row.CreatedAt,
+	var entries []domain.MemoryEntry
+	for rows.Next() {
+		var e domain.MemoryEntry
+		if err := rows.Scan(&e.ID, &e.Content, &e.Category, &e.CreatedAt); err != nil {
+			return nil, fmt.Errorf("scan memory row: %w", err)
 		}
+		entries = append(entries, e)
 	}
 
-	return entries, nil
+	return entries, rows.Err()
 }
 
 func (m *SQLiteMemory) Recent(limit int) ([]domain.MemoryEntry, error) {
@@ -315,36 +317,30 @@ func (m *SQLiteMemory) Recent(limit int) ([]domain.MemoryEntry, error) {
 
 	m.log.Debug("recent memories", zap.Int("limit", limit))
 
-	var rows []struct {
-		ID        string
-		Content   string
-		Category  string
-		CreatedAt time.Time
-	}
-
-	err := m.db.Raw(
+	rows, err := m.db.Query(
 		"SELECT id, content, COALESCE(category, 'fact') as category, created_at FROM agent_memory ORDER BY created_at DESC LIMIT ?",
 		limit,
-	).Scan(&rows).Error
+	)
 	if err != nil {
 		return nil, fmt.Errorf("recent memories: %w", err)
 	}
+	defer rows.Close()
 
-	entries := make([]domain.MemoryEntry, len(rows))
-	for i, row := range rows {
-		entries[i] = domain.MemoryEntry{
-			ID:        row.ID,
-			Content:   row.Content,
-			Category:  row.Category,
-			CreatedAt: row.CreatedAt,
+	var entries []domain.MemoryEntry
+	for rows.Next() {
+		var e domain.MemoryEntry
+		if err := rows.Scan(&e.ID, &e.Content, &e.Category, &e.CreatedAt); err != nil {
+			return nil, fmt.Errorf("scan memory row: %w", err)
 		}
+		entries = append(entries, e)
 	}
 
-	return entries, nil
+	return entries, rows.Err()
 }
 
 // SearchSemantic busca memorias usando vector store ou fallback LIKE
 func (m *SQLiteMemory) SearchSemantic(ctx context.Context, query string, limit int) ([]domain.MemoryEntry, error) {
+	ctx = database.Ctx(ctx)
 	if m.vector != nil {
 		results, err := m.vector.Search(query, limit)
 		if err == nil && len(results) > 0 {
@@ -365,36 +361,49 @@ const minCondenseCount = 10
 
 // CondenseOldMemories comprime memorias antigas em sinteses via LLM
 func (m *SQLiteMemory) CondenseOldMemories(ctx context.Context, llmClient *llm.Client, llmConfig llm.ClientConfig) error {
+	ctx = database.Ctx(ctx)
 	if llmConfig.BaseURL == "" {
 		return nil
 	}
 
 	cutoff := time.Now().Add(-7 * 24 * time.Hour)
 
-	var rows []struct {
-		ID        string
-		Content   string
-		Category  string
-		CreatedAt time.Time
-	}
-
-	err := m.db.Raw(
+	rows, err := m.db.QueryContext(ctx,
 		"SELECT id, content, COALESCE(category, 'fact') as category, created_at FROM agent_memory WHERE COALESCE(category, 'fact') IN ('fact', '') AND created_at < ? ORDER BY created_at ASC LIMIT 30",
 		cutoff,
-	).Scan(&rows).Error
+	)
 	if err != nil {
 		return fmt.Errorf("query old memories: %w", err)
 	}
+	defer rows.Close()
 
-	if len(rows) < minCondenseCount {
-		m.log.Debug("condense skipped: not enough old memories", zap.Int("count", len(rows)))
+	var memRows []struct {
+		ID, Content, Category string
+		CreatedAt             time.Time
+	}
+	for rows.Next() {
+		var r struct {
+			ID, Content, Category string
+			CreatedAt             time.Time
+		}
+		if err := rows.Scan(&r.ID, &r.Content, &r.Category, &r.CreatedAt); err != nil {
+			return fmt.Errorf("scan old memory: %w", err)
+		}
+		memRows = append(memRows, r)
+	}
+	if err := rows.Err(); err != nil {
+		return fmt.Errorf("iterate old memories: %w", err)
+	}
+
+	if len(memRows) < minCondenseCount {
+		m.log.Debug("condense skipped: not enough old memories", zap.Int("count", len(memRows)))
 		return nil
 	}
 
 	// Juntar conteudo
 	var contents []string
 	var ids []string
-	for _, row := range rows {
+	for _, row := range memRows {
 		contents = append(contents, row.Content)
 		ids = append(ids, row.ID)
 	}
@@ -421,9 +430,15 @@ func (m *SQLiteMemory) CondenseOldMemories(ctx context.Context, llmClient *llm.C
 	}
 
 	// Transacao atomica: delete velhas + insert sintese
-	return m.db.Transaction(func(tx *gorm.DB) error {
-		// Delete velhas do SQLite
-		if err := tx.Exec("DELETE FROM agent_memory WHERE id IN ?", ids).Error; err != nil {
+	return database.WithTx(m.db, ctx, func(tx *sql.Tx) error {
+		// Delete velhas do SQLite — build IN (?, ?, ...) dynamically
+		placeholders := strings.Repeat("?,", len(ids))
+		placeholders = placeholders[:len(placeholders)-1]
+		args := make([]any, len(ids))
+		for i, id := range ids {
+			args[i] = id
+		}
+		if _, err := tx.ExecContext(ctx, "DELETE FROM agent_memory WHERE id IN ("+placeholders+")", args...); err != nil {
 			return fmt.Errorf("delete old memories: %w", err)
 		}
 

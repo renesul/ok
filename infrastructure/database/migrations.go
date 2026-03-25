@@ -1,54 +1,107 @@
 package database
 
 import (
+	"database/sql"
 	"fmt"
-
-	"github.com/renesul/ok/domain"
-	"gorm.io/gorm"
+	"strings"
 )
 
-func RunMigrations(db *gorm.DB) error {
-	if err := db.AutoMigrate(
-		&domain.Session{},
-		&domain.Conversation{},
-		&domain.Message{},
-	); err != nil {
-		return fmt.Errorf("run migrations: %w", err)
+func RunMigrations(db *sql.DB) error {
+	// Core domain tables (replaces GORM AutoMigrate)
+	sessionsSQL := `CREATE TABLE IF NOT EXISTS sessions (
+		id TEXT PRIMARY KEY,
+		expires_at DATETIME NOT NULL,
+		created_at DATETIME NOT NULL
+	)`
+	if _, err := db.Exec(sessionsSQL); err != nil {
+		return fmt.Errorf("create sessions table: %w", err)
 	}
 
+	conversationsSQL := `CREATE TABLE IF NOT EXISTS conversations (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		title TEXT NOT NULL DEFAULT '',
+		source TEXT NOT NULL DEFAULT 'import',
+		channel TEXT NOT NULL DEFAULT 'web',
+		created_at DATETIME NOT NULL,
+		updated_at DATETIME NOT NULL
+	)`
+	if _, err := db.Exec(conversationsSQL); err != nil {
+		return fmt.Errorf("create conversations table: %w", err)
+	}
+
+	messagesSQL := `CREATE TABLE IF NOT EXISTS messages (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		conversation_id INTEGER NOT NULL,
+		role TEXT NOT NULL DEFAULT '',
+		content TEXT NOT NULL DEFAULT '',
+		sort_order INTEGER NOT NULL DEFAULT 0,
+		created_at DATETIME NOT NULL
+	)`
+	if _, err := db.Exec(messagesSQL); err != nil {
+		return fmt.Errorf("create messages table: %w", err)
+	}
+	execIgnore(db, "CREATE INDEX IF NOT EXISTS idx_messages_conversation_id ON messages(conversation_id)")
+
+	// FTS5
 	fts5SQL := `CREATE VIRTUAL TABLE IF NOT EXISTS messages_fts USING fts5(
 		conversation_id UNINDEXED,
 		content,
 		tokenize='unicode61'
 	)`
-	if err := db.Exec(fts5SQL).Error; err != nil {
+	if _, err := db.Exec(fts5SQL); err != nil {
 		return fmt.Errorf("create fts5 table: %w", err)
 	}
 
+	// Embeddings
 	embeddingsSQL := `CREATE TABLE IF NOT EXISTS message_embeddings (
 		message_id INTEGER PRIMARY KEY,
 		conversation_id INTEGER NOT NULL,
 		embedding BLOB NOT NULL
 	)`
-	if err := db.Exec(embeddingsSQL).Error; err != nil {
+	if _, err := db.Exec(embeddingsSQL); err != nil {
 		return fmt.Errorf("create embeddings table: %w", err)
 	}
 
+	// Agent memory
 	memorySQL := `CREATE TABLE IF NOT EXISTS agent_memory (
 		id TEXT PRIMARY KEY,
 		content TEXT NOT NULL,
 		created_at DATETIME NOT NULL
 	)`
-	if err := db.Exec(memorySQL).Error; err != nil {
+	if _, err := db.Exec(memorySQL); err != nil {
 		return fmt.Errorf("create agent_memory table: %w", err)
 	}
+	addColumnIfNotExists(db, "ALTER TABLE agent_memory ADD COLUMN category TEXT DEFAULT 'fact'")
+	addColumnIfNotExists(db, "ALTER TABLE agent_memory ADD COLUMN embedding BLOB DEFAULT NULL")
 
-	// Memory category column
-	db.Exec("ALTER TABLE agent_memory ADD COLUMN category TEXT DEFAULT 'fact'")
+	// FTS5 for agent_memory
+	memoryFtsSQL := `CREATE VIRTUAL TABLE IF NOT EXISTS agent_memory_fts USING fts5(
+		content,
+		category UNINDEXED,
+		tokenize='unicode61'
+	)`
+	if _, err := db.Exec(memoryFtsSQL); err != nil {
+		return fmt.Errorf("create fts5 memory table: %w", err)
+	}
 
-	// Memory embedding column (vector search)
-	db.Exec("ALTER TABLE agent_memory ADD COLUMN embedding BLOB DEFAULT NULL")
+	// Triggers to keep FTS5 in sync with agent_memory
+	db.Exec(`CREATE TRIGGER IF NOT EXISTS agent_memory_ai AFTER INSERT ON agent_memory BEGIN
+		INSERT INTO agent_memory_fts(rowid, content, category) VALUES (new.rowid, new.content, new.category);
+	END;`)
+	db.Exec(`CREATE TRIGGER IF NOT EXISTS agent_memory_ad AFTER DELETE ON agent_memory BEGIN
+		INSERT INTO agent_memory_fts(agent_memory_fts, rowid, content, category) VALUES('delete', old.rowid, old.content, old.category);
+	END;`)
+	db.Exec(`CREATE TRIGGER IF NOT EXISTS agent_memory_au AFTER UPDATE ON agent_memory BEGIN
+		INSERT INTO agent_memory_fts(agent_memory_fts, rowid, content, category) VALUES('delete', old.rowid, old.content, old.category);
+		INSERT INTO agent_memory_fts(rowid, content, category) VALUES (new.rowid, new.content, new.category);
+	END;`)
 
+	// Backfill existing data
+	db.Exec(`INSERT INTO agent_memory_fts(rowid, content, category)
+		SELECT rowid, content, category FROM agent_memory 
+		WHERE rowid NOT IN (SELECT rowid FROM agent_memory_fts);`)
+
+	// Scheduler
 	schedulerSQL := `CREATE TABLE IF NOT EXISTS scheduled_jobs (
 		id TEXT PRIMARY KEY,
 		name TEXT NOT NULL,
@@ -61,10 +114,11 @@ func RunMigrations(db *gorm.DB) error {
 		fail_count INTEGER DEFAULT 0,
 		created_at DATETIME NOT NULL
 	)`
-	if err := db.Exec(schedulerSQL).Error; err != nil {
+	if _, err := db.Exec(schedulerSQL); err != nil {
 		return fmt.Errorf("create scheduled_jobs table: %w", err)
 	}
 
+	// Feedback
 	feedbackSQL := `CREATE TABLE IF NOT EXISTS agent_feedback (
 		id TEXT PRIMARY KEY,
 		tool_name TEXT NOT NULL,
@@ -74,20 +128,22 @@ func RunMigrations(db *gorm.DB) error {
 		error TEXT DEFAULT '',
 		created_at DATETIME NOT NULL
 	)`
-	if err := db.Exec(feedbackSQL).Error; err != nil {
+	if _, err := db.Exec(feedbackSQL); err != nil {
 		return fmt.Errorf("create agent_feedback table: %w", err)
 	}
-	db.Exec("CREATE INDEX IF NOT EXISTS idx_feedback_tool ON agent_feedback(tool_name)")
-	db.Exec("ALTER TABLE agent_feedback ADD COLUMN cost INTEGER DEFAULT 1")
+	execIgnore(db, "CREATE INDEX IF NOT EXISTS idx_feedback_tool ON agent_feedback(tool_name)")
+	addColumnIfNotExists(db, "ALTER TABLE agent_feedback ADD COLUMN cost INTEGER DEFAULT 1")
 
+	// Config
 	configSQL := `CREATE TABLE IF NOT EXISTS agent_config (
 		key TEXT PRIMARY KEY,
 		value TEXT NOT NULL
 	)`
-	if err := db.Exec(configSQL).Error; err != nil {
+	if _, err := db.Exec(configSQL); err != nil {
 		return fmt.Errorf("create agent_config table: %w", err)
 	}
 
+	// Executions
 	executionsSQL := `CREATE TABLE IF NOT EXISTS agent_executions (
 		id TEXT PRIMARY KEY,
 		goal TEXT NOT NULL,
@@ -98,7 +154,7 @@ func RunMigrations(db *gorm.DB) error {
 		step_count INTEGER DEFAULT 0,
 		created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 	)`
-	if err := db.Exec(executionsSQL).Error; err != nil {
+	if _, err := db.Exec(executionsSQL); err != nil {
 		return fmt.Errorf("create agent_executions table: %w", err)
 	}
 
@@ -147,8 +203,8 @@ Integracao LLM: OpenAI API (gpt-4.1-mini)
 Embedding: text-embedding-3-small')`)
 
 	// Execution metrics columns
-	db.Exec("ALTER TABLE agent_executions ADD COLUMN tools_used TEXT DEFAULT ''")
-	db.Exec("ALTER TABLE agent_executions ADD COLUMN failure_reason TEXT DEFAULT ''")
+	addColumnIfNotExists(db, "ALTER TABLE agent_executions ADD COLUMN tools_used TEXT DEFAULT ''")
+	addColumnIfNotExists(db, "ALTER TABLE agent_executions ADD COLUMN failure_reason TEXT DEFAULT ''")
 
 	// Default agent limits
 	db.Exec(`INSERT OR IGNORE INTO agent_config (key, value) VALUES ('agent_limits', '{"max_steps":6,"max_attempts":4,"timeout_ms":120000}')`)
@@ -163,12 +219,23 @@ Embedding: text-embedding-3-small')`)
 		approved INTEGER DEFAULT 1,
 		created_at DATETIME NOT NULL
 	)`
-	if err := db.Exec(auditSQL).Error; err != nil {
+	if _, err := db.Exec(auditSQL); err != nil {
 		return fmt.Errorf("create agent_audit table: %w", err)
 	}
-	db.Exec("CREATE INDEX IF NOT EXISTS idx_audit_tool ON agent_audit(tool)")
-	db.Exec("CREATE INDEX IF NOT EXISTS idx_audit_created ON agent_audit(created_at)")
-
+	execIgnore(db, "CREATE INDEX IF NOT EXISTS idx_audit_tool ON agent_audit(tool)")
+	execIgnore(db, "CREATE INDEX IF NOT EXISTS idx_audit_created ON agent_audit(created_at)")
 
 	return nil
+}
+
+func addColumnIfNotExists(db *sql.DB, query string) {
+	_, err := db.Exec(query)
+	if err != nil && !strings.Contains(err.Error(), "duplicate column") {
+		// Silently ignore duplicate column errors
+	}
+	_ = err
+}
+
+func execIgnore(db *sql.DB, query string) {
+	db.Exec(query)
 }

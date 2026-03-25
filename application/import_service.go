@@ -32,9 +32,13 @@ func NewImportService(conversationRepository domain.ConversationRepository, mess
 func (s *ImportService) ImportChatGPT(ctx context.Context, reader io.Reader) (int, error) {
 	s.log.Debug("import chatgpt")
 
-	data, err := io.ReadAll(reader)
+	const maxImportSize = 100 * 1024 * 1024 // 100MB
+	data, err := io.ReadAll(io.LimitReader(reader, maxImportSize+1))
 	if err != nil {
 		return 0, fmt.Errorf("read zip data: %w", err)
+	}
+	if len(data) > maxImportSize {
+		return 0, fmt.Errorf("arquivo muito grande (max %d MB)", maxImportSize/1024/1024)
 	}
 
 	zipReader, err := zip.NewReader(bytes.NewReader(data), int64(len(data)))

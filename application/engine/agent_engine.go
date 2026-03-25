@@ -2,26 +2,26 @@ package engine
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"fmt"
 	"time"
 
 	"github.com/renesul/ok/domain"
 	agentpkg "github.com/renesul/ok/infrastructure/agent"
+	"github.com/renesul/ok/infrastructure/database"
 	"github.com/renesul/ok/infrastructure/llm"
 	"go.uber.org/zap"
-	"gorm.io/gorm"
 )
 
 const (
 	maxReplansPerStep    = 2
 	contextPrunePercent  = 0.8
-	pruneHistorySummary  = "Resuma a trilha abaixo de forma estrita. Mantenha nomes de arquivos, caminhos, resultados criticos e erros. Descarte conversas literais."
 )
 
 // AgentEngine contem o loop unificado OBSERVE/PLAN/ACT/REFLECT
 type AgentEngine struct {
-	db                *gorm.DB
+	db                *sql.DB
 	llmClient         *llm.Client
 	llmConfig         llm.ClientConfig
 	llmFastConfig     llm.ClientConfig
@@ -35,7 +35,7 @@ type AgentEngine struct {
 }
 
 func NewAgentEngine(
-	db *gorm.DB,
+	db *sql.DB,
 	llmClient *llm.Client,
 	llmConfig llm.ClientConfig,
 	llmFastConfig llm.ClientConfig,
@@ -65,6 +65,13 @@ func NewAgentEngine(
 // RunLoop executa o loop autonomo OBSERVE/PLAN/ACT/REFLECT uma unica vez
 func (e *AgentEngine) RunLoop(ctx context.Context, input string, emitter Emitter) error {
 	execStart := time.Now()
+
+	// Reset delegate counter per execution
+	if dt, ok := e.planner.Tools()["delegate"]; ok {
+		if resettable, ok := dt.(interface{ ResetCount() }); ok {
+			resettable.ResetCount()
+		}
+	}
 
 	// OBSERVE
 	state := agentpkg.NewExecutionState(input, domain.ExecutionBudget{
@@ -138,8 +145,9 @@ func (e *AgentEngine) RunLoop(ctx context.Context, input string, emitter Emitter
 
 	// ACT + REFLECT loop
 	replansThisStep := 0
+	var budgetReason string
 	for exhausted, reason := agentpkg.IsBudgetExhausted(state); !exhausted; exhausted, reason = agentpkg.IsBudgetExhausted(state) {
-		_ = reason
+		budgetReason = reason
 		step := agentpkg.CurrentPlannedStep(state)
 		if step == nil {
 			break
@@ -235,11 +243,13 @@ func (e *AgentEngine) RunLoop(ctx context.Context, input string, emitter Emitter
 		}
 	}
 
-	// Plano completado
+	// Plano completado ou budget esgotado
 	agentpkg.Transition(state, domain.PhaseDone)
 	lastOutput := e.lastStepOutput(state)
 	if lastOutput != "" {
 		emitter.EmitMessage(lastOutput)
+	} else if budgetReason != "" {
+		emitter.EmitMessage("execucao interrompida: " + budgetReason)
 	} else {
 		emitter.EmitMessage("execucao concluida")
 	}
@@ -277,7 +287,7 @@ func (e *AgentEngine) executeSingleStep(ctx context.Context, state *domain.Execu
 		emitter.EmitStep(plan.Tool.Name(), plan.Tool.Name(), "done", execMs)
 		emitter.EmitMessage(result)
 		if e.memory != nil && e.db != nil && agentpkg.ShouldStore(input, result) {
-			e.db.Transaction(func(tx *gorm.DB) error {
+			database.WithTx(e.db, ctx, func(tx *sql.Tx) error {
 				return e.memory.SaveChunkedInTx(tx, domain.MemoryEntry{Content: input + " -> " + result})
 			})
 		}
@@ -304,7 +314,7 @@ func (e *AgentEngine) saveResults(state *domain.ExecutionState, input, output st
 		return
 	}
 
-	err := e.db.Transaction(func(tx *gorm.DB) error {
+	err := database.WithTx(e.db, context.Background(), func(tx *sql.Tx) error {
 		// Salvar execution record
 		if e.execRepo != nil {
 			record := e.buildExecutionRecord(state, startTime)
@@ -335,7 +345,7 @@ func (e *AgentEngine) reflectAndLearn(ctx context.Context, state *domain.Executi
 		return
 	}
 
-	e.db.Transaction(func(tx *gorm.DB) error {
+	database.WithTx(e.db, context.Background(), func(tx *sql.Tx) error {
 		memContent := fmt.Sprintf("%s: %s -> %s [%s]",
 			step.Tool, step.Input, step.Output, step.Status)
 		if err := e.memory.SaveChunkedInTx(tx, domain.MemoryEntry{Content: memContent}); err != nil {
@@ -416,58 +426,32 @@ func estimateTokens(text string) int {
 	return len(text) / 4
 }
 
-// pruneContextIfNeeded comprime historico antigo se o contexto esta perto do limite
-func (e *AgentEngine) pruneContextIfNeeded(ctx context.Context, state *domain.ExecutionState) {
+// pruneContextIfNeeded descarta metade antiga do historico quando o contexto
+// ultrapassa 80% da janela de tokens. Sliding window simples — sem chamada LLM.
+func (e *AgentEngine) pruneContextIfNeeded(_ context.Context, state *domain.ExecutionState) {
 	maxTokens := e.llmConfig.MaxContextTokens
 	if maxTokens <= 0 {
 		return
 	}
 
 	systemPrompt := e.buildSystemPrompt()
-	context := agentpkg.BuildContext(state)
-	totalTokens := estimateTokens(systemPrompt) + estimateTokens(context)
+	ctx := agentpkg.BuildContext(state)
+	totalTokens := estimateTokens(systemPrompt) + estimateTokens(ctx)
 	threshold := int(float64(maxTokens) * contextPrunePercent)
 
 	if totalTokens < threshold {
 		return
 	}
 
-	// Pegar metade mais antiga do historico
 	historyLen := len(state.History)
 	if historyLen < 4 {
 		return
 	}
 	splitAt := historyLen / 2
 
-	var oldEntries []string
-	for _, entry := range state.History[:splitAt] {
-		oldEntries = append(oldEntries, fmt.Sprintf("[%s] %s", entry.Phase, entry.Content))
-	}
-	oldText := fmt.Sprintf("Historico (%d entradas):\n%s", splitAt, joinStrings(oldEntries, "\n"))
-
-	// Resumir via llmFast
-	cfg := e.llmFastConfig
-	if cfg.BaseURL == "" {
-		cfg = e.llmConfig
-	}
-	cfg.MaxTokens = 300
-	cfg.Temperature = 0.1
-
-	messages := []llm.Message{
-		{Role: "system", Content: pruneHistorySummary},
-		{Role: "user", Content: oldText},
-	}
-
-	summary, err := e.llmClient.ChatCompletionSync(ctx, cfg, messages)
-	if err != nil {
-		e.log.Debug("context prune failed, keeping full history", zap.Error(err))
-		return
-	}
-
-	// Substituir entradas antigas por resumo
 	synthEntry := domain.ExecutionEntry{
 		Phase:   domain.PhaseObserve,
-		Content: "[resumo do historico anterior] " + summary,
+		Content: fmt.Sprintf("[Contexto antigo podado — %d entradas removidas]", splitAt),
 	}
 	state.History = append([]domain.ExecutionEntry{synthEntry}, state.History[splitAt:]...)
 
@@ -489,26 +473,14 @@ func joinStrings(parts []string, sep string) string {
 	return result
 }
 
-// summarizeIfLong usa o modelo fast para comprimir outputs longos antes do Reflect
+// summarizeIfLong was previously a synchronous LLM call that caused N+1 API bottlenecks.
+// It is now an O(1) pure string truncation to preserve extreme OODA loop velocity.
 func (e *AgentEngine) summarizeIfLong(ctx context.Context, output string) string {
-	if len(output) <= 500 {
+	const maxOutputLength = 1500
+	if len(output) <= maxOutputLength {
 		return output
 	}
-
-	messages := []llm.Message{
-		{Role: "system", Content: "Resuma o output abaixo em no maximo 3 frases objetivas. Mantenha erros e numeros importantes."},
-		{Role: "user", Content: output},
-	}
-
-	cfg := e.llmFastConfig
-	cfg.MaxTokens = 200
-	cfg.Temperature = 0.1
-
-	summary, err := e.llmClient.ChatCompletionSync(ctx, cfg, messages)
-	if err != nil {
-		e.log.Debug("summarize failed, using raw output", zap.Error(err))
-		return agentpkg.TruncateWithEllipsis(output, 500)
-	}
-
-	return summary
+	
+	e.log.Debug("truncating long tool output to prevent window exhaustion", zap.Int("len", len(output)))
+	return agentpkg.TruncateWithEllipsis(output, maxOutputLength)
 }

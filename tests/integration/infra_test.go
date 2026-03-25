@@ -27,7 +27,7 @@ func TestAuditLogRecord(t *testing.T) {
 
 	// Verify record exists
 	var count int64
-	testDB.Raw("SELECT COUNT(*) FROM agent_audit WHERE tool = 'echo'").Scan(&count)
+	testDB.QueryRow("SELECT COUNT(*) FROM agent_audit WHERE tool = 'echo'").Scan(&count)
 	if count != 1 {
 		t.Fatalf("expected 1 audit record, got %d", count)
 	}
@@ -45,7 +45,7 @@ func TestAuditLogRecordAutoID(t *testing.T) {
 	})
 
 	var id string
-	testDB.Raw("SELECT id FROM agent_audit WHERE tool = 'http'").Scan(&id)
+	testDB.QueryRow("SELECT id FROM agent_audit WHERE tool = 'http'").Scan(&id)
 	if id == "" {
 		t.Error("expected auto-generated ID")
 	}
@@ -68,7 +68,7 @@ func TestAuditLogTruncatesOutput(t *testing.T) {
 	})
 
 	var storedOutput string
-	testDB.Raw("SELECT output FROM agent_audit WHERE tool = 'test'").Scan(&storedOutput)
+	testDB.QueryRow("SELECT output FROM agent_audit WHERE tool = 'test'").Scan(&storedOutput)
 	if len(storedOutput) > 510 { // 500 + ellipsis
 		t.Errorf("expected truncated output (<= 510 chars), got %d chars", len(storedOutput))
 	}

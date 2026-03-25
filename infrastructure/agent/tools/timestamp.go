@@ -12,7 +12,7 @@ import (
 type TimestampTool struct{}
 
 func (t *TimestampTool) Name() string        { return "timestamp" }
-func (t *TimestampTool) Description() string { return "operacoes com data/hora (now, parse:data, unix:timestamp)" }
+func (t *TimestampTool) Description() string { return "date/time operations (now, parse:date, unix:timestamp)" }
 func (t *TimestampTool) Safety() domain.ToolSafety          { return domain.ToolSafe }
 
 func (t *TimestampTool) Run(input string) (string, error) {

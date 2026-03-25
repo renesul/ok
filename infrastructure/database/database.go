@@ -1,40 +1,33 @@
 package database
 
 import (
+	"database/sql"
 	"fmt"
 	"os"
 	"path/filepath"
 
-	"github.com/glebarez/sqlite"
-	"gorm.io/gorm"
-	"gorm.io/gorm/logger"
+	_ "github.com/glebarez/go-sqlite"
 )
 
-func New(path string, debug bool) (*gorm.DB, error) {
+func New(path string, debug bool) (*sql.DB, error) {
 	dir := filepath.Dir(path)
 	if err := os.MkdirAll(dir, 0755); err != nil {
 		return nil, fmt.Errorf("create database directory: %w", err)
 	}
 
-	logMode := logger.Silent
-	if debug {
-		logMode = logger.Info
-	}
-
-	db, err := gorm.Open(sqlite.Open(path), &gorm.Config{
-		Logger: logger.Default.LogMode(logMode),
-	})
+	db, err := sql.Open("sqlite", path+"?_pragma=journal_mode(WAL)&_pragma=busy_timeout(5000)")
 	if err != nil {
 		return nil, fmt.Errorf("open database: %w", err)
 	}
 
-	sqlDB, err := db.DB()
-	if err != nil {
-		return nil, fmt.Errorf("get underlying db: %w", err)
-	}
+	// WAL mode allows concurrent readers with one writer.
+	// busy_timeout handles write contention gracefully.
+	db.SetMaxOpenConns(15)
+	db.SetMaxIdleConns(5)
 
-	sqlDB.SetMaxOpenConns(5)
-	sqlDB.SetMaxIdleConns(2)
+	if err := db.Ping(); err != nil {
+		return nil, fmt.Errorf("ping database: %w", err)
+	}
 
 	return db, nil
 }

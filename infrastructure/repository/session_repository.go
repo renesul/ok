@@ -2,37 +2,45 @@ package repository
 
 import (
 	"context"
-	"errors"
+	"database/sql"
 	"fmt"
 	"time"
 
 	"github.com/renesul/ok/domain"
+	"github.com/renesul/ok/infrastructure/database"
 	"go.uber.org/zap"
-	"gorm.io/gorm"
 )
 
 type SessionRepository struct {
-	db  *gorm.DB
+	db  *sql.DB
 	log *zap.Logger
 }
 
-func NewSessionRepository(db *gorm.DB, log *zap.Logger) *SessionRepository {
+func NewSessionRepository(db *sql.DB, log *zap.Logger) *SessionRepository {
 	return &SessionRepository{db: db, log: log.Named("repository.session")}
 }
 
 func (r *SessionRepository) Create(ctx context.Context, session *domain.Session) error {
+	ctx = database.Ctx(ctx)
 	r.log.Debug("insert session", zap.String("id", session.ID))
-	if err := r.db.WithContext(ctx).Create(session).Error; err != nil {
+	_, err := r.db.ExecContext(ctx,
+		"INSERT INTO sessions (id, expires_at, created_at) VALUES (?, ?, ?)",
+		session.ID, session.ExpiresAt, session.CreatedAt,
+	)
+	if err != nil {
 		return fmt.Errorf("insert session: %w", err)
 	}
 	return nil
 }
 
 func (r *SessionRepository) FindByID(ctx context.Context, id string) (*domain.Session, error) {
+	ctx = database.Ctx(ctx)
 	r.log.Debug("find session by id", zap.String("id", id))
 	var session domain.Session
-	err := r.db.WithContext(ctx).Where("id = ?", id).First(&session).Error
-	if errors.Is(err, gorm.ErrRecordNotFound) {
+	err := r.db.QueryRowContext(ctx,
+		"SELECT id, expires_at, created_at FROM sessions WHERE id = ?", id,
+	).Scan(&session.ID, &session.ExpiresAt, &session.CreatedAt)
+	if err == sql.ErrNoRows {
 		r.log.Debug("session not found", zap.String("id", id))
 		return nil, nil
 	}
@@ -43,19 +51,23 @@ func (r *SessionRepository) FindByID(ctx context.Context, id string) (*domain.Se
 }
 
 func (r *SessionRepository) DeleteByID(ctx context.Context, id string) error {
+	ctx = database.Ctx(ctx)
 	r.log.Debug("delete session", zap.String("id", id))
-	if err := r.db.WithContext(ctx).Delete(&domain.Session{}, "id = ?", id).Error; err != nil {
+	_, err := r.db.ExecContext(ctx, "DELETE FROM sessions WHERE id = ?", id)
+	if err != nil {
 		return fmt.Errorf("delete session: %w", err)
 	}
 	return nil
 }
 
 func (r *SessionRepository) DeleteExpired(ctx context.Context) error {
+	ctx = database.Ctx(ctx)
 	r.log.Debug("delete expired sessions")
-	result := r.db.WithContext(ctx).Where("expires_at < ?", time.Now()).Delete(&domain.Session{})
-	if result.Error != nil {
-		return fmt.Errorf("delete expired sessions: %w", result.Error)
+	result, err := r.db.ExecContext(ctx, "DELETE FROM sessions WHERE expires_at < ?", time.Now())
+	if err != nil {
+		return fmt.Errorf("delete expired sessions: %w", err)
 	}
-	r.log.Debug("expired sessions deleted", zap.Int64("count", result.RowsAffected))
+	count, _ := result.RowsAffected()
+	r.log.Debug("expired sessions deleted", zap.Int64("count", count))
 	return nil
 }

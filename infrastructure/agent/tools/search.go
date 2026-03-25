@@ -33,7 +33,7 @@ type SearchTool struct {
 func NewSearchTool(baseDir string) *SearchTool { return &SearchTool{baseDir: baseDir} }
 
 func (t *SearchTool) Name() string                       { return "search" }
-func (t *SearchTool) Description() string                { return "busca conteudo em arquivos recursivamente (ripgrep-like)" }
+func (t *SearchTool) Description() string                { return "searches content in files recursively (ripgrep-like)" }
 func (t *SearchTool) Safety() domain.ToolSafety          { return domain.ToolSafe }
 
 func (t *SearchTool) Run(input string) (string, error) {

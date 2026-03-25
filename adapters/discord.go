@@ -2,23 +2,23 @@ package adapters
 
 import (
 	"context"
+	"time"
 
 	"github.com/bwmarrin/discordgo"
-	"github.com/renesul/ok/application"
 	"go.uber.org/zap"
 )
 
 type DiscordAdapter struct {
-	agentService *application.AgentService
-	botToken     string
-	ownerID      string
-	session      *discordgo.Session
-	log          *zap.Logger
+	agentRunner AgentRunner
+	botToken    string
+	ownerID     string
+	session     *discordgo.Session
+	log         *zap.Logger
 }
 
-func NewDiscordAdapter(agentService *application.AgentService, botToken, ownerID string, log *zap.Logger) *DiscordAdapter {
+func NewDiscordAdapter(agentRunner AgentRunner, botToken, ownerID string, log *zap.Logger) *DiscordAdapter {
 	return &DiscordAdapter{
-		agentService: agentService,
+		agentRunner: agentRunner,
 		botToken:     botToken,
 		ownerID:      ownerID,
 		log:          log.Named("adapter.discord"),
@@ -61,6 +61,12 @@ func (a *DiscordAdapter) Stop() {
 }
 
 func (a *DiscordAdapter) handleMessage(s *discordgo.Session, m *discordgo.MessageCreate) {
+	defer func() {
+		if r := recover(); r != nil {
+			a.log.Error("discord panic recovered", zap.Any("panic", r))
+		}
+	}()
+
 	// Ignorar mensagens do proprio bot
 	if m.Author.ID == s.State.User.ID {
 		return
@@ -79,14 +85,18 @@ func (a *DiscordAdapter) handleMessage(s *discordgo.Session, m *discordgo.Messag
 
 	a.log.Debug("discord owner command", zap.String("text", text))
 
-	resp, err := a.agentService.Run(context.Background(), text)
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Minute)
+	defer cancel()
+	resp, err := a.agentRunner.Run(ctx, text)
 	if err != nil {
 		a.log.Debug("discord agent error", zap.Error(err))
+		s.ChannelMessageSend(m.ChannelID, "⚠️ Erro interno: "+err.Error())
 		return
 	}
 
 	result := NormalizeResponse(resp)
 	a.log.Debug("discord agent result", zap.String("result", result))
-
-	// NAO envia resposta — modo passivo
+	if result != "" {
+		s.ChannelMessageSend(m.ChannelID, result)
+	}
 }

@@ -1,11 +1,11 @@
 package agent
 
 import (
+	"database/sql"
 	"time"
 
 	"github.com/google/uuid"
 	"go.uber.org/zap"
-	"gorm.io/gorm"
 )
 
 // AuditEntry — registro de execucao de tool para auditoria
@@ -21,12 +21,12 @@ type AuditEntry struct {
 
 // AuditLog — registra todas as execucoes de tools
 type AuditLog struct {
-	db  *gorm.DB
+	db  *sql.DB
 	log *zap.Logger
 }
 
 // NewAuditLog cria um audit log
-func NewAuditLog(db *gorm.DB, log *zap.Logger) *AuditLog {
+func NewAuditLog(db *sql.DB, log *zap.Logger) *AuditLog {
 	return &AuditLog{
 		db:  db,
 		log: log.Named("agent.audit"),
@@ -45,10 +45,10 @@ func (a *AuditLog) Record(entry AuditEntry) {
 	// Truncar output grande
 	entry.Output = TruncateWithEllipsis(entry.Output, 500)
 
-	err := a.db.Exec(
+	_, err := a.db.Exec(
 		"INSERT INTO agent_audit (id, tool, input, output, safety, approved, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
 		entry.ID, entry.Tool, entry.Input, entry.Output, entry.Safety, entry.Approved, entry.CreatedAt,
-	).Error
+	)
 	if err != nil {
 		a.log.Debug("audit record failed", zap.Error(err))
 	}

@@ -21,7 +21,7 @@ func NewScheduleTaskTool(jobRepo domain.JobRepository) *ScheduleTaskTool {
 }
 
 func (t *ScheduleTaskTool) Name() string                       { return "schedule" }
-func (t *ScheduleTaskTool) Description() string                { return "agenda uma tarefa para execucao futura periodica" }
+func (t *ScheduleTaskTool) Description() string                { return "schedules a task for future periodic execution" }
 func (t *ScheduleTaskTool) Safety() domain.ToolSafety          { return domain.ToolSafe }
 
 func (t *ScheduleTaskTool) Run(input string) (string, error) {

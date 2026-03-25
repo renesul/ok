@@ -10,34 +10,34 @@ import (
 func BuildPlanningPrompt(goal string, toolDescriptions string, memories []string) string {
 	var parts []string
 
-	parts = append(parts, `Voce e um planejador de tarefas. Dado um objetivo, crie um plano estruturado com 2 a 6 passos.
+	parts = append(parts, `You are an expert autonomous task planner. Given an objective, create a structured plan with 2 to 6 steps.
 
-Cada passo deve usar uma das ferramentas disponiveis. Decomponha o objetivo em acoes atomicas e sequenciais.
+Each step MUST use one of the available tools. Decompose the objective into atomic and sequential actions.
 
-GUIA: Mapeie a intencao do usuario para a ferramenta correta:
-- pesquisar na internet/documentacao → web_search
-- executar codigo → repl (respeite a linguagem: JavaScript=node, Python=python)
-- navegar/abrir site → browser
-- buscar em arquivos do projeto → search
-- comando no terminal / git / npm / testes → shell
-- ler arquivo → file_read
-- criar arquivo → file_write
-- editar arquivo → file_edit
-- corrigir bug → file_read + file_edit + shell
-Respeite TUDO que o usuario pediu explicitamente (linguagem, formato, ferramenta, tom). Nunca substitua sem perguntar.`)
+GUIDE: Map the user's intent to the correct tool:
+- search internet/documentation → web_search
+- execute code → repl (respect language: JavaScript=node, Python=python)
+- navigate/open site → browser
+- search project files → search
+- terminal commands / git / npm / tests → shell
+- read file → file_read
+- write new file → file_write
+- edit file → file_edit
+- fix bug → file_read + file_edit + shell
+Respect EVERYTHING the user explicitly requested (language, format, tool, tone). NEVER substitute without asking.`)
 
-	parts = append(parts, "Ferramentas disponiveis:\n"+toolDescriptions)
+	parts = append(parts, "Available tools:\n"+toolDescriptions)
 
 	if len(memories) > 0 {
-		parts = append(parts, "Memorias relevantes:\n"+strings.Join(memories, "\n"))
+		parts = append(parts, "Relevant memories:\n"+strings.Join(memories, "\n"))
 	}
 
-	parts = append(parts, fmt.Sprintf(`Objetivo: %s
+	parts = append(parts, fmt.Sprintf(`Objective: %s
 
-Responda APENAS com JSON valido no formato:
-{"steps":[{"name":"descricao curta","tool":"nome_da_tool","input":"valor","purpose":"por que este passo"}],"reasoning":"raciocinio geral do plano"}
+Respond ONLY with valid JSON in the exact format:
+{"reasoning":"step-by-step deduction of the overall plan", "steps":[{"name":"short description","tool":"tool_name","input":"value","purpose":"why this step is needed"}]}
 
-IMPORTANTE: Use apenas tools que existem na lista acima. Cada step deve ter name, tool, input e purpose.`, goal))
+IMPORTANT: Use ONLY tools that exist in the list above. Each step must have name, tool, input, and purpose.`, goal))
 
 	return strings.Join(parts, "\n\n")
 }
@@ -52,31 +52,31 @@ func BuildReflectionPrompt(goal string, executedSteps []domain.PlannedStep, last
 		line := fmt.Sprintf("%d. [%s] %s (tool: %s)", i+1, status, step.Name, step.Tool)
 		if step.Output != "" {
 			output := TruncateWithEllipsis(step.Output, 300)
-			line += "\n   Resultado: " + output
+			line += "\n   Result: " + output
 		}
 		stepsDesc = append(stepsDesc, line)
 	}
 
-	return fmt.Sprintf(`Voce e um avaliador de execucao. Analise o progresso e decida o proximo passo.
+	return fmt.Sprintf(`You are an execution evaluator for an autonomous agent. Analyze the progress and decide the next step.
 
-Objetivo: %s
+Objective: %s
 
-Passos executados:
+Executed steps:
 %s
 
-Ultimo resultado: %s
+Last result: %s
 
-Analise:
-- O resultado foi valido e util?
-- O objetivo foi atingido?
-- Precisa ajustar o plano?
+Analysis:
+- Was the result valid and useful?
+- Has the objective been achieved?
+- Does the plan need adjustment?
 
-Responda APENAS com JSON valido:
-{"action":"continue|replan|done|error","reason":"justificativa curta","final_answer":"resposta final se action=done","revised_plan":[{"name":"...","tool":"...","input":"...","purpose":"..."}]}
+Respond ONLY with valid JSON:
+{"reason":"deep reasoning about the result and next steps", "action":"continue|replan|done|error", "final_answer":"final answer if action=done", "revised_plan":[{"name":"...","tool":"...","input":"...","purpose":"..."}]}
 
-Acoes:
-- "continue": proximo passo do plano
-- "replan": substituir passos restantes (fornecer revised_plan)
-- "done": objetivo atingido (fornecer final_answer)
-- "error": impossivel completar (fornecer reason)`, goal, strings.Join(stepsDesc, "\n"), lastResult)
+Actions:
+- "continue": proceed to the next step of the plan
+- "replan": replace remaining steps (provide revised_plan)
+- "done": objective completely achieved (provide final_answer)
+- "error": impossible to complete task (NEVER emit 'error' without attempting at least 3 totally distinct fallback strategies. Exhaust all resources before giving up. Provide the reason)`, goal, strings.Join(stepsDesc, "\n"), lastResult)
 }

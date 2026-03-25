@@ -2,9 +2,11 @@ package application
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/renesul/ok/application/engine"
@@ -12,11 +14,10 @@ import (
 	agentpkg "github.com/renesul/ok/infrastructure/agent"
 	"github.com/renesul/ok/infrastructure/llm"
 	"go.uber.org/zap"
-	"gorm.io/gorm"
 )
 
 type AgentService struct {
-	db               *gorm.DB
+	db               *sql.DB
 	llmClient        *llm.Client
 	llmHeavyConfig   llm.ClientConfig
 	llmFastConfig    llm.ClientConfig
@@ -31,11 +32,12 @@ type AgentService struct {
 	environmentNotes string
 	limits           domain.AgentLimits
 	cachedPrompt     string
+	promptMu         sync.RWMutex
 	log              *zap.Logger
 }
 
 func NewAgentService(
-	db *gorm.DB,
+	db *sql.DB,
 	llmClient *llm.Client,
 	llmHeavyConfig llm.ClientConfig,
 	llmFastConfig llm.ClientConfig,
@@ -120,7 +122,9 @@ func (s *AgentService) loadTemplates() {
 
 func (s *AgentService) ReloadSoul() {
 	s.loadTemplates()
+	s.promptMu.Lock()
 	s.cachedPrompt = ""
+	s.promptMu.Unlock()
 }
 
 func (s *AgentService) GetConfigRepo() *agentpkg.ConfigRepository {
@@ -128,9 +132,13 @@ func (s *AgentService) GetConfigRepo() *agentpkg.ConfigRepository {
 }
 
 func (s *AgentService) BuildSystemPrompt() string {
+	s.promptMu.RLock()
 	if s.cachedPrompt != "" {
-		return s.cachedPrompt
+		cached := s.cachedPrompt
+		s.promptMu.RUnlock()
+		return cached
 	}
+	s.promptMu.RUnlock()
 
 	now := time.Now().Format("Monday, 2 January 2006, 15:04")
 
@@ -138,7 +146,7 @@ func (s *AgentService) BuildSystemPrompt() string {
 
 	soul := s.soul
 	if soul == "" {
-		soul = "Voce e um assistente pessoal inteligente e direto."
+		soul = "You are a highly capable, direct, and intelligent personal autonomous agent functioning on the user's local machine."
 	}
 	parts = append(parts, soul)
 
@@ -146,10 +154,10 @@ func (s *AgentService) BuildSystemPrompt() string {
 		parts = append(parts, s.identity)
 	}
 	if s.userProfile != "" {
-		parts = append(parts, "Sobre o usuario: "+s.userProfile)
+		parts = append(parts, "About the user: "+s.userProfile)
 	}
 	if s.environmentNotes != "" {
-		parts = append(parts, "Ambiente: "+s.environmentNotes)
+		parts = append(parts, "Environment: "+s.environmentNotes)
 	}
 
 	if s.memory != nil {
@@ -159,61 +167,67 @@ func (s *AgentService) BuildSystemPrompt() string {
 			for _, r := range rules {
 				ruleTexts = append(ruleTexts, "- "+r.Content)
 			}
-			parts = append(parts, "Regras aprendidas (OBEDECA SEMPRE):\n"+strings.Join(ruleTexts, "\n"))
+			parts = append(parts, "Learned Rules (OBEY ALWAYS):\n"+strings.Join(ruleTexts, "\n"))
 		}
 	}
 
-	parts = append(parts, "Data e hora atual: "+now)
+	parts = append(parts, "Current date and time: "+now)
 
-	parts = append(parts, fmt.Sprintf(`Ferramentas disponiveis:
+	parts = append(parts, fmt.Sprintf(`Available Tools:
 %s
 
-GUIA DE SELECAO DE FERRAMENTAS (use a mais especifica para cada pedido):
-- Pesquisar na internet / buscar documentacao / solucao de erro → web_search
-- Abrir/navegar site especifico → browser
-- Buscar texto em arquivos do projeto → search
-- Ler arquivo (com paginacao) → file_read
-- Criar/escrever arquivo novo → file_write
-- Editar trecho de arquivo existente → file_edit
-- Executar codigo JS/Python/Bash → repl (language:"node"|"python"|"bash")
-- Executar comando no terminal / git / npm / testes → shell
-- Corrigir bug → file_read + file_edit + shell (rodar testes)
-- Escrever testes → file_read + file_write + shell
-- Instalar pacote → shell (npm install / pip install / go get)
-- Fazer commit/push → shell (git add/commit/push)
-- Calcular expressao → math
-- Parsear JSON → json_parse
-- Agendar tarefa recorrente → schedule
-- Fazer request HTTP para API → http
-- Converter base64 → base64
-- Extrair texto de HTML → text_extract
-- Listar diretorio completo → folder_index
-- Tarefa complexa (subdividir em partes) → delegate
+TOOL SELECTION GUIDE (use the most specific tool for each request):
+- Search internet / documentation / troubleshoot errors → web_search
+- Open/navigate specific website → browser
+- Search text within project files → search
+- Read file (with pagination) → file_read
+- Create/write new file → file_write
+- Edit snippet in existing file → file_edit
+- Execute JS/Python/Bash code → repl (language:"node"|"python"|"bash")
+- Execute terminal commands / git / npm / tests → shell
+- Fix bug → file_read + file_edit + shell (run tests)
+- Write tests → file_read + file_write + shell
+- Install packages → shell (npm install / pip install / go get)
+- Commit/push code → shell (git add/commit/push)
+- Calculate expressions → math
+- Parse JSON → json_parse
+- Schedule recurring tasks → schedule
+- Make HTTP requests → http
+- Convert base64 → base64
+- Extract text from HTML → text_extract
+- Read entire directory structure → folder_index
+- Complex tasks (subdivide into parts) → delegate
 
-REGRAS:
-- Respeite EXATAMENTE o que o usuario pediu (linguagem, formato, ferramenta, tom)
-- Se pediu JavaScript → repl com language:"node"
-- Se pediu CSV → gere CSV, nao JSON
-- Se pediu shell → use shell, nao repl
-- Nunca substitua a escolha do usuario sem perguntar
-- Para conversa normal sem acao → responda direto com done=true
+RULES:
+- RESPECT EXACTLY what the user requested (language, format, tool, tone).
+- If JavaScript is requested → repl with language:"node".
+- If CSV is requested → output raw CSV, not JSON.
+- If shell is requested → use shell, not repl.
+- NEVER substitute the user's choice without asking.
+- For normal conversation without required actions → respond directly with done=true.
 
-Para usar uma ferramenta, responda APENAS com JSON:
-{"tool":"nome","input":"valor","done":false}
+To use a tool, reply EXACTLY with valid JSON ONLY:
+{"thought":"your step-by-step reasoning and deduction", "tool":"name","input":"value","done":false}
 
-Para responder diretamente (sem ferramenta), responda APENAS com JSON:
-{"tool":"","input":"sua resposta aqui","done":true}
+To answer directly (no tool needed), reply EXACTLY with valid JSON ONLY:
+{"thought":"your step-by-step reasoning and deduction", "tool":"","input":"your final answer","done":true}
 
-IMPORTANTE: Responda SEMPRE em JSON valido.`, s.planner.ToolDescriptions()))
+IMPORTANT: ALWAYS respond in valid JSON format ONLY. No markdown wrapping.`, s.planner.ToolDescriptions()))
 
-	s.cachedPrompt = joinNonEmpty(parts, "\n\n")
+	prompt := joinNonEmpty(parts, "\n\n")
+
+	s.promptMu.Lock()
+	s.cachedPrompt = prompt
+	s.promptMu.Unlock()
 
 	go func() {
 		time.Sleep(1 * time.Minute)
+		s.promptMu.Lock()
 		s.cachedPrompt = ""
+		s.promptMu.Unlock()
 	}()
 
-	return s.cachedPrompt
+	return prompt
 }
 
 func joinNonEmpty(parts []string, sep string) string {

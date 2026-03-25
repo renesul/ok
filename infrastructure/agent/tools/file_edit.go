@@ -22,7 +22,7 @@ func NewFileEditTool(cm *agent.ConfirmationManager) *FileEditTool {
 }
 
 func (t *FileEditTool) Name() string                       { return "file_edit" }
-func (t *FileEditTool) Description() string                { return "CRITICO: edita linhas especificas de um arquivo. Use SEMPRE start_line e end_line para o trecho exato. NUNCA reescreva o arquivo inteiro para alterar poucas linhas. Input JSON: {\"file\":\"/path\", \"start_line\":N, \"end_line\":N, \"replacement\":\"novo conteudo\"}" }
+func (t *FileEditTool) Description() string                { return "CRITICAL: edits specific lines in a file. ALWAYS use start_line and end_line for the exact snippet. NEVER rewrite the entire file to change a few lines. Input JSON: {\"file\":\"/path\", \"start_line\":N, \"end_line\":N, \"replacement\":\"new content\"}" }
 func (t *FileEditTool) Safety() domain.ToolSafety          { return domain.ToolDangerous }
 
 func (t *FileEditTool) Run(input string) (string, error) {

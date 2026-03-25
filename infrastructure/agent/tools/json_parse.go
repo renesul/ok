@@ -11,7 +11,7 @@ import (
 type JSONParseTool struct{}
 
 func (t *JSONParseTool) Name() string        { return "json_parse" }
-func (t *JSONParseTool) Description() string { return "parseia JSON e extrai campos por path (ex: field.sub)" }
+func (t *JSONParseTool) Description() string { return "parses JSON and extracts fields by path (e.g. field.sub)" }
 func (t *JSONParseTool) Safety() domain.ToolSafety          { return domain.ToolSafe }
 
 type jsonParseInput struct {

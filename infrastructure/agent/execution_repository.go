@@ -1,22 +1,24 @@
 package agent
 
 import (
+	"context"
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/renesul/ok/domain"
+	"github.com/renesul/ok/infrastructure/database"
 	"go.uber.org/zap"
-	"gorm.io/gorm"
 )
 
 type ExecutionRepository struct {
-	db  *gorm.DB
+	db  *sql.DB
 	log *zap.Logger
 }
 
-func NewExecutionRepository(db *gorm.DB, log *zap.Logger) *ExecutionRepository {
+func NewExecutionRepository(db *sql.DB, log *zap.Logger) *ExecutionRepository {
 	return &ExecutionRepository{db: db, log: log.Named("agent.execution")}
 }
 
@@ -25,7 +27,7 @@ func (r *ExecutionRepository) Save(record *domain.ExecutionRecord) error {
 }
 
 // SaveInTx salva um execution record dentro de uma transacao existente
-func (r *ExecutionRepository) SaveInTx(tx *gorm.DB, record *domain.ExecutionRecord) error {
+func (r *ExecutionRepository) SaveInTx(tx database.Execer, record *domain.ExecutionRecord) error {
 	if record.ID == "" {
 		record.ID = uuid.New().String()
 	}
@@ -46,99 +48,100 @@ func (r *ExecutionRepository) SaveInTx(tx *gorm.DB, record *domain.ExecutionReco
 		toolsUsedJSON = []byte("[]")
 	}
 
-	return tx.Exec(
+	_, err = tx.ExecContext(context.Background(),
 		"INSERT INTO agent_executions (id, goal, status, steps, timeline, total_ms, step_count, tools_used, failure_reason, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
 		record.ID, record.Goal, record.Status, string(stepsJSON), string(timelineJSON), record.TotalMs, record.StepCount, string(toolsUsedJSON), record.FailureReason, record.CreatedAt,
-	).Error
+	)
+	if err != nil {
+		return fmt.Errorf("save execution: %w", err)
+	}
+	return nil
 }
 
 func (r *ExecutionRepository) FindByID(id string) (*domain.ExecutionRecord, error) {
-	var row struct {
-		ID            string
-		Goal          string
-		Status        string
-		Steps         string
-		Timeline      string
-		TotalMs       int64
-		StepCount     int
-		ToolsUsed     string
-		FailureReason string
-		CreatedAt     time.Time
-	}
+	row := r.db.QueryRow(
+		"SELECT id, goal, status, steps, timeline, total_ms, step_count, COALESCE(tools_used,'') as tools_used, COALESCE(failure_reason,'') as failure_reason, created_at FROM agent_executions WHERE id = ?", id,
+	)
 
-	err := r.db.Raw("SELECT id, goal, status, steps, timeline, total_ms, step_count, COALESCE(tools_used,'') as tools_used, COALESCE(failure_reason,'') as failure_reason, created_at FROM agent_executions WHERE id = ?", id).Scan(&row).Error
+	var rec struct {
+		ID, Goal, Status, Steps, Timeline, ToolsUsed, FailureReason string
+		TotalMs                                                      int64
+		StepCount                                                    int
+		CreatedAt                                                    time.Time
+	}
+	err := row.Scan(&rec.ID, &rec.Goal, &rec.Status, &rec.Steps, &rec.Timeline, &rec.TotalMs, &rec.StepCount, &rec.ToolsUsed, &rec.FailureReason, &rec.CreatedAt)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
 	if err != nil {
 		return nil, fmt.Errorf("find execution: %w", err)
 	}
-	if row.ID == "" {
-		return nil, nil
-	}
 
 	record := &domain.ExecutionRecord{
-		ID:            row.ID,
-		Goal:          row.Goal,
-		Status:        row.Status,
-		TotalMs:       row.TotalMs,
-		StepCount:     row.StepCount,
-		FailureReason: row.FailureReason,
-		CreatedAt:     row.CreatedAt,
+		ID:            rec.ID,
+		Goal:          rec.Goal,
+		Status:        rec.Status,
+		TotalMs:       rec.TotalMs,
+		StepCount:     rec.StepCount,
+		FailureReason: rec.FailureReason,
+		CreatedAt:     rec.CreatedAt,
 	}
 
-	if err := json.Unmarshal([]byte(row.Steps), &record.Steps); err != nil {
-		r.log.Debug("unmarshal steps failed", zap.String("id", row.ID), zap.Error(err))
+	if err := json.Unmarshal([]byte(rec.Steps), &record.Steps); err != nil {
+		r.log.Debug("unmarshal steps failed", zap.String("id", rec.ID), zap.Error(err))
 	}
-	if err := json.Unmarshal([]byte(row.Timeline), &record.Timeline); err != nil {
-		r.log.Debug("unmarshal timeline failed", zap.String("id", row.ID), zap.Error(err))
+	if err := json.Unmarshal([]byte(rec.Timeline), &record.Timeline); err != nil {
+		r.log.Debug("unmarshal timeline failed", zap.String("id", rec.ID), zap.Error(err))
 	}
-	if err := json.Unmarshal([]byte(row.ToolsUsed), &record.ToolsUsed); err != nil {
-		r.log.Debug("unmarshal tools_used failed", zap.String("id", row.ID), zap.Error(err))
+	if err := json.Unmarshal([]byte(rec.ToolsUsed), &record.ToolsUsed); err != nil {
+		r.log.Debug("unmarshal tools_used failed", zap.String("id", rec.ID), zap.Error(err))
 	}
 
 	return record, nil
 }
 
 func (r *ExecutionRepository) FindRecent(limit int) ([]domain.ExecutionRecord, error) {
-	var rows []struct {
-		ID            string
-		Goal          string
-		Status        string
-		Steps         string
-		Timeline      string
-		TotalMs       int64
-		StepCount     int
-		ToolsUsed     string
-		FailureReason string
-		CreatedAt     time.Time
-	}
-
-	err := r.db.Raw("SELECT id, goal, status, steps, timeline, total_ms, step_count, COALESCE(tools_used,'') as tools_used, COALESCE(failure_reason,'') as failure_reason, created_at FROM agent_executions ORDER BY created_at DESC LIMIT ?", limit).Scan(&rows).Error
+	rows, err := r.db.Query(
+		"SELECT id, goal, status, steps, timeline, total_ms, step_count, COALESCE(tools_used,'') as tools_used, COALESCE(failure_reason,'') as failure_reason, created_at FROM agent_executions ORDER BY created_at DESC LIMIT ?", limit,
+	)
 	if err != nil {
 		return nil, fmt.Errorf("find recent executions: %w", err)
 	}
+	defer rows.Close()
 
-	records := make([]domain.ExecutionRecord, len(rows))
-	for i, row := range rows {
-		records[i] = domain.ExecutionRecord{
-			ID:            row.ID,
-			Goal:          row.Goal,
-			Status:        row.Status,
-			TotalMs:       row.TotalMs,
-			StepCount:     row.StepCount,
-			FailureReason: row.FailureReason,
-			CreatedAt:     row.CreatedAt,
+	var records []domain.ExecutionRecord
+	for rows.Next() {
+		var id, goal, status, steps, timeline, toolsUsed, failureReason string
+		var totalMs int64
+		var stepCount int
+		var createdAt time.Time
+
+		if err := rows.Scan(&id, &goal, &status, &steps, &timeline, &totalMs, &stepCount, &toolsUsed, &failureReason, &createdAt); err != nil {
+			return nil, fmt.Errorf("scan execution row: %w", err)
 		}
-		if err := json.Unmarshal([]byte(row.Steps), &records[i].Steps); err != nil {
-			r.log.Debug("unmarshal steps failed", zap.String("id", row.ID), zap.Error(err))
+
+		rec := domain.ExecutionRecord{
+			ID:            id,
+			Goal:          goal,
+			Status:        status,
+			TotalMs:       totalMs,
+			StepCount:     stepCount,
+			FailureReason: failureReason,
+			CreatedAt:     createdAt,
 		}
-		if err := json.Unmarshal([]byte(row.Timeline), &records[i].Timeline); err != nil {
-			r.log.Debug("unmarshal timeline failed", zap.String("id", row.ID), zap.Error(err))
+		if err := json.Unmarshal([]byte(steps), &rec.Steps); err != nil {
+			r.log.Debug("unmarshal steps failed", zap.String("id", id), zap.Error(err))
 		}
-		if err := json.Unmarshal([]byte(row.ToolsUsed), &records[i].ToolsUsed); err != nil {
-			r.log.Debug("unmarshal tools_used failed", zap.String("id", row.ID), zap.Error(err))
+		if err := json.Unmarshal([]byte(timeline), &rec.Timeline); err != nil {
+			r.log.Debug("unmarshal timeline failed", zap.String("id", id), zap.Error(err))
 		}
+		if err := json.Unmarshal([]byte(toolsUsed), &rec.ToolsUsed); err != nil {
+			r.log.Debug("unmarshal tools_used failed", zap.String("id", id), zap.Error(err))
+		}
+		records = append(records, rec)
 	}
 
-	return records, nil
+	return records, rows.Err()
 }
 
 func (r *ExecutionRepository) GetMetrics() (*domain.ExecutionMetrics, error) {
@@ -146,39 +149,32 @@ func (r *ExecutionRepository) GetMetrics() (*domain.ExecutionMetrics, error) {
 		ToolUsageCount: make(map[string]int),
 	}
 
-	var stats struct {
-		Total       int
-		SuccessRate float64
-		AvgMs       int64
-		AvgSteps    float64
-	}
-	err := r.db.Raw(`
+	err := r.db.QueryRow(`
 		SELECT COUNT(*) as total,
-			AVG(CASE WHEN status = 'done' THEN 1.0 ELSE 0.0 END) as success_rate,
-			CAST(AVG(total_ms) AS INTEGER) as avg_ms,
-			AVG(step_count) as avg_steps
+			COALESCE(AVG(CASE WHEN status = 'done' THEN 1.0 ELSE 0.0 END), 0) as success_rate,
+			COALESCE(CAST(AVG(total_ms) AS INTEGER), 0) as avg_ms,
+			COALESCE(AVG(step_count), 0) as avg_steps
 		FROM agent_executions
-	`).Scan(&stats).Error
+	`).Scan(&metrics.TotalExecutions, &metrics.SuccessRate, &metrics.AvgDurationMs, &metrics.AvgStepCount)
 	if err != nil {
 		return nil, fmt.Errorf("get execution metrics: %w", err)
 	}
 
-	metrics.TotalExecutions = stats.Total
-	metrics.SuccessRate = stats.SuccessRate
-	metrics.AvgDurationMs = stats.AvgMs
-	metrics.AvgStepCount = stats.AvgSteps
-
 	// Tool usage from recent executions
-	var rows []struct{ ToolsUsed string }
-	r.db.Raw("SELECT COALESCE(tools_used,'') as tools_used FROM agent_executions WHERE tools_used != '' ORDER BY created_at DESC LIMIT 100").Scan(&rows)
-	for _, row := range rows {
-		var tools []string
-		json.Unmarshal([]byte(row.ToolsUsed), &tools)
-		for _, tool := range tools {
-			metrics.ToolUsageCount[tool]++
+	rows, err := r.db.Query("SELECT COALESCE(tools_used,'') FROM agent_executions WHERE tools_used != '' ORDER BY created_at DESC LIMIT 100")
+	if err == nil {
+		defer rows.Close()
+		for rows.Next() {
+			var toolsUsed string
+			if err := rows.Scan(&toolsUsed); err == nil {
+				var tools []string
+				json.Unmarshal([]byte(toolsUsed), &tools)
+				for _, tool := range tools {
+					metrics.ToolUsageCount[tool]++
+				}
+			}
 		}
 	}
 
 	return metrics, nil
 }
-

@@ -51,7 +51,8 @@ func NewServer(
 	auth := middleware.RequireAuth(sessionService, log)
 
 	app.Get("/", auth, func(c *fiber.Ctx) error {
-		return c.Redirect("/chat")
+		return c.Redirect("/agent")
+
 	})
 	app.Get("/chat", auth, chatHandler.ChatPage)
 	app.Get("/chat/:id", auth, chatHandler.ChatPage)

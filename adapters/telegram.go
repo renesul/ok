@@ -2,23 +2,23 @@ package adapters
 
 import (
 	"context"
+	"time"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
-	"github.com/renesul/ok/application"
 	"go.uber.org/zap"
 )
 
 type TelegramAdapter struct {
-	agentService *application.AgentService
-	botToken     string
-	ownerID      int64
-	bot          *tgbotapi.BotAPI
-	log          *zap.Logger
+	agentRunner AgentRunner
+	botToken    string
+	ownerID     int64
+	bot         *tgbotapi.BotAPI
+	log         *zap.Logger
 }
 
-func NewTelegramAdapter(agentService *application.AgentService, botToken string, ownerID int64, log *zap.Logger) *TelegramAdapter {
+func NewTelegramAdapter(agentRunner AgentRunner, botToken string, ownerID int64, log *zap.Logger) *TelegramAdapter {
 	return &TelegramAdapter{
-		agentService: agentService,
+		agentRunner: agentRunner,
 		botToken:     botToken,
 		ownerID:      ownerID,
 		log:          log.Named("adapter.telegram"),
@@ -49,9 +49,16 @@ func (a *TelegramAdapter) Start() {
 
 	updates := a.bot.GetUpdatesChan(u)
 
+	// Semaphore para limitar flood de goroutines (max 50)
+	sem := make(chan struct{}, 50)
+
 	for update := range updates {
 		if update.Message != nil {
-			go a.handleMessage(update.Message)
+			sem <- struct{}{}
+			go func(msg *tgbotapi.Message) {
+				defer func() { <-sem }()
+				a.handleMessage(msg)
+			}(update.Message)
 		}
 	}
 }
@@ -64,6 +71,12 @@ func (a *TelegramAdapter) Stop() {
 }
 
 func (a *TelegramAdapter) handleMessage(msg *tgbotapi.Message) {
+	defer func() {
+		if r := recover(); r != nil {
+			a.log.Error("telegram panic recovered", zap.Any("panic", r))
+		}
+	}()
+
 	// Ignorar grupos
 	if msg.Chat.IsGroup() || msg.Chat.IsSuperGroup() {
 		return
@@ -82,14 +95,20 @@ func (a *TelegramAdapter) handleMessage(msg *tgbotapi.Message) {
 
 	a.log.Debug("telegram owner command", zap.String("text", text))
 
-	resp, err := a.agentService.Run(context.Background(), text)
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Minute)
+	defer cancel()
+	resp, err := a.agentRunner.Run(ctx, text)
 	if err != nil {
 		a.log.Debug("telegram agent error", zap.Error(err))
+		if a.bot != nil {
+			a.bot.Send(tgbotapi.NewMessage(msg.Chat.ID, "⚠️ Erro interno: "+err.Error()))
+		}
 		return
 	}
 
 	result := NormalizeResponse(resp)
 	a.log.Debug("telegram agent result", zap.String("result", result))
-
-	// NAO envia resposta — modo passivo
+	if a.bot != nil && result != "" {
+		a.bot.Send(tgbotapi.NewMessage(msg.Chat.ID, result))
+	}
 }

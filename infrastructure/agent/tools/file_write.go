@@ -20,7 +20,7 @@ func NewFileWriteTool(baseDir string) *FileWriteTool {
 }
 
 func (t *FileWriteTool) Name() string        { return "file_write" }
-func (t *FileWriteTool) Description() string  { return "Cria ou sobrescreve um arquivo no sandbox. Input JSON: {\"path\":\"nome.txt\", \"content\":\"conteudo\"}. O path e relativo ao sandbox — NAO use paths absolutos ou ~/." }
+func (t *FileWriteTool) Description() string  { return "Creates or overwrites a file in the sandbox. Input JSON: {\"path\":\"name.txt\", \"content\":\"content\"}. Path is relative to sandbox — DO NOT use absolute paths or ~/." }
 func (t *FileWriteTool) Safety() domain.ToolSafety          { return domain.ToolRestricted }
 
 type fileWriteInput struct {

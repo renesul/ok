@@ -6,12 +6,12 @@
   <title>OK — Workspace</title>
   <link rel="stylesheet" href="/static/css/theme.css">
   <link rel="stylesheet" href="/static/css/agent.css">
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
   <div class="workspace">
 
-    <header class="workspace-header">
+    <header class="workspace-header blur-backdrop">
       <div class="header-left">
         <span class="header-logo">OK</span>
         <span class="header-badge">Workspace</span>
@@ -21,60 +21,41 @@
         </div>
       </div>
       <div class="header-right">
-        <button class="btn-stop" id="stopBtn" type="button" style="display:none">STOP</button>
-        <a href="/chat" class="header-link">Chat</a>
-        <a href="/profile" class="header-link">Perfil</a>
+        <button class="btn-stop glass-btn" id="stopBtn" type="button" style="display:none">STOP</button>
+        <a href="/chat" class="header-link glass-btn">Chat</a>
+        <a href="/profile" class="header-link glass-btn">Perfil</a>
       </div>
     </header>
 
     <div class="workspace-body">
 
-      <!-- PAINEL ESQUERDO: Chat -->
+      <!-- PAINEL ESQUERDO: Chat Interativo -->
       <section class="panel panel-left" id="panelLeft">
-        <div class="panel-header">
-          <span class="panel-title">Chat</span>
+        <div class="panel-header glass-header">
+          <span class="panel-title">Feed do Agente</span>
         </div>
-        <div class="panel-content" id="chatPanel"></div>
+        <div class="panel-content" id="chatPanel">
+            <div class="chat-greeting">
+                <h2>Seja bem-vindo ao OK.</h2>
+                <p>Todo o output da IA e do Terminal sera renderizado diretamente aqui.</p>
+            </div>
+        </div>
         <div class="chat-input-area">
           <form class="chat-form" id="agentForm">
-            <input class="chat-input" id="agentInput" type="text" placeholder="Comando para o agent..." autocomplete="off">
+            <input class="chat-input" id="agentInput" type="text" placeholder="Envie um comando ou objetivo..." autocomplete="off">
             <button class="chat-send" id="agentSend" type="submit" disabled>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4z"/></svg>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4z"/></svg>
             </button>
           </form>
         </div>
       </section>
 
-      <div class="resizer" id="resizer1"></div>
-
-      <!-- PAINEL CENTRAL: Terminal + Diff -->
-      <section class="panel panel-center" id="panelCenter">
-        <div class="panel-header">
-          <div class="tab-bar">
-            <button class="tab active" data-tab="terminal">Terminal</button>
-            <button class="tab" data-tab="diff">Diff</button>
-          </div>
-        </div>
-        <div class="panel-content">
-          <div class="tab-content active" id="tabTerminal">
-            <div id="terminalContainer"></div>
-          </div>
-          <div class="tab-content" id="tabDiff">
-            <div class="diff-empty" id="diffEmpty">Nenhum diff disponivel</div>
-            <div class="diff-viewer" id="diffViewer" style="display:none">
-              <div class="diff-header" id="diffHeader"></div>
-              <div class="diff-content" id="diffContent"></div>
-            </div>
-          </div>
-        </div>
-      </section>
-
       <div class="resizer" id="resizer2"></div>
 
-      <!-- PAINEL DIREITO: Estado -->
-      <section class="panel panel-right" id="panelRight">
-        <div class="panel-header">
-          <span class="panel-title">Estado</span>
+      <!-- PAINEL DIREITO: Ferramentas e Estado -->
+      <section class="panel panel-right glass-panel" id="panelRight">
+        <div class="panel-header glass-header">
+          <span class="panel-title">Telemetry & State</span>
         </div>
         <div class="panel-content panel-scroll">
 
@@ -89,13 +70,8 @@
           </div>
 
           <div class="sidebar-section">
-            <h3 class="section-title">Canais</h3>
+            <h3 class="section-title">Canais Activos</h3>
             <div id="channelsList"></div>
-          </div>
-
-          <div class="sidebar-section">
-            <h3 class="section-title">Memoria</h3>
-            <div id="memoryList" class="section-empty">Sem memorias</div>
           </div>
 
         </div>
@@ -105,16 +81,16 @@
 
     <!-- MODAL HIL -->
     <div class="modal-overlay" id="confirmModal" style="display:none">
-      <div class="modal-box">
+      <div class="modal-box glass-modal">
         <div class="modal-header">
           <span class="modal-icon">&#9888;</span>
-          <span class="modal-title">Confirmacao Necessaria</span>
+          <span class="modal-title">Aprovacao de Segurança</span>
         </div>
         <div class="modal-tool" id="confirmTool"></div>
         <pre class="modal-summary" id="confirmSummary"></pre>
         <div class="modal-timer" id="confirmTimer">30s</div>
         <div class="modal-actions">
-          <button class="btn-approve" id="confirmApprove">Aprovar</button>
+          <button class="btn-approve" id="confirmApprove">Aprovar Comando</button>
           <button class="btn-reject" id="confirmReject">Rejeitar</button>
         </div>
       </div>
@@ -122,7 +98,6 @@
 
   </div>
 
-  <script src="https://cdn.jsdelivr.net/npm/xterm@5.3.0/lib/xterm.min.js"></script>
   <script src="/static/js/agent.js"></script>
 </body>
 </html>

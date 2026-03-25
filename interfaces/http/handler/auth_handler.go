@@ -28,7 +28,8 @@ func (h *AuthHandler) LoginPage(c *fiber.Ctx) error {
 	if sessionID != "" {
 		valid, _ := h.sessionService.ValidateSession(c.Context(), sessionID)
 		if valid {
-			return c.Redirect("/chat")
+			return c.Redirect("/agent")
+
 		}
 	}
 	c.Set("Content-Type", "text/html; charset=utf-8")

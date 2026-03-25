@@ -64,7 +64,7 @@ func NewShellToolWithConfirmation(cm *agent.ConfirmationManager) *ShellTool {
 }
 
 func (t *ShellTool) Name() string                        { return "shell" }
-func (t *ShellTool) Description() string                 { return "Executa comandos bash no sistema. ALERTA: Se o comando retornar output muito grande (>500 linhas), prefira usar a tool search ou filtrar com grep/head/tail. NAO injete dumps gigantes no contexto." }
+func (t *ShellTool) Description() string                 { return "Executes bash commands on the system. WARNING: If command returns large output (>500 lines), prefer using the search tool or filtering with grep/head/tail. DO NOT inject massive dumps into the context." }
 func (t *ShellTool) Safety() domain.ToolSafety           { return domain.ToolDangerous }
 
 func (t *ShellTool) SetStreamCallback(cb domain.StreamCallback) {

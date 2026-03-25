@@ -18,7 +18,7 @@ var (
 type TextExtractTool struct{}
 
 func (t *TextExtractTool) Name() string        { return "text_extract" }
-func (t *TextExtractTool) Description() string { return "extrai texto limpo de HTML (remove tags, scripts, styles)" }
+func (t *TextExtractTool) Description() string { return "extracts clean text from HTML (removes tags, scripts, styles)" }
 func (t *TextExtractTool) Safety() domain.ToolSafety          { return domain.ToolSafe }
 
 func (t *TextExtractTool) Run(input string) (string, error) {

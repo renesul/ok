@@ -99,16 +99,23 @@ func run() error {
 	fileWatcher := agent.NewFileWatcher(comp.AgentMemory, cfg.AgentSandboxDir, log)
 	go fileWatcher.Start()
 
-	// Memory condenser (a cada 6 horas)
+	// Memory condenser (a cada 6 horas) — shutdown via stopCh
+	stopCh := make(chan struct{})
 	go func() {
 		condenseConfig := comp.LLMFast
 		if condenseConfig.BaseURL == "" {
 			condenseConfig = comp.LLMHeavy
 		}
+		ticker := time.NewTicker(6 * time.Hour)
+		defer ticker.Stop()
 		for {
-			time.Sleep(6 * time.Hour)
-			if err := comp.AgentMemory.CondenseOldMemories(context.Background(), comp.LLMClient, condenseConfig); err != nil {
-				log.Debug("memory condense failed", zap.Error(err))
+			select {
+			case <-ticker.C:
+				if err := comp.AgentMemory.CondenseOldMemories(context.Background(), comp.LLMClient, condenseConfig); err != nil {
+					log.Debug("memory condense failed", zap.Error(err))
+				}
+			case <-stopCh:
+				return
 			}
 		}
 	}()
@@ -136,6 +143,7 @@ func run() error {
 		signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 		<-quit
 		log.Debug("shutting down")
+		close(stopCh)
 		bgScheduler.Stop()
 		whatsappAdapter.Stop()
 		telegramAdapter.Stop()

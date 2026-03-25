@@ -6,17 +6,17 @@ import (
 )
 
 type Conversation struct {
-	ID        uint      `json:"id" gorm:"primaryKey"`
+	ID        uint      `json:"id"`
 	Title     string    `json:"title"`
-	Source    string    `json:"source" gorm:"default:'import'"`
-	Channel   string    `json:"channel" gorm:"default:'web'"`
+	Source    string    `json:"source"`
+	Channel   string    `json:"channel"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 }
 
 type Message struct {
-	ID             uint      `json:"id" gorm:"primaryKey"`
-	ConversationID uint      `json:"conversation_id" gorm:"index;not null"`
+	ID             uint      `json:"id"`
+	ConversationID uint      `json:"conversation_id"`
 	Role           string    `json:"role"`
 	Content        string    `json:"content"`
 	SortOrder      int       `json:"sort_order"`
