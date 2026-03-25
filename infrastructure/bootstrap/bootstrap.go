@@ -59,7 +59,12 @@ func NewAgent(db *sql.DB, cfg *config.Config, log *zap.Logger) *Components {
 	planner.RegisterTool(agenttools.NewScheduleTaskTool(jobRepository))
 	planner.RegisterTool(agenttools.NewSearchTool(cfg.AgentSandboxDir))
 	planner.RegisterTool(agenttools.NewFileEditTool(confirmManager))
-	planner.RegisterTool(agenttools.NewBrowserTool())
+	visionConfig := llm.ClientConfig{
+		BaseURL: cfg.VisionBaseURL,
+		APIKey:  cfg.VisionAPIKey,
+		Model:   cfg.VisionModel,
+	}
+	planner.RegisterTool(agenttools.NewBrowserTool(llmClient, visionConfig))
 	planner.RegisterTool(agenttools.NewREPLTool(confirmManager))
 	planner.RegisterTool(agenttools.NewWebSearchTool())
 

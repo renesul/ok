@@ -20,6 +20,9 @@ type Config struct {
 	LLMFastBaseURL string `mapstructure:"LLM_FAST_BASE_URL"`
 	LLMFastAPIKey  string `mapstructure:"LLM_FAST_API_KEY"`
 	LLMFastModel   string `mapstructure:"LLM_FAST_MODEL"`
+	VisionBaseURL string `mapstructure:"VISION_BASE_URL"`
+	VisionAPIKey  string `mapstructure:"VISION_API_KEY"`
+	VisionModel   string `mapstructure:"VISION_MODEL"`
 	EmbedProvider string `mapstructure:"EMBED_PROVIDER"`
 	EmbedBaseURL  string `mapstructure:"EMBED_BASE_URL"`
 	EmbedAPIKey   string `mapstructure:"EMBED_API_KEY"`
@@ -56,6 +59,9 @@ func LoadFrom(envFile string) (*Config, error) {
 	viper.SetDefault("LLM_FAST_BASE_URL", "")
 	viper.SetDefault("LLM_FAST_API_KEY", "")
 	viper.SetDefault("LLM_FAST_MODEL", "")
+	viper.SetDefault("VISION_BASE_URL", "")
+	viper.SetDefault("VISION_API_KEY", "")
+	viper.SetDefault("VISION_MODEL", "")
 	viper.SetDefault("EMBED_PROVIDER", "")
 	viper.SetDefault("EMBED_BASE_URL", "")
 	viper.SetDefault("EMBED_API_KEY", "")

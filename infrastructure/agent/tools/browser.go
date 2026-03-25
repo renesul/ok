@@ -2,6 +2,7 @@ package tools
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -16,32 +17,52 @@ import (
 	"github.com/go-rod/rod/lib/launcher"
 	"github.com/go-rod/rod/lib/proto"
 	"github.com/renesul/ok/domain"
+	"github.com/renesul/ok/infrastructure/llm"
 )
 
 const (
 	browserTimeout  = 15 * time.Second
+	actionTimeout   = 5 * time.Second
 	maxBrowserWords = 5000
 )
 
-type BrowserTool struct{}
+type BrowserAction struct {
+	Type     string `json:"type"`               // wait, click, fill, js, screenshot, text, analyze
+	Selector string `json:"selector,omitempty"`
+	Value    string `json:"value,omitempty"`     // for fill
+	Script   string `json:"script,omitempty"`    // for js
+	Path     string `json:"path,omitempty"`      // for screenshot
+	Prompt   string `json:"prompt,omitempty"`    // for analyze (vision)
+}
 
-func NewBrowserTool() *BrowserTool { return &BrowserTool{} }
+type browserInput struct {
+	URL     string          `json:"url"`
+	Actions []BrowserAction `json:"actions,omitempty"`
+}
 
-func (t *BrowserTool) Name() string                       { return "browser" }
-func (t *BrowserTool) Description() string                { return "opens web page with headless browser and returns rendered text" }
-func (t *BrowserTool) Safety() domain.ToolSafety          { return domain.ToolRestricted }
+type BrowserTool struct {
+	llmClient    *llm.Client
+	visionConfig llm.ClientConfig
+}
+
+func NewBrowserTool(llmClient *llm.Client, visionConfig llm.ClientConfig) *BrowserTool {
+	return &BrowserTool{llmClient: llmClient, visionConfig: visionConfig}
+}
+
+func (t *BrowserTool) Name() string { return "browser" }
+func (t *BrowserTool) Description() string {
+	return `opens web page with headless browser. Input JSON: {"url":"https://...", "actions":[{"type":"click","selector":"#btn"},{"type":"fill","selector":"#email","value":"a@b.com"},{"type":"js","script":"document.title"},{"type":"text","selector":".result"},{"type":"screenshot"},{"type":"analyze","prompt":"describe what you see"},{"type":"wait","selector":"#loaded"}]}. Without actions, returns page text. "analyze" takes a screenshot and uses vision AI to describe what is on the page.`
+}
+func (t *BrowserTool) Safety() domain.ToolSafety { return domain.ToolRestricted }
 
 func (t *BrowserTool) Run(input string) (string, error) {
 	return t.RunWithContext(context.Background(), input)
 }
 
 func (t *BrowserTool) RunWithContext(ctx context.Context, input string) (string, error) {
-	var req struct {
-		URL string `json:"url"`
-	}
-
+	var req browserInput
 	if err := json.Unmarshal([]byte(input), &req); err != nil {
-		return "", fmt.Errorf("input deve ser JSON: {\"url\":\"https://example.com\"}")
+		return "", fmt.Errorf(`input deve ser JSON: {"url":"https://example.com"}`)
 	}
 
 	if req.URL == "" {
@@ -52,17 +73,16 @@ func (t *BrowserTool) RunWithContext(ctx context.Context, input string) (string,
 		return "", err
 	}
 
-	// Tentar headless browser primeiro, fallback para HTTP se Chrome nao existe
 	path, exists := launcher.LookPath()
 	if exists {
-		text, err := fetchWithBrowser(ctx, req.URL, path)
-		if err != nil {
-			return "", err
-		}
-		return truncateWords(text, maxBrowserWords), nil
+		return t.runWithBrowser(ctx, req, path)
 	}
 
-	// Fallback: HTTP simples + strip HTML
+	// Fallback HTTP — actions nao suportadas sem browser
+	if len(req.Actions) > 0 {
+		return "", fmt.Errorf("actions requerem Chrome/Chromium instalado (headless browser nao encontrado)")
+	}
+
 	text, err := fetchWithHTTP(ctx, req.URL)
 	if err != nil {
 		return "", err
@@ -70,8 +90,7 @@ func (t *BrowserTool) RunWithContext(ctx context.Context, input string) (string,
 	return truncateWords(text, maxBrowserWords), nil
 }
 
-func fetchWithBrowser(ctx context.Context, targetURL, chromePath string) (result string, err error) {
-	// Safety net: recover de qualquer panic residual do rod
+func (t *BrowserTool) runWithBrowser(ctx context.Context, req browserInput, chromePath string) (result string, err error) {
 	defer func() {
 		if r := recover(); r != nil {
 			err = fmt.Errorf("browser panic: %v", r)
@@ -98,7 +117,7 @@ func fetchWithBrowser(ctx context.Context, targetURL, chromePath string) (result
 	}
 	defer page.Close()
 
-	if navErr := page.Context(execCtx).Navigate(targetURL); navErr != nil {
+	if navErr := page.Context(execCtx).Navigate(req.URL); navErr != nil {
 		return "", fmt.Errorf("navegar: %w", navErr)
 	}
 
@@ -106,6 +125,26 @@ func fetchWithBrowser(ctx context.Context, targetURL, chromePath string) (result
 		return "", fmt.Errorf("aguardar carregamento: %w", loadErr)
 	}
 
+	// Execute actions if any
+	var outputs []string
+	for i, action := range req.Actions {
+		actCtx, actCancel := context.WithTimeout(execCtx, actionTimeout)
+		out, actErr := t.executeAction(actCtx, page.Context(actCtx), action)
+		actCancel()
+		if actErr != nil {
+			return "", fmt.Errorf("action %d (%s): %w", i+1, action.Type, actErr)
+		}
+		if out != "" {
+			outputs = append(outputs, out)
+		}
+	}
+
+	// If actions produced output, return that
+	if len(outputs) > 0 {
+		return strings.Join(outputs, "\n"), nil
+	}
+
+	// Default: return body text
 	body, elemErr := page.Element("body")
 	if elemErr != nil {
 		return "", fmt.Errorf("elemento body: %w", elemErr)
@@ -116,7 +155,91 @@ func fetchWithBrowser(ctx context.Context, targetURL, chromePath string) (result
 		return "", fmt.Errorf("extrair texto: %w", textErr)
 	}
 
-	return strings.TrimSpace(text), nil
+	return truncateWords(strings.TrimSpace(text), maxBrowserWords), nil
+}
+
+func (t *BrowserTool) executeAction(ctx context.Context, page *rod.Page, action BrowserAction) (string, error) {
+	switch action.Type {
+	case "wait":
+		if action.Selector == "" {
+			return "", fmt.Errorf("selector obrigatorio para wait")
+		}
+		_, err := page.Element(action.Selector)
+		return "", err
+
+	case "click":
+		if action.Selector == "" {
+			return "", fmt.Errorf("selector obrigatorio para click")
+		}
+		el, err := page.Element(action.Selector)
+		if err != nil {
+			return "", err
+		}
+		return "", el.Click(proto.InputMouseButtonLeft, 1)
+
+	case "fill":
+		if action.Selector == "" {
+			return "", fmt.Errorf("selector obrigatorio para fill")
+		}
+		el, err := page.Element(action.Selector)
+		if err != nil {
+			return "", err
+		}
+		return "", el.Input(action.Value)
+
+	case "js":
+		if action.Script == "" {
+			return "", fmt.Errorf("script obrigatorio para js")
+		}
+		res, err := page.Eval(action.Script)
+		if err != nil {
+			return "", err
+		}
+		return res.Value.String(), nil
+
+	case "screenshot":
+		data, err := page.Screenshot(true, nil)
+		if err != nil {
+			return "", err
+		}
+		encoded := base64.StdEncoding.EncodeToString(data)
+		if len(encoded) > 500 {
+			return fmt.Sprintf("screenshot captured (%d bytes, base64 truncated)", len(data)), nil
+		}
+		return encoded, nil
+
+	case "text":
+		if action.Selector == "" {
+			return "", fmt.Errorf("selector obrigatorio para text")
+		}
+		el, err := page.Element(action.Selector)
+		if err != nil {
+			return "", err
+		}
+		return el.Text()
+
+	case "analyze":
+		if t.llmClient == nil || t.visionConfig.BaseURL == "" {
+			return "", fmt.Errorf("vision not configured (set VISION_BASE_URL, VISION_API_KEY, VISION_MODEL)")
+		}
+		data, err := page.Screenshot(true, nil)
+		if err != nil {
+			return "", fmt.Errorf("screenshot for vision: %w", err)
+		}
+		encoded := base64.StdEncoding.EncodeToString(data)
+		prompt := action.Prompt
+		if prompt == "" {
+			prompt = "Describe what you see on this web page. Be concise and factual."
+		}
+		description, visionErr := t.llmClient.ChatCompletionVision(ctx, t.visionConfig, prompt, encoded)
+		if visionErr != nil {
+			return "", fmt.Errorf("vision analysis: %w", visionErr)
+		}
+		return description, nil
+
+	default:
+		return "", fmt.Errorf("action type desconhecido: %s", action.Type)
+	}
 }
 
 var htmlTagsRe = regexp.MustCompile(`<script[^>]*>[\s\S]*?</script>|<style[^>]*>[\s\S]*?</style>|<[^>]+>`)
@@ -137,14 +260,12 @@ func fetchWithHTTP(ctx context.Context, targetURL string) (string, error) {
 	}
 	defer resp.Body.Close()
 
-	body, err := io.ReadAll(io.LimitReader(resp.Body, 1024*1024)) // 1MB max
+	body, err := io.ReadAll(io.LimitReader(resp.Body, 1024*1024))
 	if err != nil {
 		return "", fmt.Errorf("ler body: %w", err)
 	}
 
-	// Strip HTML tags, scripts, styles
 	text := htmlTagsRe.ReplaceAllString(string(body), " ")
-	// Collapse whitespace
 	text = regexp.MustCompile(`\s+`).ReplaceAllString(text, " ")
 	return strings.TrimSpace(text), nil
 }
@@ -175,7 +296,6 @@ func validateURL(rawURL string) error {
 
 	ips, lookupErr := net.LookupIP(host)
 	if lookupErr != nil {
-		// Se não conseguiu resolver o DNS, bloqueamos preventivamente
 		return fmt.Errorf("resolucao DNS falhou (ssrf prevention): %w", lookupErr)
 	}
 

@@ -109,6 +109,70 @@ func (c *Client) ChatCompletionStream(ctx context.Context, config ClientConfig, 
 	return c.processStream(resp.Body, onToken)
 }
 
+// ChatCompletionVision envia uma imagem base64 junto com texto para um modelo com vision
+func (c *Client) ChatCompletionVision(ctx context.Context, config ClientConfig, prompt string, imageBase64 string) (string, error) {
+	if config.BaseURL == "" || config.Model == "" {
+		return "", fmt.Errorf("vision not configured")
+	}
+
+	apiURL := strings.TrimRight(config.BaseURL, "/") + "/chat/completions"
+
+	messages := []map[string]interface{}{
+		{
+			"role": "user",
+			"content": []map[string]interface{}{
+				{"type": "text", "text": c.scrubText(prompt)},
+				{"type": "image_url", "image_url": map[string]interface{}{
+					"url":    "data:image/png;base64," + imageBase64,
+					"detail": "low",
+				}},
+			},
+		},
+	}
+
+	body := map[string]interface{}{
+		"model":      config.Model,
+		"messages":   messages,
+		"max_tokens": 500,
+		"stream":     false,
+	}
+
+	jsonBody, err := json.Marshal(body)
+	if err != nil {
+		return "", fmt.Errorf("marshal request: %w", err)
+	}
+
+	req, err := http.NewRequestWithContext(ctx, "POST", apiURL, bytes.NewReader(jsonBody))
+	if err != nil {
+		return "", fmt.Errorf("create request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+config.APIKey)
+
+	c.log.Debug("llm vision", zap.String("model", config.Model))
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return "", fmt.Errorf("vision request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		respBody, _ := io.ReadAll(resp.Body)
+		return "", fmt.Errorf("vision error %d: %s", resp.StatusCode, string(respBody))
+	}
+
+	var result chatCompletionResponse
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return "", fmt.Errorf("decode response: %w", err)
+	}
+	if len(result.Choices) == 0 {
+		return "", fmt.Errorf("no choices in vision response")
+	}
+
+	return result.Choices[0].Message.Content, nil
+}
+
 // ChatCompletionSync executa uma completion nao-streaming e retorna o texto completo
 func (c *Client) ChatCompletionSync(ctx context.Context, config ClientConfig, messages []Message) (string, error) {
 	url := strings.TrimRight(config.BaseURL, "/") + "/chat/completions"
