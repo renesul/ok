@@ -66,6 +66,10 @@ func NewAgentService(
 
 func (s *AgentService) Run(ctx context.Context, input string) (domain.AgentResponse, error) {
 	s.log.Debug("agent start", zap.String("input", input))
+	// Invalidate cached prompt so learned rules from previous runs are included
+	s.promptMu.Lock()
+	s.cachedPrompt = ""
+	s.promptMu.Unlock()
 	eng := s.buildEngine()
 	emitter := engine.NewBufferEmitter()
 	if err := eng.RunLoop(ctx, input, emitter); err != nil {
@@ -76,6 +80,9 @@ func (s *AgentService) Run(ctx context.Context, input string) (domain.AgentRespo
 
 func (s *AgentService) RunStream(ctx context.Context, input string, onEvent domain.EventCallback) error {
 	s.log.Debug("agent stream start", zap.String("input", input))
+	s.promptMu.Lock()
+	s.cachedPrompt = ""
+	s.promptMu.Unlock()
 	emit := func(e domain.AgentEvent) {
 		if onEvent != nil {
 			onEvent(e)
@@ -197,6 +204,7 @@ TOOL SELECTION GUIDE (use the most specific tool for each request):
 - Extract text from HTML → text_extract
 - Read entire directory structure → folder_index
 - Complex tasks (subdivide into parts) → delegate
+- Memorize a rule or fact permanently → learn_rule
 
 RULES:
 - RESPECT EXACTLY what the user requested (language, format, tool, tone).

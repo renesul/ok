@@ -75,7 +75,7 @@ func (e *AgentEngine) RunLoop(ctx context.Context, input string, emitter Emitter
 
 	// OBSERVE
 	state := agentpkg.NewExecutionState(input, domain.ExecutionBudget{
-		MaxSteps:    e.limits.MaxAttempts,
+		MaxSteps:    e.limits.MaxSteps,
 		MaxDuration: time.Duration(e.limits.TimeoutMs) * time.Millisecond,
 	})
 	emitter.EmitPhase("observe")
@@ -103,7 +103,6 @@ func (e *AgentEngine) RunLoop(ctx context.Context, input string, emitter Emitter
 		decideConfig = e.llmConfig
 	}
 	decision, err := e.llmClient.Decide(ctx, decideConfig, systemPrompt, agentpkg.BuildContext(state))
-	state.Attempts++
 	if err != nil {
 		emitter.EmitMessage("error: " + err.Error())
 		emitter.EmitDone()
@@ -133,7 +132,6 @@ func (e *AgentEngine) RunLoop(ctx context.Context, input string, emitter Emitter
 		return nil
 	}
 	executionPlan, planErr := e.llmClient.CreatePlanStreaming(ctx, e.llmConfig, planPrompt, input, onPlanToken)
-	state.Attempts++
 
 	if planErr != nil || len(executionPlan.Steps) == 0 {
 		return e.executeSingleStep(ctx, state, decision, input, emitter, execStart)
@@ -177,6 +175,7 @@ func (e *AgentEngine) RunLoop(ctx context.Context, input string, emitter Emitter
 		stepStart := time.Now()
 		result, execErr := e.executor.Execute(plan)
 		execMs := time.Since(stepStart).Milliseconds()
+		state.Attempts++ // count tool executions, not LLM calls
 
 		if execErr != nil {
 			step.Status = "failed"
@@ -195,7 +194,6 @@ func (e *AgentEngine) RunLoop(ctx context.Context, input string, emitter Emitter
 		stepOutput := e.summarizeIfLong(ctx, step.Output)
 		reflectPrompt := agentpkg.BuildReflectionPrompt(input, state.Plan.Steps[:state.CurrentStep+1], stepOutput)
 		reflection, reflectErr := e.llmClient.Reflect(ctx, e.llmFastConfig, reflectPrompt, agentpkg.BuildContext(state))
-		state.Attempts++
 
 		if reflectErr != nil {
 			e.log.Error("reflection API failed or returned malformed JSON", zap.Error(reflectErr))
@@ -269,7 +267,7 @@ func (e *AgentEngine) executeSingleStep(ctx context.Context, state *domain.Execu
 	if errors.Is(err, agentpkg.ErrDone) || err != nil {
 		if err != nil && !errors.Is(err, agentpkg.ErrDone) {
 			emitter.EmitStep(decision.Tool, decision.Tool, "rejected", 0)
-			emitter.EmitMessage("planner: " + err.Error())
+			emitter.EmitMessage(err.Error())
 		} else {
 			emitter.EmitMessage(decision.Input)
 		}
@@ -283,7 +281,7 @@ func (e *AgentEngine) executeSingleStep(ctx context.Context, state *domain.Execu
 
 	if execErr != nil {
 		emitter.EmitStep(plan.Tool.Name(), plan.Tool.Name(), "failed", execMs)
-		emitter.EmitMessage("execution: " + execErr.Error())
+		emitter.EmitMessage(execErr.Error())
 	} else {
 		emitter.EmitStep(plan.Tool.Name(), plan.Tool.Name(), "done", execMs)
 		emitter.EmitMessage(result)
@@ -301,8 +299,14 @@ func (e *AgentEngine) lastStepOutput(state *domain.ExecutionState) string {
 	if state.Plan == nil {
 		return ""
 	}
+	// Prefer last successful output, fall back to last failed output
 	for i := len(state.Plan.Steps) - 1; i >= 0; i-- {
 		if state.Plan.Steps[i].Output != "" && state.Plan.Steps[i].Status == "done" {
+			return state.Plan.Steps[i].Output
+		}
+	}
+	for i := len(state.Plan.Steps) - 1; i >= 0; i-- {
+		if state.Plan.Steps[i].Output != "" && state.Plan.Steps[i].Status == "failed" {
 			return state.Plan.Steps[i].Output
 		}
 	}

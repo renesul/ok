@@ -12,7 +12,9 @@ import (
 type TimestampTool struct{}
 
 func (t *TimestampTool) Name() string        { return "timestamp" }
-func (t *TimestampTool) Description() string { return "date/time operations (now, parse:date, unix:timestamp)" }
+func (t *TimestampTool) Description() string {
+	return "date/time operations. Input: 'now' for current time, 'unix' for current unix timestamp, 'unix:1710000000' to convert unix to date, 'parse:2024-01-15' to parse a date string"
+}
 func (t *TimestampTool) Safety() domain.ToolSafety          { return domain.ToolSafe }
 
 func (t *TimestampTool) Run(input string) (string, error) {
