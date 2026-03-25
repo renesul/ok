@@ -93,7 +93,7 @@ func TestMain(m *testing.M) {
 	planner.RegisterTool(&agenttools.TextExtractTool{})
 	planner.RegisterTool(agenttools.NewIndexFolderTool(testCfg.AgentSandboxDir))
 	planner.RegisterTool(agenttools.NewSearchTool(testCfg.AgentSandboxDir))
-	planner.RegisterTool(agenttools.NewBrowserTool())
+	planner.RegisterTool(agenttools.NewBrowserTool(nil, llm.ClientConfig{}))
 	planner.RegisterTool(agenttools.NewREPLTool(nil))
 	planner.RegisterTool(agenttools.NewWebSearchTool())
 	planner.RegisterTool(agenttools.NewLearnRuleTool(agentMemory))

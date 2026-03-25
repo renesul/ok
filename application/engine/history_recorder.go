@@ -28,6 +28,14 @@ func NewHistoryRecorder(db *sql.DB, memory *agentpkg.SQLiteMemory, execRepo *age
 	}
 }
 
+// SearchMemories busca memorias semanticas relevantes para o input.
+func (h *HistoryRecorder) SearchMemories(ctx context.Context, input string, limit int) ([]domain.MemoryEntry, error) {
+	if h.memory == nil {
+		return nil, nil
+	}
+	return h.memory.SearchSemantic(ctx, input, limit)
+}
+
 // SaveResults persiste execution record + memoria em uma unica transacao
 func (h *HistoryRecorder) SaveResults(state *domain.ExecutionState, input, output string, startTime time.Time) {
 	if h.db == nil {

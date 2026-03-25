@@ -64,8 +64,7 @@ func (c *ContextManager) PruneContextIfNeeded(ctx context.Context, state *domain
 	)
 }
 
-// SummarizeIfLong was previously a synchronous LLM call that caused N+1 API bottlenecks.
-// It is now an O(1) pure string truncation to preserve extreme OODA loop velocity.
+// SummarizeIfLong trunca output longo de tools para nao estourar a janela de contexto.
 func (c *ContextManager) SummarizeIfLong(ctx context.Context, output string) string {
 	const maxOutputLength = 1500
 	if len(output) <= maxOutputLength {

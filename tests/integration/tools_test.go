@@ -7,6 +7,7 @@ import (
 
 	agent "github.com/renesul/ok/infrastructure/agent"
 	agenttools "github.com/renesul/ok/infrastructure/agent/tools"
+	"github.com/renesul/ok/infrastructure/llm"
 	"go.uber.org/zap"
 )
 
@@ -262,7 +263,7 @@ func TestREPLToolEmptyCode(t *testing.T) {
 // --- BrowserTool ---
 
 func TestBrowserToolEmptyURL(t *testing.T) {
-	tool := agenttools.NewBrowserTool()
+	tool := agenttools.NewBrowserTool(nil, llm.ClientConfig{})
 	_, err := tool.Run(`{"url":""}`)
 	if err == nil {
 		t.Error("expected error for empty URL")
@@ -270,7 +271,7 @@ func TestBrowserToolEmptyURL(t *testing.T) {
 }
 
 func TestBrowserToolBlocksLocalhost(t *testing.T) {
-	tool := agenttools.NewBrowserTool()
+	tool := agenttools.NewBrowserTool(nil, llm.ClientConfig{})
 	_, err := tool.Run(`{"url":"http://localhost:8080"}`)
 	if err == nil {
 		t.Error("expected error for localhost URL")
@@ -278,7 +279,7 @@ func TestBrowserToolBlocksLocalhost(t *testing.T) {
 }
 
 func TestBrowserToolBlocksPrivateIP(t *testing.T) {
-	tool := agenttools.NewBrowserTool()
+	tool := agenttools.NewBrowserTool(nil, llm.ClientConfig{})
 	_, err := tool.Run(`{"url":"http://192.168.1.1"}`)
 	if err == nil {
 		t.Error("expected error for private IP")
@@ -286,7 +287,7 @@ func TestBrowserToolBlocksPrivateIP(t *testing.T) {
 }
 
 func TestBrowserToolInvalidProtocol(t *testing.T) {
-	tool := agenttools.NewBrowserTool()
+	tool := agenttools.NewBrowserTool(nil, llm.ClientConfig{})
 	_, err := tool.Run(`{"url":"ftp://example.com"}`)
 	if err == nil {
 		t.Error("expected error for non-http protocol")

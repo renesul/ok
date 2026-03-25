@@ -31,7 +31,6 @@ type BrowserAction struct {
 	Selector string `json:"selector,omitempty"`
 	Value    string `json:"value,omitempty"`     // for fill
 	Script   string `json:"script,omitempty"`    // for js
-	Path     string `json:"path,omitempty"`      // for screenshot
 	Prompt   string `json:"prompt,omitempty"`    // for analyze (vision)
 }
 
@@ -191,6 +190,13 @@ func (t *BrowserTool) executeAction(ctx context.Context, page *rod.Page, action 
 		if action.Script == "" {
 			return "", fmt.Errorf("script obrigatorio para js")
 		}
+		blocked := []string{"fetch(", "XMLHttpRequest", "document.cookie", "localStorage", "sessionStorage", "eval(", "Function("}
+		scriptLower := strings.ToLower(action.Script)
+		for _, b := range blocked {
+			if strings.Contains(scriptLower, strings.ToLower(b)) {
+				return "", fmt.Errorf("script bloqueado: contem '%s'", b)
+			}
+		}
 		res, err := page.Eval(action.Script)
 		if err != nil {
 			return "", err
@@ -242,7 +248,10 @@ func (t *BrowserTool) executeAction(ctx context.Context, page *rod.Page, action 
 	}
 }
 
-var htmlTagsRe = regexp.MustCompile(`<script[^>]*>[\s\S]*?</script>|<style[^>]*>[\s\S]*?</style>|<[^>]+>`)
+var (
+	htmlTagsRe   = regexp.MustCompile(`<script[^>]*>[\s\S]*?</script>|<style[^>]*>[\s\S]*?</style>|<[^>]+>`)
+	whitespaceRe = regexp.MustCompile(`\s+`)
+)
 
 func fetchWithHTTP(ctx context.Context, targetURL string) (string, error) {
 	reqCtx, cancel := context.WithTimeout(ctx, browserTimeout)
@@ -266,7 +275,7 @@ func fetchWithHTTP(ctx context.Context, targetURL string) (string, error) {
 	}
 
 	text := htmlTagsRe.ReplaceAllString(string(body), " ")
-	text = regexp.MustCompile(`\s+`).ReplaceAllString(text, " ")
+	text = whitespaceRe.ReplaceAllString(text, " ")
 	return strings.TrimSpace(text), nil
 }
 

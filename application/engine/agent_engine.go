@@ -80,16 +80,14 @@ func (e *AgentEngine) RunLoop(ctx context.Context, input string, emitter Emitter
 	})
 	emitter.EmitPhase("observe")
 
-	if e.historyRecorder.memory != nil {
-		memories, err := e.historyRecorder.memory.SearchSemantic(ctx, input, 5)
-		if err == nil && len(memories) > 0 {
-			var memStrings []string
-			for _, m := range memories {
-				state.Memories = append(state.Memories, m.Content)
-				memStrings = append(memStrings, m.Content)
-			}
-			emitter.EmitMemories(memStrings)
+	memories, err := e.historyRecorder.SearchMemories(ctx, input, 5)
+	if err == nil && len(memories) > 0 {
+		var memStrings []string
+		for _, m := range memories {
+			state.Memories = append(state.Memories, m.Content)
+			memStrings = append(memStrings, m.Content)
 		}
+		emitter.EmitMemories(memStrings)
 	}
 
 	agentpkg.AddEntry(state, domain.PhaseObserve, "user: "+input)
