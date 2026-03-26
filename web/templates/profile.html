@@ -166,10 +166,14 @@
           <form class="import-form" id="importForm">
             <label class="import-label" id="importLabel">
               <input type="file" name="file" accept=".zip" class="import-input" id="importFile">
-              <span class="import-text" id="importText">Selecionar arquivo ZIP</span>
+              <span class="import-text" id="importText">Select .zip file</span>
             </label>
-            <div class="config-status" id="importStatus"></div>
-            <button class="btn-primary" type="submit" id="importButton" disabled>Importar</button>
+            <div class="import-progress" id="importProgress">
+              <div class="import-progress-bar"><div class="import-progress-fill" id="importProgressFill"></div></div>
+              <span class="import-progress-text" id="importProgressText">0%</span>
+            </div>
+            <div class="import-status" id="importStatus"></div>
+            <button class="btn-primary" type="submit" id="importButton" disabled>Import</button>
           </form>
         </div>
 

@@ -270,14 +270,19 @@ var importLabel = document.getElementById('importLabel');
 var importText = document.getElementById('importText');
 var importButton = document.getElementById('importButton');
 var importStatus = document.getElementById('importStatus');
+var importProgress = document.getElementById('importProgress');
+var importProgressFill = document.getElementById('importProgressFill');
+var importProgressText = document.getElementById('importProgressText');
 
 importFile.addEventListener('change', function () {
   if (this.files.length > 0) {
     importText.textContent = this.files[0].name;
     importLabel.classList.add('has-file');
     importButton.disabled = false;
+    importStatus.textContent = '';
+    importStatus.className = 'import-status';
   } else {
-    importText.textContent = 'Selecionar arquivo ZIP';
+    importText.textContent = 'Select .zip file';
     importLabel.classList.remove('has-file');
     importButton.disabled = true;
   }
@@ -289,27 +294,58 @@ document.getElementById('importForm').addEventListener('submit', function (e) {
   if (!file) return;
 
   importButton.disabled = true;
-  importStatus.textContent = 'Importando...';
-  importStatus.className = 'import-status loading';
+  importStatus.textContent = '';
+  importStatus.className = 'import-status';
+  importProgress.classList.add('active');
+  importProgressFill.style.width = '0%';
+  importProgressText.textContent = 'Uploading... 0%';
 
   var formData = new FormData();
   formData.append('file', file);
 
-  fetch('/api/import/chatgpt', { method: 'POST', body: formData })
-    .then(function (r) {
-      if (!r.ok) return r.json().then(function (d) { throw new Error(d.error); });
-      return r.json();
-    })
-    .then(function (data) {
-      importStatus.textContent = data.message;
-      importStatus.className = 'import-status success';
-      importFile.value = '';
-      importText.textContent = 'Selecionar arquivo ZIP';
-      importLabel.classList.remove('has-file');
-    })
-    .catch(function (err) {
-      importStatus.textContent = err.message;
+  var xhr = new XMLHttpRequest();
+  xhr.open('POST', '/api/import/chatgpt');
+
+  xhr.upload.addEventListener('progress', function (evt) {
+    if (evt.lengthComputable) {
+      var pct = Math.round((evt.loaded / evt.total) * 100);
+      importProgressFill.style.width = pct + '%';
+      importProgressText.textContent = 'Uploading... ' + pct + '%';
+      if (pct === 100) {
+        importProgressText.textContent = 'Processing conversations...';
+      }
+    }
+  });
+
+  xhr.addEventListener('load', function () {
+    importProgress.classList.remove('active');
+    try {
+      var data = JSON.parse(xhr.responseText);
+      if (xhr.status >= 200 && xhr.status < 300) {
+        importProgressFill.style.width = '100%';
+        importStatus.textContent = data.message;
+        importStatus.className = 'import-status success';
+        importFile.value = '';
+        importText.textContent = 'Select .zip file';
+        importLabel.classList.remove('has-file');
+      } else {
+        importStatus.textContent = data.error || 'Import failed';
+        importStatus.className = 'import-status error';
+        importButton.disabled = false;
+      }
+    } catch (err) {
+      importStatus.textContent = 'Unexpected response';
       importStatus.className = 'import-status error';
       importButton.disabled = false;
-    });
+    }
+  });
+
+  xhr.addEventListener('error', function () {
+    importProgress.classList.remove('active');
+    importStatus.textContent = 'Connection failed';
+    importStatus.className = 'import-status error';
+    importButton.disabled = false;
+  });
+
+  xhr.send(formData);
 });

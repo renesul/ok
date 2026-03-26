@@ -108,6 +108,35 @@
 .tool-safety.high { background: #dcfce7; color: #166534; }
 .tool-safety.low { background: #fee2e2; color: #991b1b; }
 
+/* Import */
+.import-form { display: flex; flex-direction: column; gap: 16px; }
+.import-label {
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  padding: 40px 24px; background: var(--color-card); border: 2px dashed var(--color-border);
+  border-radius: var(--radius-md); cursor: pointer; transition: all 0.2s;
+}
+.import-label:hover { border-color: var(--color-primary); background: rgba(59,130,246,0.04); }
+.import-label.has-file { border-color: var(--color-primary); border-style: solid; background: rgba(59,130,246,0.06); }
+.import-input { display: none; }
+.import-text { font-size: 14px; font-weight: 500; color: var(--color-text-secondary); }
+.import-label.has-file .import-text { color: var(--color-text); font-weight: 600; }
+
+.import-progress { display: none; flex-direction: column; gap: 8px; }
+.import-progress.active { display: flex; }
+.import-progress-bar {
+  height: 6px; background: var(--color-border); border-radius: 3px; overflow: hidden;
+}
+.import-progress-fill {
+  height: 100%; width: 0%; background: var(--color-primary); border-radius: 3px;
+  transition: width 0.3s ease;
+}
+.import-progress-text { font-size: 13px; font-weight: 500; color: var(--color-text-secondary); }
+
+.import-status { font-size: 13px; font-weight: 500; margin-top: 4px; }
+.import-status.success { color: var(--color-success); }
+.import-status.error { color: var(--color-error); }
+.import-status.loading { color: var(--color-text-secondary); }
+
 /* Dividers */
 .config-divider { height: 1px; background: var(--color-border); margin: 32px 0; }
 .config-subtitle { font-size: 16px; font-weight: 600; color: var(--color-text); margin-bottom: 16px; }
