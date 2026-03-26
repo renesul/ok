@@ -88,6 +88,9 @@ func (s *AgentService) emitGlobal(e domain.AgentEvent) {
 
 func (s *AgentService) Run(ctx context.Context, input string) (domain.AgentResponse, error) {
 	s.log.Debug("agent start", zap.String("input", input))
+	if !s.autoForgetRule(input) {
+		s.autoLearnRule(input)
+	}
 	s.promptMu.Lock()
 	s.cachedPrompt = ""
 	s.promptMu.Unlock()
@@ -105,6 +108,9 @@ func (s *AgentService) Run(ctx context.Context, input string) (domain.AgentRespo
 
 func (s *AgentService) RunStream(ctx context.Context, input string, onEvent domain.EventCallback) error {
 	s.log.Debug("agent stream start", zap.String("input", input))
+	if !s.autoForgetRule(input) {
+		s.autoLearnRule(input)
+	}
 	s.promptMu.Lock()
 	s.cachedPrompt = ""
 	s.promptMu.Unlock()
@@ -117,6 +123,62 @@ func (s *AgentService) RunStream(ctx context.Context, input string, onEvent doma
 	eng := s.buildEngine()
 	emitter := engine.NewCallbackEmitter(emit)
 	return eng.RunLoop(ctx, input, emitter)
+}
+
+// rulePatterns detects user intent to save a permanent rule.
+var rulePatterns = []string{
+	"from now on", "always ", "never ", "remember that", "remember this",
+	"memorize", "learn this", "learn that", "de agora em diante",
+	"sempre ", "nunca ", "lembre", "memorize", "aprenda",
+}
+
+var forgetPatterns = []string{
+	"forget ", "forget that", "remove rule", "delete rule",
+	"stop doing", "esqueça", "esqueca", "remova regra", "apague regra",
+}
+
+func (s *AgentService) autoForgetRule(input string) bool {
+	if s.memory == nil {
+		return false
+	}
+	lower := strings.ToLower(input)
+	for _, pattern := range forgetPatterns {
+		if strings.Contains(lower, pattern) {
+			idx := strings.Index(lower, pattern)
+			keyword := strings.TrimSpace(input[idx+len(pattern):])
+			if keyword == "" {
+				return true
+			}
+			deleted, err := s.memory.DeleteRulesByContent(keyword)
+			if err != nil {
+				s.log.Debug("auto-forget rule failed", zap.Error(err))
+			} else if deleted > 0 {
+				s.log.Debug("auto-forgot rules", zap.Int64("deleted", deleted), zap.String("keyword", keyword))
+			}
+			return true
+		}
+	}
+	return false
+}
+
+func (s *AgentService) autoLearnRule(input string) {
+	if s.memory == nil {
+		return
+	}
+	lower := strings.ToLower(input)
+	for _, pattern := range rulePatterns {
+		if strings.Contains(lower, pattern) {
+			if err := s.memory.Save(domain.MemoryEntry{
+				Content:  input,
+				Category: "rule",
+			}); err != nil {
+				s.log.Debug("auto-learn rule failed", zap.Error(err))
+			} else {
+				s.log.Debug("auto-learned rule from input", zap.String("input", input))
+			}
+			return
+		}
+	}
 }
 
 func (s *AgentService) buildEngine() *engine.AgentEngine {
@@ -158,6 +220,40 @@ func (s *AgentService) ReloadSoul() {
 	s.promptMu.Lock()
 	s.cachedPrompt = ""
 	s.promptMu.Unlock()
+}
+
+func (s *AgentService) ListSkills() []map[string]string {
+	if s.skillRepo == nil {
+		return nil
+	}
+	skills, err := s.skillRepo.List()
+	if err != nil {
+		return nil
+	}
+	var result []map[string]string
+	for _, sk := range skills {
+		result = append(result, map[string]string{
+			"name":        sk.Name,
+			"description": sk.Description,
+		})
+	}
+	return result
+}
+
+func (s *AgentService) ListTools() []map[string]string {
+	tools := s.planner.Tools()
+	var result []map[string]string
+	for _, tool := range tools {
+		entry := map[string]string{
+			"name":        tool.Name(),
+			"description": tool.Description(),
+		}
+		if st, ok := tool.(domain.SafeTool); ok {
+			entry["safety"] = string(st.Safety())
+		}
+		result = append(result, entry)
+	}
+	return result
 }
 
 func (s *AgentService) GetConfigRepo() *agentpkg.ConfigRepository {

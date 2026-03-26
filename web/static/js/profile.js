@@ -113,6 +113,10 @@ fetch('/api/config')
   .then(function (cfg) {
     document.getElementById('llmBaseUrl').textContent = cfg.llm_base_url || '—';
     document.getElementById('llmModel').textContent = cfg.llm_model || '—';
+    document.getElementById('llmFastBaseUrl').textContent = cfg.llm_fast_base_url || '—';
+    document.getElementById('llmFastModel').textContent = cfg.llm_fast_model || '—';
+    document.getElementById('visionBaseUrl').textContent = cfg.vision_base_url || '—';
+    document.getElementById('visionModel').textContent = cfg.vision_model || '—';
     document.getElementById('embedProvider').textContent = cfg.embed_provider || '—';
     document.getElementById('embedModel').textContent = cfg.embed_model || '—';
     document.getElementById('agentSandbox').textContent = cfg.agent_sandbox || '—';
@@ -188,6 +192,49 @@ document.getElementById('saveAgentConfig').addEventListener('click', function ()
     .then(function () { status.textContent = 'Saved!'; status.className = 'config-status success'; })
     .catch(function (e) { status.textContent = e.message; status.className = 'config-status error'; });
 });
+
+// Tools
+fetch('/api/agent/tools')
+  .then(function (r) { return r.json(); })
+  .then(function (tools) {
+    var list = document.getElementById('toolsList');
+    list.innerHTML = '';
+    if (!tools || !tools.length) {
+      list.innerHTML = '<div style="font-size:13px;color:#999">No tools registered</div>';
+      return;
+    }
+    tools.sort(function (a, b) { return a.name.localeCompare(b.name); });
+    tools.forEach(function (tool) {
+      var item = document.createElement('div');
+      item.className = 'tool-item';
+      var safetyClass = tool.safety === 'safe' ? 'high' : 'low';
+      item.innerHTML = '<div><span class="tool-name">' + tool.name + '</span>' +
+        '<div class="tool-desc">' + tool.description + '</div></div>' +
+        '<span class="tool-safety ' + safetyClass + '">' + (tool.safety || 'safe') + '</span>';
+      list.appendChild(item);
+    });
+  })
+  .catch(function () {});
+
+// Skills
+fetch('/api/agent/skills')
+  .then(function (r) { return r.json(); })
+  .then(function (skills) {
+    var list = document.getElementById('skillsList');
+    list.innerHTML = '';
+    if (!skills || !skills.length) {
+      list.innerHTML = '<div style="font-size:13px;color:#999">No skills installed</div>';
+      return;
+    }
+    skills.forEach(function (skill) {
+      var item = document.createElement('div');
+      item.className = 'tool-item';
+      item.innerHTML = '<div><span class="tool-name">' + skill.name + '</span>' +
+        '<div class="tool-desc">' + skill.description + '</div></div>';
+      list.appendChild(item);
+    });
+  })
+  .catch(function () {});
 
 // Jobs
 function loadJobs() {

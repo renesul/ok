@@ -338,6 +338,17 @@ func (m *SQLiteMemory) Recent(limit int) ([]domain.MemoryEntry, error) {
 	return entries, rows.Err()
 }
 
+func (m *SQLiteMemory) DeleteRulesByContent(keyword string) (int64, error) {
+	result, err := m.db.Exec(
+		"DELETE FROM agent_memory WHERE category = 'rule' AND LOWER(content) LIKE ?",
+		"%"+strings.ToLower(keyword)+"%",
+	)
+	if err != nil {
+		return 0, fmt.Errorf("delete rules: %w", err)
+	}
+	return result.RowsAffected()
+}
+
 // SearchSemantic busca memorias usando vector store ou fallback LIKE
 func (m *SQLiteMemory) SearchSemantic(ctx context.Context, query string, limit int) ([]domain.MemoryEntry, error) {
 	ctx = database.Ctx(ctx)

@@ -173,6 +173,18 @@ func (h *AgentHandler) Metrics(c *fiber.Ctx) error {
 	return c.JSON(metrics)
 }
 
+func (h *AgentHandler) ListTools(c *fiber.Ctx) error {
+	return c.JSON(h.agentService.ListTools())
+}
+
+func (h *AgentHandler) ListSkills(c *fiber.Ctx) error {
+	skills := h.agentService.ListSkills()
+	if skills == nil {
+		skills = []map[string]string{}
+	}
+	return c.JSON(skills)
+}
+
 func (h *AgentHandler) GetConfig(c *fiber.Ctx) error {
 	key := c.Params("key")
 	repo := h.agentService.GetConfigRepo()

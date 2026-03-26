@@ -94,10 +94,24 @@
         <div class="config-panel" id="panel-llm">
           <h2 class="config-panel-title">LLM</h2>
           <p class="config-desc">Language model configuration (editable in .env)</p>
+
+          <h3 class="config-subtitle">Primary Model</h3>
           <div class="info-grid">
             <div class="info-label">Base URL</div><div class="info-value" id="llmBaseUrl">—</div>
             <div class="info-label">Model</div><div class="info-value" id="llmModel">—</div>
             <div class="info-label">Status</div><div class="info-value" id="llmStatus">—</div>
+          </div>
+
+          <h3 class="config-subtitle" style="margin-top:24px">Fast Model</h3>
+          <div class="info-grid">
+            <div class="info-label">Base URL</div><div class="info-value" id="llmFastBaseUrl">—</div>
+            <div class="info-label">Model</div><div class="info-value" id="llmFastModel">—</div>
+          </div>
+
+          <h3 class="config-subtitle" style="margin-top:24px">Vision Model</h3>
+          <div class="info-grid">
+            <div class="info-label">Base URL</div><div class="info-value" id="visionBaseUrl">—</div>
+            <div class="info-label">Model</div><div class="info-value" id="visionModel">—</div>
           </div>
         </div>
 
@@ -140,6 +154,11 @@
 
           <h3 class="config-subtitle">Tools</h3>
           <div id="toolsList"></div>
+
+          <div class="config-divider"></div>
+
+          <h3 class="config-subtitle">Skills</h3>
+          <div id="skillsList"></div>
         </div>
 
         <!-- Scheduler -->
@@ -184,6 +203,7 @@
           <div class="info-grid">
             <div class="info-label">Port</div><div class="info-value" id="serverPort">—</div>
             <div class="info-label">Debug</div><div class="info-value" id="debugMode">—</div>
+            <div class="info-label">Sandbox</div><div class="info-value" id="agentSandbox">—</div>
           </div>
         </div>
 

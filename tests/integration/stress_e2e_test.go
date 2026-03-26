@@ -596,6 +596,24 @@ func TestStressE2E_Offline(t *testing.T) {
 		}
 	})
 
+	t.Run("Offline_ListTools", func(t *testing.T) {
+		resp := authenticatedRequest(t, "GET", "/api/agent/tools", nil)
+		if resp.StatusCode != 200 {
+			t.Errorf("expected 200, got %d", resp.StatusCode)
+		}
+		body, _ := io.ReadAll(resp.Body)
+		if !strings.Contains(string(body), "echo") {
+			t.Errorf("expected tools list to contain 'echo', got %s", string(body))
+		}
+	})
+
+	t.Run("Offline_ListSkills", func(t *testing.T) {
+		resp := authenticatedRequest(t, "GET", "/api/agent/skills", nil)
+		if resp.StatusCode != 200 {
+			t.Errorf("expected 200, got %d", resp.StatusCode)
+		}
+	})
+
 	t.Run("Offline_Logout", func(t *testing.T) {
 		cookie := loginAndGetCookie(t)
 		req := httptest.NewRequest("POST", "/api/auth/logout", nil)

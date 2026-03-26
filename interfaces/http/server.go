@@ -79,6 +79,8 @@ func NewServer(
 	api.Get("/agent/status", agentHandler.Status)
 	api.Get("/agent/executions", agentHandler.ListExecutions)
 	api.Get("/agent/executions/:id", agentHandler.GetExecution)
+	api.Get("/agent/tools", agentHandler.ListTools)
+	api.Get("/agent/skills", agentHandler.ListSkills)
 	api.Get("/agent/metrics", agentHandler.Metrics)
 	api.Get("/agent/limits", agentHandler.GetLimits)
 	api.Put("/agent/limits", agentHandler.SetLimits)
@@ -99,9 +101,13 @@ func NewServer(
 		return c.JSON(fiber.Map{
 			"server_port":    cfg.ServerPort,
 			"debug":          cfg.Debug,
-			"llm_base_url":   cfg.LLMBaseURL,
-			"llm_model":      cfg.LLMModel,
-			"embed_provider": cfg.EmbedProvider,
+			"llm_base_url":      cfg.LLMBaseURL,
+			"llm_model":         cfg.LLMModel,
+			"llm_fast_base_url": cfg.LLMFastBaseURL,
+			"llm_fast_model":    cfg.LLMFastModel,
+			"vision_base_url":   cfg.VisionBaseURL,
+			"vision_model":      cfg.VisionModel,
+			"embed_provider":    cfg.EmbedProvider,
 			"embed_base_url": cfg.EmbedBaseURL,
 			"embed_model":    cfg.EmbedModel,
 			"agent_sandbox":  cfg.AgentSandboxDir,
