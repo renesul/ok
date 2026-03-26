@@ -36,6 +36,7 @@ type ConversationRepository interface {
 	Update(ctx context.Context, conversation *Conversation) error
 	Delete(ctx context.Context, id uint) error
 	Search(ctx context.Context, query string) ([]Conversation, error)
+	ExistsBySourceKey(ctx context.Context, source, title string, createdAt time.Time) (bool, error)
 }
 
 type MessageRepository interface {

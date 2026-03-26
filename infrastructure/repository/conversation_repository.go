@@ -172,3 +172,16 @@ func (r *ConversationRepository) Search(ctx context.Context, query string) ([]do
 	r.log.Debug("search results", zap.Int("count", len(conversations)))
 	return conversations, rows.Err()
 }
+
+func (r *ConversationRepository) ExistsBySourceKey(ctx context.Context, source, title string, createdAt time.Time) (bool, error) {
+	ctx = database.Ctx(ctx)
+	var count int
+	err := r.db.QueryRowContext(ctx,
+		"SELECT COUNT(*) FROM conversations WHERE source = ? AND title = ? AND created_at = ?",
+		source, title, createdAt,
+	).Scan(&count)
+	if err != nil {
+		return false, fmt.Errorf("check duplicate: %w", err)
+	}
+	return count > 0, nil
+}

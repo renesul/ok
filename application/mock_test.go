@@ -52,6 +52,10 @@ func (r *mockConversationRepo) Search(_ context.Context, query string) ([]domain
 	return r.searchResult, nil
 }
 
+func (r *mockConversationRepo) ExistsBySourceKey(_ context.Context, _, _ string, _ time.Time) (bool, error) {
+	return false, nil
+}
+
 // --- Mock MessageRepository ---
 
 type mockMessageRepo struct {

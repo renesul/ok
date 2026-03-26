@@ -56,12 +56,12 @@ func (h *ImportHandler) ImportChatGPT(c *fiber.Ctx) error {
 	if err != nil {
 		h.log.Debug("import chatgpt failed", zap.Error(err))
 		return c.Status(fiber.StatusUnprocessableEntity).JSON(fiber.Map{
-			"error": fmt.Sprintf("falha ao importar: %s", err.Error()),
+			"error": fmt.Sprintf("import failed: %s", err.Error()),
 		})
 	}
 
 	return c.Status(fiber.StatusCreated).JSON(fiber.Map{
-		"message": fmt.Sprintf("%d conversas importadas", count),
+		"message": fmt.Sprintf("%d conversations imported", count),
 		"count":   count,
 	})
 }

@@ -71,6 +71,7 @@ func (s *ImportService) ImportChatGPT(ctx context.Context, reader io.Reader) (in
 	}
 
 	imported := 0
+	skipped := 0
 	for _, export := range exports {
 		messages := linearizeMessages(export.Mapping, export.CreateTime)
 		if len(messages) == 0 {
@@ -79,7 +80,14 @@ func (s *ImportService) ImportChatGPT(ctx context.Context, reader io.Reader) (in
 
 		title := export.Title
 		if title == "" {
-			title = "Sem titulo"
+			title = "Untitled"
+		}
+
+		createdAt := timeFromFloat(export.CreateTime)
+		exists, _ := s.conversationRepository.ExistsBySourceKey(ctx, "import", title, createdAt)
+		if exists {
+			skipped++
+			continue
 		}
 
 		conversation := &domain.Conversation{
@@ -122,7 +130,7 @@ func (s *ImportService) ImportChatGPT(ctx context.Context, reader io.Reader) (in
 		imported++
 	}
 
-	s.log.Debug("import completed", zap.Int("imported", imported), zap.Int("total", len(exports)))
+	s.log.Debug("import completed", zap.Int("imported", imported), zap.Int("skipped", skipped), zap.Int("total", len(exports)))
 	return imported, nil
 }
 
