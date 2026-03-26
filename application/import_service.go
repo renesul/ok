@@ -7,6 +7,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/renesul/ok/domain"
@@ -38,7 +40,7 @@ func (s *ImportService) ImportChatGPT(ctx context.Context, reader io.Reader) (in
 		return 0, fmt.Errorf("read zip data: %w", err)
 	}
 	if len(data) > maxImportSize {
-		return 0, fmt.Errorf("arquivo muito grande (max %d MB)", maxImportSize/1024/1024)
+		return 0, fmt.Errorf("file too large (max %d MB)", maxImportSize/1024/1024)
 	}
 
 	zipReader, err := zip.NewReader(bytes.NewReader(data), int64(len(data)))
@@ -46,14 +48,26 @@ func (s *ImportService) ImportChatGPT(ctx context.Context, reader io.Reader) (in
 		return 0, fmt.Errorf("open zip: %w", err)
 	}
 
-	conversationsJSON, err := findFileInZip(zipReader, "conversations.json")
-	if err != nil {
-		return 0, fmt.Errorf("find conversations.json: %w", err)
-	}
-
 	var exports []chatGPTExport
-	if err := json.Unmarshal(conversationsJSON, &exports); err != nil {
-		return 0, fmt.Errorf("parse conversations.json: %w", err)
+	conversationFiles := findConversationFiles(zipReader)
+	if len(conversationFiles) == 0 {
+		return 0, fmt.Errorf("no conversations.json or conversations-NNN.json found in zip")
+	}
+	for _, file := range conversationFiles {
+		rc, err := file.Open()
+		if err != nil {
+			return 0, fmt.Errorf("open %s: %w", file.Name, err)
+		}
+		fileData, err := io.ReadAll(rc)
+		rc.Close()
+		if err != nil {
+			return 0, fmt.Errorf("read %s: %w", file.Name, err)
+		}
+		var batch []chatGPTExport
+		if err := json.Unmarshal(fileData, &batch); err != nil {
+			return 0, fmt.Errorf("parse %s: %w", file.Name, err)
+		}
+		exports = append(exports, batch...)
 	}
 
 	imported := 0
@@ -112,18 +126,17 @@ func (s *ImportService) ImportChatGPT(ctx context.Context, reader io.Reader) (in
 	return imported, nil
 }
 
-func findFileInZip(reader *zip.Reader, name string) ([]byte, error) {
+// findConversationFiles returns conversation JSON files from the zip.
+// Supports both legacy format (conversations.json) and new sharded format (conversations-NNN.json).
+func findConversationFiles(reader *zip.Reader) []*zip.File {
+	var files []*zip.File
 	for _, file := range reader.File {
-		if file.Name == name {
-			rc, err := file.Open()
-			if err != nil {
-				return nil, err
-			}
-			defer rc.Close()
-			return io.ReadAll(rc)
+		base := filepath.Base(file.Name)
+		if base == "conversations.json" || (strings.HasPrefix(base, "conversations-") && strings.HasSuffix(base, ".json")) {
+			files = append(files, file)
 		}
 	}
-	return nil, fmt.Errorf("file %s not found in zip", name)
+	return files
 }
 
 type linearMessage struct {
