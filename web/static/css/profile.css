@@ -130,6 +130,13 @@
   height: 100%; width: 0%; background: var(--color-primary); border-radius: 3px;
   transition: width 0.3s ease;
 }
+.import-progress-fill.indeterminate {
+  width: 100% !important;
+  background: linear-gradient(90deg, var(--color-primary) 25%, rgba(59,130,246,0.4) 50%, var(--color-primary) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+@keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
 .import-progress-text { font-size: 13px; font-weight: 500; color: var(--color-text-secondary); }
 
 .import-status { font-size: 13px; font-weight: 500; margin-top: 4px; }

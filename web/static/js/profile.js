@@ -298,7 +298,8 @@ document.getElementById('importForm').addEventListener('submit', function (e) {
   importStatus.className = 'import-status';
   importProgress.classList.add('active');
   importProgressFill.style.width = '0%';
-  importProgressText.textContent = 'Uploading... 0%';
+  importProgressFill.classList.remove('indeterminate');
+  importProgressText.textContent = 'Uploading...';
 
   var formData = new FormData();
   formData.append('file', file);
@@ -306,23 +307,28 @@ document.getElementById('importForm').addEventListener('submit', function (e) {
   var xhr = new XMLHttpRequest();
   xhr.open('POST', '/api/import/chatgpt');
 
+  var uploadDone = false;
   xhr.upload.addEventListener('progress', function (evt) {
-    if (evt.lengthComputable) {
+    if (evt.lengthComputable && !uploadDone) {
       var pct = Math.round((evt.loaded / evt.total) * 100);
       importProgressFill.style.width = pct + '%';
       importProgressText.textContent = 'Uploading... ' + pct + '%';
-      if (pct === 100) {
-        importProgressText.textContent = 'Processing conversations...';
-      }
     }
+  });
+
+  xhr.upload.addEventListener('load', function () {
+    uploadDone = true;
+    importProgressFill.classList.add('indeterminate');
+    importProgressFill.style.width = '100%';
+    importProgressText.textContent = 'Processing conversations...';
   });
 
   xhr.addEventListener('load', function () {
     importProgress.classList.remove('active');
+    importProgressFill.classList.remove('indeterminate');
     try {
       var data = JSON.parse(xhr.responseText);
       if (xhr.status >= 200 && xhr.status < 300) {
-        importProgressFill.style.width = '100%';
         importStatus.textContent = data.message;
         importStatus.className = 'import-status success';
         importFile.value = '';
@@ -342,6 +348,7 @@ document.getElementById('importForm').addEventListener('submit', function (e) {
 
   xhr.addEventListener('error', function () {
     importProgress.classList.remove('active');
+    importProgressFill.classList.remove('indeterminate');
     importStatus.textContent = 'Connection failed';
     importStatus.className = 'import-status error';
     importButton.disabled = false;
