@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"testing"
-	"time"
 
 	"github.com/renesul/ok/domain"
 )
@@ -36,7 +35,7 @@ func TestStepRunner_Success(t *testing.T) {
 	state := &domain.ExecutionState{Goal: "test"}
 	decision := domain.Decision{Tool: "echo", Input: "hi"}
 
-	err := runner.ExecuteSingleStep(context.Background(), state, decision, "hi", spy, time.Now())
+	err := runner.ExecuteSingleStep(context.Background(), state, decision, "hi", spy)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -61,7 +60,7 @@ func TestStepRunner_PlannerRejects(t *testing.T) {
 	state := &domain.ExecutionState{Goal: "test"}
 	decision := domain.Decision{Tool: "bad", Input: "x"}
 
-	err := runner.ExecuteSingleStep(context.Background(), state, decision, "x", spy, time.Now())
+	err := runner.ExecuteSingleStep(context.Background(), state, decision, "x", spy)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -90,7 +89,7 @@ func TestStepRunner_ExecutorFails(t *testing.T) {
 	state := &domain.ExecutionState{Goal: "test"}
 	decision := domain.Decision{Tool: "echo", Input: "hi"}
 
-	err := runner.ExecuteSingleStep(context.Background(), state, decision, "hi", spy, time.Now())
+	err := runner.ExecuteSingleStep(context.Background(), state, decision, "hi", spy)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -167,7 +166,7 @@ func TestStepRunner_NilMemory_NoDBPanic(t *testing.T) {
 	state := &domain.ExecutionState{Goal: "test"}
 
 	// Should not panic with nil memory and nil db
-	err := runner.ExecuteSingleStep(context.Background(), state, domain.Decision{Tool: "echo", Input: "x"}, "x", spy, time.Now())
+	err := runner.ExecuteSingleStep(context.Background(), state, domain.Decision{Tool: "echo", Input: "x"}, "x", spy)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}

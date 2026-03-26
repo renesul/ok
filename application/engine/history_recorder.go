@@ -64,7 +64,7 @@ func (h *HistoryRecorder) SaveResults(state *domain.ExecutionState, input, outpu
 		return nil
 	})
 	if err != nil {
-		h.log.Debug("save results failed", zap.Error(err))
+		h.log.Warn("save results failed", zap.Error(err))
 	}
 }
 
@@ -73,7 +73,7 @@ func (h *HistoryRecorder) ReflectAndLearn(ctx context.Context, state *domain.Exe
 		return
 	}
 
-	database.WithTx(h.db, context.Background(), func(tx *sql.Tx) error {
+	err := database.WithTx(h.db, context.Background(), func(tx *sql.Tx) error {
 		memContent := fmt.Sprintf("%s: %s -> %s [%s]",
 			step.Tool, step.Input, step.Output, step.Status)
 		if err := h.memory.SaveChunkedInTx(tx, domain.MemoryEntry{Content: memContent}); err != nil {
@@ -89,6 +89,9 @@ func (h *HistoryRecorder) ReflectAndLearn(ctx context.Context, state *domain.Exe
 		}
 		return nil
 	})
+	if err != nil {
+		h.log.Debug("reflect learning failed", zap.Error(err))
+	}
 }
 
 func (h *HistoryRecorder) buildExecutionRecord(state *domain.ExecutionState, startTime time.Time) *domain.ExecutionRecord {
@@ -98,26 +101,20 @@ func (h *HistoryRecorder) buildExecutionRecord(state *domain.ExecutionState, sta
 	}
 
 	toolSet := make(map[string]bool)
+	var failureReason string
 	if state.Plan != nil {
 		for _, step := range state.Plan.Steps {
 			if step.Tool != "" && step.Status == "done" {
 				toolSet[step.Tool] = true
+			}
+			if step.Status == "failed" {
+				failureReason = "step '" + step.Name + "' failed (tool: " + step.Tool + ")"
 			}
 		}
 	}
 	var toolsUsed []string
 	for tool := range toolSet {
 		toolsUsed = append(toolsUsed, tool)
-	}
-
-	var failureReason string
-	if state.Plan != nil {
-		for i := len(state.Plan.Steps) - 1; i >= 0; i-- {
-			if state.Plan.Steps[i].Status == "failed" {
-				failureReason = "step '" + state.Plan.Steps[i].Name + "' failed (tool: " + state.Plan.Steps[i].Tool + ")"
-				break
-			}
-		}
 	}
 
 	return &domain.ExecutionRecord{

@@ -28,7 +28,7 @@ func NewStepRunner(planner domain.Planner, executor domain.Executor, memory *age
 }
 
 // ExecuteSingleStep trata fallback quando plano falha ou e vazio
-func (s *StepRunner) ExecuteSingleStep(ctx context.Context, state *domain.ExecutionState, decision domain.Decision, input string, emitter Emitter, execStart time.Time) error {
+func (s *StepRunner) ExecuteSingleStep(ctx context.Context, state *domain.ExecutionState, decision domain.Decision, input string, emitter Emitter) error {
 	emitter.EmitStep(decision.Tool, decision.Tool, "running", 0)
 	agentCtx := agentpkg.ToAgentContext(state)
 	agentCtx.Add("user: " + input)
@@ -68,7 +68,6 @@ func LastStepOutput(state *domain.ExecutionState) string {
 	if state.Plan == nil {
 		return ""
 	}
-	// Prefer last successful output, fall back to last failed output
 	for i := len(state.Plan.Steps) - 1; i >= 0; i-- {
 		if state.Plan.Steps[i].Output != "" && state.Plan.Steps[i].Status == "done" {
 			return state.Plan.Steps[i].Output

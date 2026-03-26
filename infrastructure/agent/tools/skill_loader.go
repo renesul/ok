@@ -22,7 +22,7 @@ func (t *SkillLoaderTool) Description() string {
 func (t *SkillLoaderTool) Safety() domain.ToolSafety { return domain.ToolSafe }
 
 func (t *SkillLoaderTool) Run(input string) (string, error) {
-	name := strings.TrimSpace(strings.ToLower(input))
+	name := strings.TrimSpace(input)
 	if name == "" {
 		return "", fmt.Errorf("skill name required")
 	}

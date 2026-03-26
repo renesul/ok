@@ -114,7 +114,7 @@ func (e *AgentEngine) RunLoop(ctx context.Context, input string, emitter Emitter
 
 	if decision.Tool != "" && decision.Done {
 		decision.Done = false
-		return e.stepRunner.ExecuteSingleStep(ctx, state, decision, input, emitter, execStart)
+		return e.stepRunner.ExecuteSingleStep(ctx, state, decision, input, emitter)
 	}
 
 	// PLAN
@@ -130,7 +130,7 @@ func (e *AgentEngine) RunLoop(ctx context.Context, input string, emitter Emitter
 	executionPlan, planErr := e.llmClient.CreatePlanStreaming(ctx, e.llmConfig, planPrompt, input, onPlanToken)
 
 	if planErr != nil || len(executionPlan.Steps) == 0 {
-		return e.stepRunner.ExecuteSingleStep(ctx, state, decision, input, emitter, execStart)
+		return e.stepRunner.ExecuteSingleStep(ctx, state, decision, input, emitter)
 	}
 
 	agentpkg.SetPlan(state, executionPlan)
