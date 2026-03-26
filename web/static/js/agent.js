@@ -89,7 +89,7 @@ document.getElementById('agentForm').addEventListener('submit', function (e) {
   lastGoal = input;
   setRunning(true);
   
-  // Limpar greet original apenas uma vez
+  // Clear original greeting only once
   var greet = document.querySelector('.chat-greeting');
   if (greet) greet.style.display = 'none';
 
@@ -106,7 +106,7 @@ function fallbackSSE(input) {
   fetch('/api/agent/stream', {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ input: input })
   }).then(function (response) {
-    if (!response.ok) return response.json().then(function (d) { throw new Error(d.error || 'Erro'); });
+    if (!response.ok) return response.json().then(function (d) { throw new Error(d.error || 'Error'); });
     var reader = response.body.getReader();
     var decoder = new TextDecoder();
     var buffer = '';
@@ -144,7 +144,7 @@ function handleEvent(data) {
       else appendStream(data.tool, data.content);
       break;
     case 'terminal':
-      appendStream('Logs Internos', data.content);
+      appendStream('Internal Logs', data.content);
       break;
     case 'message':
       addChatMsg('assistant', data.content);
@@ -168,7 +168,7 @@ function addChatMsg(type, content) {
   if (type === 'assistant') {
       var botName = document.createElement('div');
       botName.className = 'msg-bot-tag';
-      botName.textContent = 'Agente AI';
+      botName.textContent = 'AI Agent';
       msg.appendChild(botName);
   }
   var txt = document.createElement('div');
@@ -234,7 +234,7 @@ function addPhaseDrawer(phase) {
   currentStreams = {}; // Reset streams context
   var pill = document.createElement('div');
   pill.className = 'phase-divider';
-  pill.innerHTML = '<span>🚀 Fase de Execução: ' + phase.toUpperCase() + '</span>';
+  pill.innerHTML = '<span>🚀 Execution Phase:' + phase.toUpperCase() + '</span>';
   chatPanel.appendChild(pill);
   chatPanel.scrollTop = chatPanel.scrollHeight;
 }
@@ -261,7 +261,7 @@ function setRunning(running) {
   isRunning = running;
   agentSend.disabled = agentInput.value.trim() === '' || running;
   document.querySelector('.status-dot').className = 'status-dot ' + (running ? 'running' : 'idle');
-  document.querySelector('.status-text').textContent = running ? 'Processando' : 'Online';
+  document.querySelector('.status-text').textContent = running ? 'Processing' : 'Online';
   stopBtn.style.display = running ? 'inline-flex' : 'none';
 }
 
@@ -278,7 +278,7 @@ function finish(goal) {
 function renderReplayList() {
   var list = document.getElementById('replayList');
   list.innerHTML = '';
-  if (!executions.length) { list.innerHTML = '<div class="section-empty">Nenhum comando recente</div>'; return; }
+  if (!executions.length) { list.innerHTML = '<div class="section-empty">No recent commands</div>'; return; }
   executions.slice(0, 10).forEach(function (exec) {
     var item = document.createElement('div');
     item.className = 'replay-item';
@@ -291,7 +291,7 @@ function loadJobs() {
   fetch('/api/scheduler/jobs').then(function (r) { return r.json(); }).then(function (jobs) {
     var list = document.getElementById('jobsList');
     list.innerHTML = '';
-    if (!jobs || !jobs.length) { list.innerHTML = '<div class="section-empty">Sem Agendamentos</div>'; return; }
+    if (!jobs || !jobs.length) { list.innerHTML = '<div class="section-empty">No scheduled tasks</div>'; return; }
     jobs.forEach(function (job) {
       var item = document.createElement('div');
       item.className = 'job-item';
@@ -316,7 +316,7 @@ function loadStatus() {
 
 function showConfirmModal(id, tool, summary) {
   currentConfirmId = id;
-  document.getElementById('confirmTool').textContent = "Ferramenta invocada: " + tool;
+  document.getElementById('confirmTool').textContent = "Tool invoked: " + tool;
   document.getElementById('confirmSummary').textContent = summary;
   document.getElementById('confirmModal').style.display = 'flex';
   agentInput.disabled = true;

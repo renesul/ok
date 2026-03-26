@@ -70,8 +70,8 @@ func TestCreateConversationEmptyTitle(t *testing.T) {
 	var conversation map[string]interface{}
 	json.NewDecoder(resp.Body).Decode(&conversation)
 
-	if conversation["title"] != "Nova conversa" {
-		t.Errorf("expected default title 'Nova conversa', got '%v'", conversation["title"])
+	if conversation["title"] != "New conversation" {
+		t.Errorf("expected default title 'New conversation', got '%v'", conversation["title"])
 	}
 }
 

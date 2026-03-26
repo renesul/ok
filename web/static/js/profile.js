@@ -5,18 +5,18 @@ document.querySelectorAll('.nav-item[data-section]').forEach(function (item) {
     document.querySelectorAll('.config-panel').forEach(function (p) { p.classList.remove('active'); });
     this.classList.add('active');
     document.getElementById('panel-' + this.dataset.section).classList.add('active');
-    // Auto-resize textareas na secao que ficou visivel
+    // Auto-resize textareas in the visible section
     document.querySelectorAll('#panel-' + this.dataset.section + ' .config-textarea').forEach(function (ta) {
       autoResize(ta);
     });
-    // Atualizar URL
+    // Update URL
     history.pushState(null, '', '/profile/' + this.dataset.section);
     // Close mobile sidebar
     document.getElementById('sidebar').classList.remove('open');
   });
 });
 
-// Detectar secao pela URL (ex: /profile/scheduler)
+// Detect section from URL (e.g. /profile/scheduler)
 (function () {
   var parts = window.location.pathname.split('/');
   // /profile/scheduler → parts = ['', 'profile', 'scheduler']
@@ -64,8 +64,8 @@ document.getElementById('saveSoul').addEventListener('click', function () {
     body: JSON.stringify({ value: text })
   })
     .then(function (r) {
-      if (!r.ok) throw new Error('Erro');
-      status.textContent = 'Salvo!';
+      if (!r.ok) throw new Error('Error');
+      status.textContent = 'Saved!';
       status.className = 'config-status success';
     })
     .catch(function (e) {
@@ -91,7 +91,7 @@ function saveTemplate(key, textareaId, statusId) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ value: text })
   })
-    .then(function (r) { if (!r.ok) throw new Error('Erro'); status.textContent = 'Salvo!'; status.className = 'config-status success'; })
+    .then(function (r) { if (!r.ok) throw new Error('Error'); status.textContent = 'Saved!'; status.className = 'config-status success'; })
     .catch(function (e) { status.textContent = e.message; status.className = 'config-status error'; });
 }
 
@@ -107,7 +107,7 @@ document.getElementById('saveUser').addEventListener('click', function () { save
 loadTemplate('environment_notes', 'environmentText');
 document.getElementById('saveEnvironment').addEventListener('click', function () { saveTemplate('environment_notes', 'environmentText', 'environmentStatus'); });
 
-// Config publica + LLM/Embed/Sistema
+// Public config + LLM/Embed/System
 fetch('/api/config')
   .then(function (r) { return r.json(); })
   .then(function (cfg) {
@@ -151,7 +151,7 @@ fetch('/api/agent/status')
       card.className = 'channel-card';
       card.innerHTML = '<span class="channel-dot ' + (ch.on ? 'on' : 'off') + '"></span>' +
         '<span class="channel-card-name">' + ch.name + '</span>' +
-        '<span class="channel-card-status">' + (ch.on ? 'ativo' : 'inativo') + '</span>';
+        '<span class="channel-card-status">' + (ch.on ? 'active' : 'inactive') + '</span>';
       list.appendChild(card);
     });
   })
@@ -178,14 +178,14 @@ document.getElementById('saveAgentConfig').addEventListener('click', function ()
   };
 
   if (limits.max_steps <= 0 || limits.max_attempts <= 0 || limits.timeout_ms <= 0) {
-    status.textContent = 'Todos os valores devem ser > 0';
+    status.textContent = 'All values must be > 0';
     status.className = 'config-status error';
     return;
   }
 
   fetch('/api/agent/limits', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(limits) })
-    .then(function (r) { if (!r.ok) return r.json().then(function (d) { throw new Error(d.error || 'Erro'); }); return r.json(); })
-    .then(function () { status.textContent = 'Salvo!'; status.className = 'config-status success'; })
+    .then(function (r) { if (!r.ok) return r.json().then(function (d) { throw new Error(d.error || 'Error'); }); return r.json(); })
+    .then(function () { status.textContent = 'Saved!'; status.className = 'config-status success'; })
     .catch(function (e) { status.textContent = e.message; status.className = 'config-status error'; });
 });
 
@@ -197,7 +197,7 @@ function loadJobs() {
       var list = document.getElementById('jobsList');
       list.innerHTML = '';
       if (!jobs || !jobs.length) {
-        list.innerHTML = '<div style="font-size:12px;color:#999">Sem jobs</div>';
+        list.innerHTML = '<div style="font-size:12px;color:#999">No jobs</div>';
         return;
       }
       jobs.forEach(function (job) {
@@ -253,7 +253,7 @@ document.getElementById('newJobForm').addEventListener('submit', function (e) {
       return r.json();
     })
     .then(function () {
-      status.textContent = 'Job criado!';
+      status.textContent = 'Job created!';
       status.className = 'config-status success';
       form.reset();
       loadJobs();

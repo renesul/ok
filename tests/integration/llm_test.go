@@ -179,7 +179,7 @@ func TestChatConversationTitleUpdate(t *testing.T) {
 	for _, c := range conversations {
 		if c["id"].(float64) == convID {
 			title := c["title"].(string)
-			if title != "Nova conversa" && len(title) > 0 {
+			if title != "New conversation" && len(title) > 0 {
 				found = true
 			}
 			break

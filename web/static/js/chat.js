@@ -32,7 +32,7 @@ document.getElementById('newChatButton').addEventListener('click', function () {
       return response.json();
     })
     .then(function (conversation) {
-      selectConversation(conversation.id, conversation.title || 'Nova conversa');
+      selectConversation(conversation.id, conversation.title || 'New conversation');
       loadConversations();
       closeSidebar();
     });
@@ -104,7 +104,7 @@ document.getElementById('chatInputForm').addEventListener('submit', function (ev
     .then(function (response) {
       if (!response.ok && response.headers.get('content-type') && response.headers.get('content-type').indexOf('application/json') !== -1) {
         return response.json().then(function (data) {
-          throw new Error(data.error || 'Erro ao enviar mensagem.');
+          throw new Error(data.error || 'Error sending message.');
         });
       }
 
@@ -129,7 +129,7 @@ document.getElementById('chatInputForm').addEventListener('submit', function (ev
             try {
               var data = JSON.parse(jsonStr);
               if (data.error) {
-                assistantBubble.textContent = 'Erro: ' + data.error;
+                assistantBubble.textContent = 'Error: ' + data.error;
                 finishStreaming(assistantBubble);
                 return;
               }
@@ -169,7 +169,7 @@ document.getElementById('chatInputForm').addEventListener('submit', function (ev
       return readChunk();
     })
     .catch(function (error) {
-      assistantBubble.textContent = 'Erro: ' + error.message;
+      assistantBubble.textContent = 'Error: ' + error.message;
       finishStreaming(assistantBubble);
     });
 });
@@ -238,7 +238,7 @@ function appendMessage(role, content) {
 
   var roleLabel = document.createElement('div');
   roleLabel.className = 'message-role';
-  roleLabel.textContent = role === 'user' ? 'Voce' : 'Assistente';
+  roleLabel.textContent = role === 'user' ? 'You' : 'Assistant';
 
   var bubble = document.createElement('div');
   bubble.className = 'message-bubble';
@@ -291,7 +291,7 @@ function renderConversationList(conversations) {
   if (!conversations || conversations.length === 0) {
     var empty = document.createElement('div');
     empty.className = 'conversation-empty';
-    empty.textContent = 'Nenhuma conversa';
+    empty.textContent = 'No conversations';
     list.appendChild(empty);
     return;
   }
@@ -315,13 +315,13 @@ function renderConversationList(conversations) {
 
     var titleSpan = document.createElement('span');
     titleSpan.className = 'conversation-title';
-    titleSpan.textContent = conv.title || 'Sem titulo';
+    titleSpan.textContent = conv.title || 'Untitled';
     item.appendChild(titleSpan);
 
     var deleteBtn = document.createElement('button');
     deleteBtn.className = 'conversation-delete';
     deleteBtn.innerHTML = '&times;';
-    deleteBtn.setAttribute('aria-label', 'Excluir conversa');
+    deleteBtn.setAttribute('aria-label', 'Delete conversation');
     deleteBtn.addEventListener('click', function (e) {
       e.stopPropagation();
       fetch('/api/conversations/' + conv.id, { method: 'DELETE' })
@@ -334,7 +334,7 @@ function renderConversationList(conversations) {
             clearMessageList();
             var empty = document.getElementById('chatEmpty');
             empty.style.display = 'flex';
-            empty.querySelector('.chat-empty-text').textContent = 'Selecione uma conversa';
+            empty.querySelector('.chat-empty-text').textContent = 'Select a conversation';
             history.pushState(null, '', '/chat');
           }
           loadConversations();
@@ -352,7 +352,7 @@ function renderConversationList(conversations) {
 // Select conversation
 function selectConversation(id, title, skipPush) {
   activeConversationID = id;
-  document.getElementById('chatTitle').textContent = title || 'Sem titulo';
+  document.getElementById('chatTitle').textContent = title || 'Untitled';
   chatInputArea.style.display = 'block';
 
   // Update URL
@@ -394,7 +394,7 @@ function renderMessages(messages) {
 
   if (!messages || messages.length === 0) {
     empty.style.display = 'flex';
-    empty.querySelector('.chat-empty-text').textContent = 'Comece uma conversa';
+    empty.querySelector('.chat-empty-text').textContent = 'Start a conversation';
     return;
   }
 
@@ -409,7 +409,7 @@ function renderMessages(messages) {
 
     var role = document.createElement('div');
     role.className = 'message-role';
-    role.textContent = msg.role === 'user' ? 'Voce' : 'Assistente';
+    role.textContent = msg.role === 'user' ? 'You' : 'Assistant';
 
     var bubble = document.createElement('div');
     bubble.className = 'message-bubble';
@@ -476,7 +476,7 @@ function checkServices() {
         if (service.status === 'disabled') {
           var disabledText = document.createElement('span');
           disabledText.className = 'health-latency';
-          disabledText.textContent = 'nao configurado';
+          disabledText.textContent = 'not configured';
           item.appendChild(disabledText);
         }
 
@@ -515,7 +515,7 @@ window.addEventListener('popstate', function (event) {
     clearMessageList();
     var empty = document.getElementById('chatEmpty');
     empty.style.display = 'flex';
-    empty.querySelector('.chat-empty-text').textContent = 'Selecione uma conversa';
+    empty.querySelector('.chat-empty-text').textContent = 'Select a conversation';
     var items = document.querySelectorAll('.conversation-item');
     items.forEach(function (item) { item.classList.remove('active'); });
   }

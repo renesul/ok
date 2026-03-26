@@ -352,10 +352,10 @@ func (m *SQLiteMemory) SearchSemantic(ctx context.Context, query string, limit i
 	return m.Search(query, limit)
 }
 
-const condensePrompt = `Voce recebe um historico de interacoes passadas de um assistente de IA.
-Extraia APENAS licoes aprendidas, preferencias do usuario e fatos relevantes sobre o projeto.
-Ignore cumprimentos, erros corrigidos e interacoes triviais.
-Retorne UM PARAGRAFO conciso.`
+const condensePrompt = `You receive a history of past interactions from an AI assistant.
+Extract ONLY lessons learned, user preferences and relevant facts about the project.
+Ignore greetings, corrected errors and trivial interactions.
+Return ONE concise paragraph.`
 
 const minCondenseCount = 10
 

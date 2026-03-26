@@ -8,7 +8,7 @@ document.getElementById('loginForm').addEventListener('submit', function (event)
   errorElement.classList.remove('visible');
 
   if (!password) {
-    showError('Informe a senha.');
+    showError('Enter your password.');
     return;
   }
 
@@ -20,7 +20,7 @@ document.getElementById('loginForm').addEventListener('submit', function (event)
     .then(function (response) {
       if (!response.ok) {
         return response.json().then(function (data) {
-          throw new Error(data.error || 'Erro ao entrar.');
+          throw new Error(data.error || 'Login failed.');
         });
       }
       return response.json();

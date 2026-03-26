@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -23,26 +23,26 @@
       <div class="header-right">
         <button class="btn-stop glass-btn" id="stopBtn" type="button" style="display:none">STOP</button>
         <a href="/chat" class="header-link glass-btn">Chat</a>
-        <a href="/profile" class="header-link glass-btn">Perfil</a>
+        <a href="/profile" class="header-link glass-btn">Profile</a>
       </div>
     </header>
 
     <div class="workspace-body">
 
-      <!-- PAINEL ESQUERDO: Chat Interativo -->
+      <!-- LEFT PANEL: Interactive Chat -->
       <section class="panel panel-left" id="panelLeft">
         <div class="panel-header glass-header">
-          <span class="panel-title">Feed do Agente</span>
+          <span class="panel-title">Agent Feed</span>
         </div>
         <div class="panel-content" id="chatPanel">
             <div class="chat-greeting">
-                <h2>Seja bem-vindo ao OK.</h2>
-                <p>Todo o output da IA e do Terminal sera renderizado diretamente aqui.</p>
+                <h2>Welcome to OK.</h2>
+                <p>All AI and Terminal output will be rendered directly here.</p>
             </div>
         </div>
         <div class="chat-input-area">
           <form class="chat-form" id="agentForm">
-            <input class="chat-input" id="agentInput" type="text" placeholder="Envie um comando ou objetivo..." autocomplete="off">
+            <input class="chat-input" id="agentInput" type="text" placeholder="Send a command or goal..." autocomplete="off">
             <button class="chat-send" id="agentSend" type="submit" disabled>
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4z"/></svg>
             </button>
@@ -52,7 +52,7 @@
 
       <div class="resizer" id="resizer2"></div>
 
-      <!-- PAINEL DIREITO: Ferramentas e Estado -->
+      <!-- RIGHT PANEL: Tools and State -->
       <section class="panel panel-right glass-panel" id="panelRight">
         <div class="panel-header glass-header">
           <span class="panel-title">Telemetry & State</span>
@@ -60,17 +60,17 @@
         <div class="panel-content panel-scroll">
 
           <div class="sidebar-section">
-            <h3 class="section-title">Execucoes</h3>
-            <div id="replayList" class="section-empty">Sem historico</div>
+            <h3 class="section-title">Executions</h3>
+            <div id="replayList" class="section-empty">No history</div>
           </div>
 
           <div class="sidebar-section">
             <h3 class="section-title">Jobs</h3>
-            <div id="jobsList" class="section-empty">Sem jobs</div>
+            <div id="jobsList" class="section-empty">No jobs</div>
           </div>
 
           <div class="sidebar-section">
-            <h3 class="section-title">Canais Activos</h3>
+            <h3 class="section-title">Active Channels</h3>
             <div id="channelsList"></div>
           </div>
 
@@ -84,14 +84,14 @@
       <div class="modal-box glass-modal">
         <div class="modal-header">
           <span class="modal-icon">&#9888;</span>
-          <span class="modal-title">Aprovacao de Segurança</span>
+          <span class="modal-title">Security Approval</span>
         </div>
         <div class="modal-tool" id="confirmTool"></div>
         <pre class="modal-summary" id="confirmSummary"></pre>
         <div class="modal-timer" id="confirmTimer">30s</div>
         <div class="modal-actions">
-          <button class="btn-approve" id="confirmApprove">Aprovar Comando</button>
-          <button class="btn-reject" id="confirmReject">Rejeitar</button>
+          <button class="btn-approve" id="confirmApprove">Approve Command</button>
+          <button class="btn-reject" id="confirmReject">Reject</button>
         </div>
       </div>
     </div>

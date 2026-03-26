@@ -81,8 +81,8 @@ func TestChatService_CreateConversation_DefaultTitle(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if conv.Title != "Nova conversa" {
-		t.Errorf("title = %q, want 'Nova conversa'", conv.Title)
+	if conv.Title != "New conversation" {
+		t.Errorf("title = %q, want 'New conversation'", conv.Title)
 	}
 	if conv.Source != "chat" {
 		t.Errorf("source = %q, want 'chat'", conv.Source)

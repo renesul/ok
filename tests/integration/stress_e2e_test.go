@@ -437,7 +437,7 @@ func TestStressE2E_ChatFlow(t *testing.T) {
 		for _, c := range convs {
 			if int(c["id"].(float64)) == convID {
 				title := c["title"].(string)
-				if title == "" || title == "Nova conversa" {
+				if title == "" || title == "New conversation" {
 					t.Error("expected title updated from first message")
 				}
 				return

@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>OK — Configuracoes</title>
+  <title>OK — Settings</title>
   <link rel="stylesheet" href="/static/css/theme.css">
   <link rel="stylesheet" href="/static/css/agent.css">
   <link rel="stylesheet" href="/static/css/profile.css">
@@ -18,21 +18,21 @@
       </div>
 
       <nav class="config-nav">
-        <button class="nav-item active" data-section="soul">Personalidade</button>
-        <button class="nav-item" data-section="identity">Identidade</button>
-        <button class="nav-item" data-section="user">Usuario</button>
-        <button class="nav-item" data-section="environment">Ambiente</button>
+        <button class="nav-item active" data-section="soul">Personality</button>
+        <button class="nav-item" data-section="identity">Identity</button>
+        <button class="nav-item" data-section="user">User</button>
+        <button class="nav-item" data-section="environment">Environment</button>
         <button class="nav-item" data-section="llm">LLM</button>
         <button class="nav-item" data-section="embed">Embedding</button>
-        <button class="nav-item" data-section="channels">Canais</button>
+        <button class="nav-item" data-section="channels">Channels</button>
         <button class="nav-item" data-section="agent">Agent</button>
         <button class="nav-item" data-section="scheduler">Scheduler</button>
         <button class="nav-item" data-section="import">Import ChatGPT</button>
-        <button class="nav-item" data-section="system">Sistema</button>
+        <button class="nav-item" data-section="system">System</button>
       </nav>
 
       <div class="sidebar-footer">
-        <a href="/agent" class="sidebar-link">🚀 Ir para o Workspace</a>
+        <a href="/agent" class="sidebar-link">🚀 Go to Workspace</a>
       </div>
     </aside>
 
@@ -41,62 +41,62 @@
         <button class="menu-toggle" id="menuToggle" type="button">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
         </button>
-        <h1 class="console-title">Configuracoes</h1>
+        <h1 class="console-title">Settings</h1>
       </header>
 
       <div class="console-content">
 
-        <!-- Personalidade -->
+        <!-- Personality -->
         <div class="config-panel active" id="panel-soul">
-          <h2 class="config-panel-title">Personalidade do Agent</h2>
-          <p class="config-desc">Define como o agent se comporta, responde e interage.</p>
-          <textarea class="config-textarea" id="soulText" rows="8" placeholder="Carregando..."></textarea>
+          <h2 class="config-panel-title">Agent Personality</h2>
+          <p class="config-desc">Defines how the agent behaves, responds and interacts.</p>
+          <textarea class="config-textarea" id="soulText" rows="8" placeholder="Loading..."></textarea>
           <div class="config-actions">
             <div class="config-status" id="soulStatus"></div>
-            <button class="btn-primary" id="saveSoul" type="button">Salvar</button>
+            <button class="btn-primary" id="saveSoul" type="button">Save</button>
           </div>
         </div>
 
         <!-- Identity -->
         <div class="config-panel" id="panel-identity">
-          <h2 class="config-panel-title">Identidade do Agent</h2>
-          <p class="config-desc">Nome, estilo e caracteristicas do agent.</p>
-          <textarea class="config-textarea" id="identityText" rows="4" placeholder="Carregando..."></textarea>
+          <h2 class="config-panel-title">Agent Identity</h2>
+          <p class="config-desc">Name, style and characteristics of the agent.</p>
+          <textarea class="config-textarea" id="identityText" rows="4" placeholder="Loading..."></textarea>
           <div class="config-actions">
             <div class="config-status" id="identityStatus"></div>
-            <button class="btn-primary" id="saveIdentity" type="button">Salvar</button>
+            <button class="btn-primary" id="saveIdentity" type="button">Save</button>
           </div>
         </div>
 
         <!-- User -->
         <div class="config-panel" id="panel-user">
-          <h2 class="config-panel-title">Perfil do Usuario</h2>
-          <p class="config-desc">Informacoes sobre voce que ajudam o agent a responder melhor.</p>
-          <textarea class="config-textarea" id="userText" rows="4" placeholder="Carregando..."></textarea>
+          <h2 class="config-panel-title">User Profile</h2>
+          <p class="config-desc">Information about you that helps the agent respond better.</p>
+          <textarea class="config-textarea" id="userText" rows="4" placeholder="Loading..."></textarea>
           <div class="config-actions">
             <div class="config-status" id="userStatus"></div>
-            <button class="btn-primary" id="saveUser" type="button">Salvar</button>
+            <button class="btn-primary" id="saveUser" type="button">Save</button>
           </div>
         </div>
 
         <!-- Environment -->
         <div class="config-panel" id="panel-environment">
-          <h2 class="config-panel-title">Notas do Ambiente</h2>
-          <p class="config-desc">Informacoes sobre seu ambiente (IPs, dispositivos, preferencias).</p>
-          <textarea class="config-textarea" id="environmentText" rows="6" placeholder="Carregando..."></textarea>
+          <h2 class="config-panel-title">Environment Notes</h2>
+          <p class="config-desc">Information about your environment (IPs, devices, preferences).</p>
+          <textarea class="config-textarea" id="environmentText" rows="6" placeholder="Loading..."></textarea>
           <div class="config-actions">
             <div class="config-status" id="environmentStatus"></div>
-            <button class="btn-primary" id="saveEnvironment" type="button">Salvar</button>
+            <button class="btn-primary" id="saveEnvironment" type="button">Save</button>
           </div>
         </div>
 
         <!-- LLM -->
         <div class="config-panel" id="panel-llm">
           <h2 class="config-panel-title">LLM</h2>
-          <p class="config-desc">Configuracao do modelo de linguagem (editavel no .env)</p>
+          <p class="config-desc">Language model configuration (editable in .env)</p>
           <div class="info-grid">
             <div class="info-label">Base URL</div><div class="info-value" id="llmBaseUrl">—</div>
-            <div class="info-label">Modelo</div><div class="info-value" id="llmModel">—</div>
+            <div class="info-label">Model</div><div class="info-value" id="llmModel">—</div>
             <div class="info-label">Status</div><div class="info-value" id="llmStatus">—</div>
           </div>
         </div>
@@ -104,27 +104,27 @@
         <!-- Embedding -->
         <div class="config-panel" id="panel-embed">
           <h2 class="config-panel-title">Embedding</h2>
-          <p class="config-desc">Busca semantica para conversas (editavel no .env)</p>
+          <p class="config-desc">Semantic search for conversations (editable in .env)</p>
           <div class="info-grid">
             <div class="info-label">Provider</div><div class="info-value" id="embedProvider">—</div>
-            <div class="info-label">Modelo</div><div class="info-value" id="embedModel">—</div>
+            <div class="info-label">Model</div><div class="info-value" id="embedModel">—</div>
             <div class="info-label">Status</div><div class="info-value" id="embedStatus">—</div>
           </div>
         </div>
 
-        <!-- Canais -->
+        <!-- Channels -->
         <div class="config-panel" id="panel-channels">
-          <h2 class="config-panel-title">Canais</h2>
-          <p class="config-desc">Plataformas de mensagem conectadas</p>
+          <h2 class="config-panel-title">Channels</h2>
+          <p class="config-desc">Connected messaging platforms</p>
           <div id="channelsList" class="channels-grid"></div>
         </div>
 
         <!-- Agent -->
         <div class="config-panel" id="panel-agent">
-          <h2 class="config-panel-title">Configuracao do Agent</h2>
-          <p class="config-desc">Limites de execucao do agente.</p>
+          <h2 class="config-panel-title">Agent Configuration</h2>
+          <p class="config-desc">Agent execution limits.</p>
 
-          <h3 class="config-subtitle">Limites</h3>
+          <h3 class="config-subtitle">Limits</h3>
           <div class="limits-grid">
             <div class="limit-field"><label class="limit-label" for="limit-steps">Max Steps</label><input type="number" class="form-input limit-input" id="limit-steps" min="1" max="20" value="6"></div>
             <div class="limit-field"><label class="limit-label" for="limit-attempts">Max Attempts</label><input type="number" class="form-input limit-input" id="limit-attempts" min="1" max="50" value="4"></div>
@@ -133,7 +133,7 @@
 
           <div class="config-actions">
             <div class="config-status" id="agentConfigStatus"></div>
-            <button class="btn-primary" id="saveAgentConfig" type="button">Salvar</button>
+            <button class="btn-primary" id="saveAgentConfig" type="button">Save</button>
           </div>
 
           <div class="config-divider"></div>
@@ -145,24 +145,24 @@
         <!-- Scheduler -->
         <div class="config-panel" id="panel-scheduler">
           <h2 class="config-panel-title">Scheduler</h2>
-          <p class="config-desc">Tarefas automaticas</p>
+          <p class="config-desc">Automated tasks</p>
           <div id="jobsList"></div>
           <div class="config-divider"></div>
-          <h3 class="config-subtitle">Novo Job</h3>
+          <h3 class="config-subtitle">New Job</h3>
           <form id="newJobForm" class="job-form">
-            <input class="form-input" name="name" placeholder="Nome" required>
-            <input class="form-input" name="task_type" placeholder="Tipo (ex: fetch_url)">
-            <input class="form-input" name="input" placeholder="Input (ex: acessar google.com)">
-            <input class="form-input" name="interval_seconds" type="number" placeholder="Intervalo (segundos)" min="60" value="120">
-            <button class="btn-primary" type="submit">Criar Job</button>
+            <input class="form-input" name="name" placeholder="Name" required>
+            <input class="form-input" name="task_type" placeholder="Type (e.g. fetch_url)">
+            <input class="form-input" name="input" placeholder="Input (e.g. access google.com)">
+            <input class="form-input" name="interval_seconds" type="number" placeholder="Interval (seconds)" min="60" value="120">
+            <button class="btn-primary" type="submit">Create</button>
           </form>
           <div class="config-status" id="jobStatus"></div>
         </div>
 
         <!-- Import -->
         <div class="config-panel" id="panel-import">
-          <h2 class="config-panel-title">Importar ChatGPT</h2>
-          <p class="config-desc">Importe conversas do ChatGPT (.zip)</p>
+          <h2 class="config-panel-title">Import ChatGPT</h2>
+          <p class="config-desc">Import ChatGPT conversations (.zip)</p>
           <form class="import-form" id="importForm">
             <label class="import-label" id="importLabel">
               <input type="file" name="file" accept=".zip" class="import-input" id="importFile">
@@ -177,12 +177,12 @@
           </form>
         </div>
 
-        <!-- Sistema -->
+        <!-- System -->
         <div class="config-panel" id="panel-system">
-          <h2 class="config-panel-title">Sistema</h2>
-          <p class="config-desc">Informacoes do servidor (editavel no .env)</p>
+          <h2 class="config-panel-title">System</h2>
+          <p class="config-desc">Server information (editable in .env)</p>
           <div class="info-grid">
-            <div class="info-label">Porta</div><div class="info-value" id="serverPort">—</div>
+            <div class="info-label">Port</div><div class="info-value" id="serverPort">—</div>
             <div class="info-label">Debug</div><div class="info-value" id="debugMode">—</div>
           </div>
         </div>

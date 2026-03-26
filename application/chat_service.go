@@ -46,7 +46,7 @@ func (s *ChatService) CreateConversation(ctx context.Context, title string) (*do
 	s.log.Debug("create conversation")
 
 	if title == "" {
-		title = "Nova conversa"
+		title = "New conversation"
 	}
 
 	conversation := &domain.Conversation{
@@ -117,7 +117,7 @@ func (s *ChatService) SendMessage(ctx context.Context, conversationID uint, cont
 		for _, msg := range contextMessages[:len(contextMessages)-1] {
 			parts = append(parts, msg.Role+": "+msg.Content)
 		}
-		agentInput = "Historico da conversa:\n" + strings.Join(parts, "\n") + "\n\nMensagem atual: " + content
+		agentInput = "Conversation history:\n" + strings.Join(parts, "\n") + "\n\nCurrent message: " + content
 	}
 
 	var fullResponse strings.Builder

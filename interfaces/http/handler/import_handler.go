@@ -27,19 +27,19 @@ func (h *ImportHandler) ImportChatGPT(c *fiber.Ctx) error {
 	file, err := c.FormFile("file")
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "arquivo nao enviado",
+			"error": "file not uploaded",
 		})
 	}
 
 	if !strings.HasSuffix(strings.ToLower(file.Filename), ".zip") {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "apenas arquivos .zip sao aceitos",
+			"error": "only .zip files are accepted",
 		})
 	}
 
 	if file.Size > maxImportSize {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "arquivo muito grande (max 100MB)",
+			"error": "file too large (max 100MB)",
 		})
 	}
 
