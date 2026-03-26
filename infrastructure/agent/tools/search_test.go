@@ -46,8 +46,8 @@ func TestSearch_NoResults(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if !strings.Contains(result, "nenhum resultado") {
-		t.Fatalf("expected 'nenhum resultado', got %q", result)
+	if !strings.Contains(result, "no results") {
+		t.Fatalf("expected 'no results', got %q", result)
 	}
 }
 
@@ -87,8 +87,8 @@ func TestSearch_EmptyDir(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if !strings.Contains(result, "nenhum resultado") {
-		t.Fatalf("expected 'nenhum resultado' for empty dir, got %q", result)
+	if !strings.Contains(result, "no results") {
+		t.Fatalf("expected 'no results' for empty dir, got %q", result)
 	}
 }
 

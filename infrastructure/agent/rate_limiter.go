@@ -44,7 +44,7 @@ func (l *RateLimiter) Allow(tool string) error {
 	}
 
 	if l.counters[tool] >= limit {
-		return fmt.Errorf("rate limit: %s excedeu %d chamadas/minuto", tool, limit)
+		return fmt.Errorf("rate limit: %s exceeded %d calls/minute", tool, limit)
 	}
 
 	l.counters[tool]++

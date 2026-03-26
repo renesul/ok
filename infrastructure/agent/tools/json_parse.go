@@ -21,7 +21,7 @@ type jsonParseInput struct {
 
 func (t *JSONParseTool) Run(input string) (string, error) {
 	if input == "" {
-		return "", fmt.Errorf("input vazio")
+		return "", fmt.Errorf("empty input")
 	}
 
 	var req jsonParseInput
@@ -29,7 +29,7 @@ func (t *JSONParseTool) Run(input string) (string, error) {
 		// Trata input direto como JSON para formatar
 		var raw interface{}
 		if err2 := json.Unmarshal([]byte(input), &raw); err2 != nil {
-			return "", fmt.Errorf("JSON invalido: %w", err2)
+			return "", fmt.Errorf("invalid JSON: %w", err2)
 		}
 		formatted, _ := json.MarshalIndent(raw, "", "  ")
 		return string(formatted), nil
@@ -37,7 +37,7 @@ func (t *JSONParseTool) Run(input string) (string, error) {
 
 	var data interface{}
 	if err := json.Unmarshal([]byte(req.JSON), &data); err != nil {
-		return "", fmt.Errorf("JSON invalido: %w", err)
+		return "", fmt.Errorf("invalid JSON: %w", err)
 	}
 
 	if req.Path == "" {
@@ -47,7 +47,7 @@ func (t *JSONParseTool) Run(input string) (string, error) {
 
 	result := extractPath(data, strings.Split(req.Path, "."))
 	if result == nil {
-		return "", fmt.Errorf("path '%s' nao encontrado", req.Path)
+		return "", fmt.Errorf("path '%s' not found", req.Path)
 	}
 
 	switch v := result.(type) {

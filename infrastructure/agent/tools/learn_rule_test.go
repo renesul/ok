@@ -8,8 +8,8 @@ import (
 func TestLearnRule_EmptyRule(t *testing.T) {
 	tool := NewLearnRuleTool(nil)
 	_, err := tool.Run(`{"rule":""}`)
-	if err == nil || !strings.Contains(err.Error(), "obrigatorio") {
-		t.Fatalf("expected 'obrigatorio' error, got %v", err)
+	if err == nil || !strings.Contains(err.Error(), "required") {
+		t.Fatalf("expected 'required' error, got %v", err)
 	}
 }
 

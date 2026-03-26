@@ -60,10 +60,10 @@ func (t *WebSearchTool) RunWithContext(ctx context.Context, input string) (strin
 	}
 
 	if query == "" {
-		return "", fmt.Errorf("query obrigatorio")
+		return "", fmt.Errorf("query required")
 	}
 	if len(query) > 500 {
-		return "", fmt.Errorf("query muito longa (max 500 chars)")
+		return "", fmt.Errorf("query too long (max 500 chars)")
 	}
 
 	reqCtx, cancel := context.WithTimeout(ctx, webSearchTimeout)
@@ -72,20 +72,20 @@ func (t *WebSearchTool) RunWithContext(ctx context.Context, input string) (strin
 	form := url.Values{"q": {query}}
 	req, err := http.NewRequestWithContext(reqCtx, "POST", ddgURL, strings.NewReader(form.Encode()))
 	if err != nil {
-		return "", fmt.Errorf("criar request: %w", err)
+		return "", fmt.Errorf("create request: %w", err)
 	}
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	req.Header.Set("User-Agent", "Mozilla/5.0 (compatible; OK-Agent/1.0)")
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return "", fmt.Errorf("busca falhou: %w", err)
+		return "", fmt.Errorf("search failed: %w", err)
 	}
 	defer resp.Body.Close()
 
 	body, err := io.ReadAll(io.LimitReader(resp.Body, 512*1024))
 	if err != nil {
-		return "", fmt.Errorf("ler resposta: %w", err)
+		return "", fmt.Errorf("read response: %w", err)
 	}
 
 	html := string(body)
@@ -129,10 +129,10 @@ func parseSearchResults(html, query string) string {
 	}
 
 	if len(results) == 0 {
-		return "nenhum resultado encontrado para: " + query
+		return "no results found for: " + query
 	}
 
-	return fmt.Sprintf("Resultados para \"%s\":\n\n%s", query, strings.Join(results, "\n\n"))
+	return fmt.Sprintf("Results for \"%s\":\n\n%s", query, strings.Join(results, "\n\n"))
 }
 
 func extractDDGURL(raw string) string {

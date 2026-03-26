@@ -48,8 +48,8 @@ func TestPruneContext_PrunesOver80Percent(t *testing.T) {
 	if len(state.History) >= 10 {
 		t.Fatalf("expected pruned history, got %d entries", len(state.History))
 	}
-	if !strings.Contains(state.History[0].Content, "podado") {
-		t.Fatalf("expected first entry to contain 'podado', got %q", state.History[0].Content)
+	if !strings.Contains(state.History[0].Content, "pruned") {
+		t.Fatalf("expected first entry to contain 'pruned', got %q", state.History[0].Content)
 	}
 }
 

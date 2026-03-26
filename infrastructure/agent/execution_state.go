@@ -45,13 +45,13 @@ func Transition(state *domain.ExecutionState, to domain.ExecutionPhase) error {
 // IsBudgetExhausted verifica se o budget foi esgotado e retorna o motivo
 func IsBudgetExhausted(state *domain.ExecutionState) (bool, string) {
 	if state.Budget.MaxSteps > 0 && state.Attempts >= state.Budget.MaxSteps {
-		return true, fmt.Sprintf("max steps atingido (%d)", state.Budget.MaxSteps)
+		return true, fmt.Sprintf("max steps reached (%d)", state.Budget.MaxSteps)
 	}
 	if state.Budget.MaxDuration > 0 && time.Since(state.Budget.StartTime) >= state.Budget.MaxDuration {
-		return true, fmt.Sprintf("timeout atingido (%s)", state.Budget.MaxDuration)
+		return true, fmt.Sprintf("timeout reached (%s)", state.Budget.MaxDuration)
 	}
 	if state.Plan != nil && state.CurrentStep >= len(state.Plan.Steps) {
-		return true, "plano completo"
+		return true, "plan complete"
 	}
 	return false, ""
 }
@@ -151,10 +151,10 @@ func ReplacePlanSafe(state *domain.ExecutionState, remaining []domain.PlannedSte
 
 func BuildContext(state *domain.ExecutionState) string {
 	var parts []string
-	parts = append(parts, "Objetivo: "+state.Goal)
+	parts = append(parts, "Goal: "+state.Goal)
 
 	if len(state.Memories) > 0 {
-		parts = append(parts, "Memorias relevantes:\n"+strings.Join(state.Memories, "\n"))
+		parts = append(parts, "Relevant memories:\n"+strings.Join(state.Memories, "\n"))
 	}
 
 	if state.Plan != nil {
@@ -172,7 +172,7 @@ func BuildContext(state *domain.ExecutionState) string {
 			}
 			planDesc = append(planDesc, line)
 		}
-		parts = append(parts, "Plano:\n"+strings.Join(planDesc, "\n"))
+		parts = append(parts, "Plan:\n"+strings.Join(planDesc, "\n"))
 	}
 
 	for _, entry := range state.History {

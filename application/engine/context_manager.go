@@ -53,7 +53,7 @@ func (c *ContextManager) PruneContextIfNeeded(ctx context.Context, state *domain
 
 	synthEntry := domain.ExecutionEntry{
 		Phase:   domain.PhaseObserve,
-		Content: fmt.Sprintf("[Contexto antigo podado — %d entradas removidas]", splitAt),
+		Content: fmt.Sprintf("[Old context pruned — %d entries removed]", splitAt),
 	}
 	state.History = append([]domain.ExecutionEntry{synthEntry}, state.History[splitAt:]...)
 

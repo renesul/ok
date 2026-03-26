@@ -53,7 +53,7 @@ func (t *FileReadTool) Run(input string) (string, error) {
 	}
 
 	if req.File == "" {
-		return "", fmt.Errorf("file obrigatorio. Input JSON: {\"file\":\"nome\", \"start_line\":1, \"end_line\":100}")
+		return "", fmt.Errorf("file required. Input JSON: {\"file\":\"name\", \"start_line\":1, \"end_line\":100}")
 	}
 
 	safe, err := safePath(t.baseDir, req.File)
@@ -64,7 +64,7 @@ func (t *FileReadTool) Run(input string) (string, error) {
 	// Filtro de extensao binaria
 	ext := strings.ToLower(filepath.Ext(safe))
 	if binaryExtensions[ext] {
-		return "", fmt.Errorf("arquivo binario negado: %s", ext)
+		return "", fmt.Errorf("binary file denied: %s", ext)
 	}
 
 	// Filtro MIME (primeiros 512 bytes)
@@ -89,7 +89,7 @@ func (t *FileReadTool) Run(input string) (string, error) {
 func checkTextMIME(path string) error {
 	f, err := os.Open(path)
 	if err != nil {
-		return fmt.Errorf("abrir arquivo: %w", err)
+		return fmt.Errorf("open file: %w", err)
 	}
 	defer f.Close()
 
@@ -101,7 +101,7 @@ func checkTextMIME(path string) error {
 
 	mime := http.DetectContentType(buf[:n])
 	if !strings.HasPrefix(mime, "text/") && mime != "application/json" && mime != "application/xml" && mime != "application/javascript" {
-		return fmt.Errorf("arquivo binario negado (MIME: %s)", mime)
+		return fmt.Errorf("binary file denied (MIME: %s)", mime)
 	}
 	return nil
 }
@@ -109,7 +109,7 @@ func checkTextMIME(path string) error {
 func readLines(path string, startLine, endLine int) (string, error) {
 	f, err := os.Open(path)
 	if err != nil {
-		return "", fmt.Errorf("ler arquivo: %w", err)
+		return "", fmt.Errorf("read file: %w", err)
 	}
 	defer f.Close()
 
@@ -156,7 +156,7 @@ func readLines(path string, startLine, endLine int) (string, error) {
 		if truncated {
 			nextStart = lineNum
 		}
-		result += fmt.Sprintf("\n[TRUNCADO: %d linhas totais. Use start_line=%d para continuar]", totalLines, nextStart)
+		result += fmt.Sprintf("\n[TRUNCATED: %d total lines. Use start_line=%d to continue]", totalLines, nextStart)
 	}
 
 	return result, nil
@@ -164,15 +164,15 @@ func readLines(path string, startLine, endLine int) (string, error) {
 
 func safePath(baseDir, relativePath string) (string, error) {
 	if strings.Contains(relativePath, "..") {
-		return "", fmt.Errorf("path traversal bloqueado")
+		return "", fmt.Errorf("path traversal blocked")
 	}
 	if filepath.IsAbs(relativePath) {
-		return "", fmt.Errorf("path absoluto nao permitido")
+		return "", fmt.Errorf("absolute path not allowed")
 	}
 
 	absBase, err := filepath.Abs(baseDir)
 	if err != nil {
-		return "", fmt.Errorf("resolver base dir: %w", err)
+		return "", fmt.Errorf("resolve base dir: %w", err)
 	}
 
 	full := filepath.Join(absBase, filepath.Clean(relativePath))
@@ -184,7 +184,7 @@ func safePath(baseDir, relativePath string) (string, error) {
 	}
 
 	if !strings.HasPrefix(full, absBase) {
-		return "", fmt.Errorf("path fora do sandbox (symlink escape detectado)")
+		return "", fmt.Errorf("path outside sandbox (symlink escape detected)")
 	}
 
 	return full, nil

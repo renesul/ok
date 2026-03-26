@@ -41,8 +41,8 @@ func TestSearchToolNoResults(t *testing.T) {
 	if err != nil {
 		t.Fatalf("search failed: %v", err)
 	}
-	if result != "nenhum resultado encontrado" {
-		t.Errorf("expected 'nenhum resultado encontrado', got: %s", result)
+	if result != "no results found" {
+		t.Errorf("expected 'no results found', got: %s", result)
 	}
 }
 

@@ -41,8 +41,8 @@ func TestExecutor_ToolError(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error from tool")
 	}
-	if !strings.Contains(err.Error(), "falhou") {
-		t.Errorf("error = %q, want to contain 'falhou'", err.Error())
+	if !strings.Contains(err.Error(), "failed") {
+		t.Errorf("error = %q, want to contain 'failed'", err.Error())
 	}
 }
 

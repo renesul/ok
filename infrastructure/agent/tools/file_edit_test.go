@@ -25,8 +25,8 @@ func TestFileEditTool_ReplaceLines(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if !strings.Contains(result, "editado") {
-		t.Errorf("result = %q, want to contain 'editado'", result)
+	if !strings.Contains(result, "edited") {
+		t.Errorf("result = %q, want to contain 'edited'", result)
 	}
 
 	data, _ := os.ReadFile(file)

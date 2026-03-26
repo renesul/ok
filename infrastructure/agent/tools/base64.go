@@ -21,7 +21,7 @@ type base64Input struct {
 
 func (t *Base64Tool) Run(input string) (string, error) {
 	if input == "" {
-		return "", fmt.Errorf("input vazio")
+		return "", fmt.Errorf("empty input")
 	}
 
 	var req base64Input
@@ -40,6 +40,6 @@ func (t *Base64Tool) Run(input string) (string, error) {
 		}
 		return string(decoded), nil
 	default:
-		return "", fmt.Errorf("action deve ser 'encode' ou 'decode'")
+		return "", fmt.Errorf("action must be 'encode' or 'decode'")
 	}
 }

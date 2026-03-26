@@ -93,13 +93,13 @@ func (g *SafetyGate) validateHTTPInput(input string) error {
 
 	// Bloquear localhost e IPs internos
 	if host == "localhost" || host == "127.0.0.1" || host == "::1" || host == "0.0.0.0" {
-		return fmt.Errorf("acesso a localhost bloqueado")
+		return fmt.Errorf("localhost access blocked")
 	}
 
 	ip := net.ParseIP(host)
 	if ip != nil {
 		if ip.IsLoopback() || ip.IsPrivate() || ip.IsLinkLocalUnicast() {
-			return fmt.Errorf("acesso a IP interno bloqueado: %s", host)
+			return fmt.Errorf("internal IP access blocked: %s", host)
 		}
 	}
 

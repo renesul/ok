@@ -65,7 +65,7 @@ func (t *REPLTool) RunWithContext(ctx context.Context, input string) (string, er
 	}
 
 	if err := json.Unmarshal([]byte(input), &req); err != nil {
-		return "", fmt.Errorf("input deve ser JSON: {\"language\":\"python\", \"code\":\"print(2+2)\"}")
+		return "", fmt.Errorf("input must be JSON: {\"language\":\"python\", \"code\":\"print(2+2)\"}")
 	}
 
 	if req.Code != "" {
@@ -73,12 +73,12 @@ func (t *REPLTool) RunWithContext(ctx context.Context, input string) (string, er
 	}
 
 	if req.Script == "" {
-		return "", fmt.Errorf("code obrigatorio")
+		return "", fmt.Errorf("code required")
 	}
 
 	lang, ok := langConfig[req.Language]
 	if !ok {
-		return "", fmt.Errorf("language deve ser: python, node ou bash")
+		return "", fmt.Errorf("language must be: python, node or bash")
 	}
 
 	// Confirmacao HIL
@@ -87,19 +87,19 @@ func (t *REPLTool) RunWithContext(ctx context.Context, input string) (string, er
 		conf := t.confirmManager.Request("repl", summary)
 		approved, waitErr := t.confirmManager.WaitForResponse(conf)
 		if waitErr != nil || !approved {
-			return "", fmt.Errorf("execucao nao aprovada")
+			return "", fmt.Errorf("execution not approved")
 		}
 	}
 
 	tempFile, err := os.CreateTemp("", fmt.Sprintf("ok_repl_*%s", lang.ext))
 	if err != nil {
-		return "", fmt.Errorf("criar script temporario seguro: %w", err)
+		return "", fmt.Errorf("create secure temp script: %w", err)
 	}
 	defer os.Remove(tempFile.Name())
 
 	if _, err := tempFile.Write([]byte(req.Script)); err != nil {
 		tempFile.Close()
-		return "", fmt.Errorf("escrever script: %w", err)
+		return "", fmt.Errorf("write script: %w", err)
 	}
 	tempFile.Close()
 
@@ -114,7 +114,7 @@ func (t *REPLTool) RunWithContext(ctx context.Context, input string) (string, er
 		// Fallback
 		output, err := cmd.CombinedOutput()
 		if execCtx.Err() == context.DeadlineExceeded {
-			return "", fmt.Errorf("timeout: script excedeu %s", replTimeout)
+			return "", fmt.Errorf("timeout: script exceeded %s", replTimeout)
 		}
 		result := agent.TruncateWithEllipsis(string(output), maxREPLOutput)
 		if err != nil {
@@ -156,7 +156,7 @@ func (t *REPLTool) RunWithContext(ctx context.Context, input string) (string, er
 	waitErr := cmd.Wait()
 
 	if execCtx.Err() == context.DeadlineExceeded {
-		return "", fmt.Errorf("timeout: script excedeu %s", replTimeout)
+		return "", fmt.Errorf("timeout: script exceeded %s", replTimeout)
 	}
 
 	result := agent.TruncateWithEllipsis(buf.String(), maxREPLOutput)
@@ -176,5 +176,5 @@ func previewCode(s string) string {
 		return s
 	}
 	omitted := strconv.Itoa(len(s) - 400)
-	return s[:200] + "\n... (" + omitted + " chars omitidos) ...\n" + s[len(s)-200:]
+	return s[:200] + "\n... (" + omitted + " chars omitted) ...\n" + s[len(s)-200:]
 }

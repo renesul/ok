@@ -26,16 +26,16 @@ func NewSchedulerService(repository domain.JobRepository, log *zap.Logger) *Sche
 
 func (s *SchedulerService) CreateJob(ctx context.Context, name, taskType, input string, intervalSeconds int) (*domain.Job, error) {
 	if name == "" {
-		return nil, fmt.Errorf("name obrigatorio")
+		return nil, fmt.Errorf("name required")
 	}
 	if taskType == "" {
-		return nil, fmt.Errorf("task_type obrigatorio")
+		return nil, fmt.Errorf("task_type required")
 	}
 	if input == "" {
-		return nil, fmt.Errorf("input obrigatorio")
+		return nil, fmt.Errorf("input required")
 	}
 	if intervalSeconds < minIntervalSeconds {
-		return nil, fmt.Errorf("intervalo minimo: %d segundos", minIntervalSeconds)
+		return nil, fmt.Errorf("minimum interval: %d seconds", minIntervalSeconds)
 	}
 
 	job := &domain.Job{
@@ -70,7 +70,7 @@ func (s *SchedulerService) UpdateJob(ctx context.Context, id string, enabled *bo
 		return nil, fmt.Errorf("find job: %w", err)
 	}
 	if job == nil {
-		return nil, fmt.Errorf("job nao encontrado")
+		return nil, fmt.Errorf("job not found")
 	}
 
 	if enabled != nil {
@@ -81,7 +81,7 @@ func (s *SchedulerService) UpdateJob(ctx context.Context, id string, enabled *bo
 	}
 	if intervalSeconds != nil {
 		if *intervalSeconds < minIntervalSeconds {
-			return nil, fmt.Errorf("intervalo minimo: %d segundos", minIntervalSeconds)
+			return nil, fmt.Errorf("minimum interval: %d seconds", minIntervalSeconds)
 		}
 		job.IntervalSeconds = *intervalSeconds
 	}

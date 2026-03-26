@@ -35,18 +35,18 @@ func (p *DefaultPlanner) Plan(decision domain.Decision, ctx *domain.AgentContext
 
 	if ctx.LimitReached() {
 		p.log.Debug("planner rejected: limit reached", zap.Int("steps", ctx.Steps), zap.Int("max", ctx.MaxSteps))
-		return domain.Plan{}, fmt.Errorf("limite de %d steps atingido", ctx.MaxSteps)
+		return domain.Plan{}, fmt.Errorf("limit of %d steps reached", ctx.MaxSteps)
 	}
 
 	tool, exists := p.tools[decision.Tool]
 	if !exists {
 		p.log.Debug("planner rejected: tool not found", zap.String("tool", decision.Tool))
-		return domain.Plan{}, fmt.Errorf("tool '%s' nao encontrada", decision.Tool)
+		return domain.Plan{}, fmt.Errorf("tool '%s' not found", decision.Tool)
 	}
 
 	if decision.Input == "" && decision.Tool != "echo" {
 		p.log.Debug("planner rejected: empty input", zap.String("tool", decision.Tool))
-		return domain.Plan{}, fmt.Errorf("input vazio para tool '%s'", decision.Tool)
+		return domain.Plan{}, fmt.Errorf("empty input for tool '%s'", decision.Tool)
 	}
 
 	p.log.Debug("plan approved", zap.String("tool", decision.Tool), zap.String("input", decision.Input))

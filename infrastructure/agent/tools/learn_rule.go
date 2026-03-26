@@ -26,19 +26,19 @@ func (t *LearnRuleTool) Run(input string) (string, error) {
 	}
 
 	if err := json.Unmarshal([]byte(input), &req); err != nil {
-		return "", fmt.Errorf("input deve ser JSON: {\"rule\":\"preferir Fiber a Echo\"}")
+		return "", fmt.Errorf("input must be JSON: {\"rule\":\"prefer Fiber over Echo\"}")
 	}
 
 	if req.Rule == "" {
-		return "", fmt.Errorf("rule obrigatorio")
+		return "", fmt.Errorf("rule required")
 	}
 
 	if err := t.memory.Save(domain.MemoryEntry{
 		Content:  req.Rule,
 		Category: "rule",
 	}); err != nil {
-		return "", fmt.Errorf("salvar regra: %w", err)
+		return "", fmt.Errorf("save rule: %w", err)
 	}
 
-	return fmt.Sprintf("regra aprendida: %s", req.Rule), nil
+	return fmt.Sprintf("rule learned: %s", req.Rule), nil
 }

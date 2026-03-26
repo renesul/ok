@@ -36,8 +36,8 @@ func TestJSONParseTool_MissingPath(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error for missing path")
 	}
-	if !strings.Contains(err.Error(), "nao encontrado") {
-		t.Errorf("error = %q, want to contain 'nao encontrado'", err.Error())
+	if !strings.Contains(err.Error(), "not found") {
+		t.Errorf("error = %q, want to contain 'not found'", err.Error())
 	}
 }
 

@@ -41,8 +41,8 @@ func TestDelegate_EmptySubTask(t *testing.T) {
 	runner := func(_ context.Context, _ string) ([]string, error) { return nil, nil }
 	tool := NewDelegateTaskTool(runner)
 	_, err := tool.Run(`{"sub_task":""}`)
-	if err == nil || !strings.Contains(err.Error(), "obrigatorio") {
-		t.Fatalf("expected 'obrigatorio' error, got %v", err)
+	if err == nil || !strings.Contains(err.Error(), "required") {
+		t.Fatalf("expected 'required' error, got %v", err)
 	}
 }
 
@@ -58,8 +58,8 @@ func TestDelegate_MaxSubAgents(t *testing.T) {
 	}
 
 	_, err := tool.Run(`{"sub_task":"task"}`)
-	if err == nil || !strings.Contains(err.Error(), "limite") {
-		t.Fatalf("expected 'limite' error on call %d, got %v", maxSubAgents+1, err)
+	if err == nil || !strings.Contains(err.Error(), "limit") {
+		t.Fatalf("expected 'limit' error on call %d, got %v", maxSubAgents+1, err)
 	}
 }
 
@@ -84,7 +84,7 @@ func TestDelegate_RunnerError(t *testing.T) {
 	}
 	tool := NewDelegateTaskTool(runner)
 	_, err := tool.Run(`{"sub_task":"task"}`)
-	if err == nil || !strings.Contains(err.Error(), "sub-agente falhou") {
-		t.Fatalf("expected 'sub-agente falhou' error, got %v", err)
+	if err == nil || !strings.Contains(err.Error(), "sub-agent failed") {
+		t.Fatalf("expected 'sub-agent failed' error, got %v", err)
 	}
 }

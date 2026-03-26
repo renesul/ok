@@ -24,12 +24,12 @@ func (t *SkillLoaderTool) Safety() domain.ToolSafety { return domain.ToolSafe }
 func (t *SkillLoaderTool) Run(input string) (string, error) {
 	name := strings.TrimSpace(strings.ToLower(input))
 	if name == "" {
-		return "", fmt.Errorf("nome da skill obrigatorio")
+		return "", fmt.Errorf("skill name required")
 	}
 
 	skill, err := t.repo.Get(name)
 	if err != nil {
-		return "", fmt.Errorf("carregar skill: %w", err)
+		return "", fmt.Errorf("load skill: %w", err)
 	}
 
 	return skill.Content, nil

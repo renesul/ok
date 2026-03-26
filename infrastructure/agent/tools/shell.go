@@ -40,11 +40,11 @@ var confirmationPatterns = []struct {
 	Pattern *regexp.Regexp
 	Reason  string
 }{
-	{regexp.MustCompile(`\brm\b.*-[^\s]*[rf]`), "rm com flag destrutiva"},
-	{regexp.MustCompile(`\bsudo\b`), "uso de sudo"},
-	{regexp.MustCompile(`\bchmod\b`), "alteracao de permissoes"},
-	{regexp.MustCompile(`\bchown\b`), "alteracao de proprietario"},
-	{regexp.MustCompile(`\bkill\b`), "encerrar processo"},
+	{regexp.MustCompile(`\brm\b.*-[^\s]*[rf]`), "rm with destructive flag"},
+	{regexp.MustCompile(`\bsudo\b`), "sudo usage"},
+	{regexp.MustCompile(`\bchmod\b`), "permission change"},
+	{regexp.MustCompile(`\bchown\b`), "ownership change"},
+	{regexp.MustCompile(`\bkill\b`), "kill process"},
 	{regexp.MustCompile(`\bshutdown\b`), "shutdown"},
 	{regexp.MustCompile(`\breboot\b`), "reboot"},
 }
@@ -79,23 +79,23 @@ func (t *ShellTool) Run(input string) (string, error) {
 
 func (t *ShellTool) RunWithContext(ctx context.Context, input string) (string, error) {
 	if input == "" {
-		return "", fmt.Errorf("comando vazio")
+		return "", fmt.Errorf("empty command")
 	}
 
 	// Tier 1: Sempre bloqueado
 	if reason := isAlwaysBlocked(input); reason != "" {
-		return "", fmt.Errorf("comando bloqueado: %s", reason)
+		return "", fmt.Errorf("command blocked: %s", reason)
 	}
 
 	// Tier 2: Requer confirmacao
 	if reason := requiresConfirmation(input); reason != "" {
 		if t.confirmManager == nil {
-			return "", fmt.Errorf("comando requer confirmacao: %s", reason)
+			return "", fmt.Errorf("command requires confirmation: %s", reason)
 		}
 		conf := t.confirmManager.Request("shell", input)
 		approved, err := t.confirmManager.WaitForResponse(conf)
 		if err != nil || !approved {
-			return "", fmt.Errorf("comando nao aprovado: %s", reason)
+			return "", fmt.Errorf("command not approved: %s", reason)
 		}
 	}
 
@@ -110,10 +110,10 @@ func (t *ShellTool) RunWithContext(ctx context.Context, input string) (string, e
 		// Fallback para CombinedOutput se PTY falhar
 		output, execErr := cmd.CombinedOutput()
 		if execCtx.Err() == context.DeadlineExceeded {
-			return "", fmt.Errorf("timeout: comando excedeu %s", shellTimeout)
+			return "", fmt.Errorf("timeout: command exceeded %s", shellTimeout)
 		}
 		if execErr != nil {
-			return "", fmt.Errorf("comando falhou: %w (output: %s)", execErr, agent.TruncateWithEllipsis(string(output), maxShellOutput))
+			return "", fmt.Errorf("command failed: %w (output: %s)", execErr, agent.TruncateWithEllipsis(string(output), maxShellOutput))
 		}
 		return agent.TruncateWithEllipsis(string(output), maxShellOutput), nil
 	}
@@ -148,10 +148,10 @@ func (t *ShellTool) RunWithContext(ctx context.Context, input string) (string, e
 	waitErr := cmd.Wait()
 
 	if execCtx.Err() == context.DeadlineExceeded {
-		return "", fmt.Errorf("timeout: comando excedeu %s", shellTimeout)
+		return "", fmt.Errorf("timeout: command exceeded %s", shellTimeout)
 	}
 	if waitErr != nil {
-		return "", fmt.Errorf("comando falhou: %w (output: %s)", waitErr, agent.TruncateWithEllipsis(buf.String(), maxShellOutput))
+		return "", fmt.Errorf("command failed: %w (output: %s)", waitErr, agent.TruncateWithEllipsis(buf.String(), maxShellOutput))
 	}
 
 	return agent.TruncateWithEllipsis(buf.String(), maxShellOutput), nil

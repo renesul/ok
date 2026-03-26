@@ -49,8 +49,8 @@ func TestFileReadTool_BinaryRejected(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error for binary extension")
 	}
-	if !strings.Contains(err.Error(), "binario") {
-		t.Errorf("error = %q, want to contain 'binario'", err.Error())
+	if !strings.Contains(err.Error(), "binary") {
+		t.Errorf("error = %q, want to contain 'binary'", err.Error())
 	}
 }
 

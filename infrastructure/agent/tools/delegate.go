@@ -41,32 +41,32 @@ func (t *DelegateTaskTool) RunWithContext(ctx context.Context, input string) (st
 	}
 
 	if err := json.Unmarshal([]byte(input), &req); err != nil {
-		return "", fmt.Errorf("input deve ser JSON: {\"sub_task\":\"descricao\", \"context\":\"info\"}")
+		return "", fmt.Errorf("input must be JSON: {\"sub_task\":\"description\", \"context\":\"info\"}")
 	}
 
 	if req.SubTask == "" {
-		return "", fmt.Errorf("sub_task obrigatorio")
+		return "", fmt.Errorf("sub_task required")
 	}
 
 	// Limite de sub-agentes por execucao
 	count := t.callCount.Add(1)
 	if count > maxSubAgents {
-		return "", fmt.Errorf("limite de %d sub-agentes atingido", maxSubAgents)
+		return "", fmt.Errorf("limit of %d sub-agents reached", maxSubAgents)
 	}
 
 	// Montar input para o sub-agente
 	subInput := req.SubTask
 	if req.Context != "" {
-		subInput = req.Context + "\n\nTarefa: " + req.SubTask
+		subInput = req.Context + "\n\nTask: " + req.SubTask
 	}
 
 	messages, err := t.runner(ctx, subInput)
 	if err != nil {
-		return "", fmt.Errorf("sub-agente falhou: %w", err)
+		return "", fmt.Errorf("sub-agent failed: %w", err)
 	}
 
 	if len(messages) == 0 {
-		return "sub-agente concluiu sem output", nil
+		return "sub-agent finished without output", nil
 	}
 
 	return strings.Join(messages, "\n"), nil

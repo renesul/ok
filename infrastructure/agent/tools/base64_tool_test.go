@@ -39,8 +39,8 @@ func TestBase64_InvalidAction(t *testing.T) {
 func TestBase64_EmptyInput(t *testing.T) {
 	tool := &Base64Tool{}
 	_, err := tool.Run("")
-	if err == nil || !strings.Contains(err.Error(), "vazio") {
-		t.Fatalf("expected 'vazio' error, got %v", err)
+	if err == nil || !strings.Contains(err.Error(), "empty") {
+		t.Fatalf("expected 'empty' error, got %v", err)
 	}
 }
 

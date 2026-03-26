@@ -211,9 +211,9 @@ func (s *AgentService) BuildSystemPrompt() string {
 			for _, sk := range skills {
 				skillDescs = append(skillDescs, fmt.Sprintf("- %s: %s", sk.Name, sk.Description))
 			}
-			parts = append(parts, "[SKILLS INSTALADAS] Voce possui as seguintes habilidades carregaveis na memoria:\n"+
+			parts = append(parts, "[INSTALLED SKILLS] You have the following loadable skills:\n"+
 				strings.Join(skillDescs, "\n")+
-				"\nUse a tool 'skill_loader' para ler as regras de uma habilidade ANTES de executar a tarefa se sentir necessidade.")
+				"\nUse the 'skill_loader' tool to read a skill's rules BEFORE executing a task if needed.")
 		}
 	}
 

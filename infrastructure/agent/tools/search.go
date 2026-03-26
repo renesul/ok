@@ -44,14 +44,14 @@ func (t *SearchTool) Run(input string) (string, error) {
 	}
 
 	if err := json.Unmarshal([]byte(input), &req); err != nil {
-		return "", fmt.Errorf("input deve ser JSON: {\"directory\":\"/path\", \"pattern\":\"texto\", \"file_extension\":\".go\"}")
+		return "", fmt.Errorf("input must be JSON: {\"directory\":\"/path\", \"pattern\":\"text\", \"file_extension\":\".go\"}")
 	}
 
 	if req.Directory == "" {
-		return "", fmt.Errorf("directory obrigatorio")
+		return "", fmt.Errorf("directory required")
 	}
 	if req.Pattern == "" {
-		return "", fmt.Errorf("pattern obrigatorio")
+		return "", fmt.Errorf("pattern required")
 	}
 
 	dir := req.Directory
@@ -60,7 +60,7 @@ func (t *SearchTool) Run(input string) (string, error) {
 	}
 	absDir, err := filepath.Abs(dir)
 	if err != nil {
-		return "", fmt.Errorf("resolver path: %w", err)
+		return "", fmt.Errorf("resolve path: %w", err)
 	}
 	if err := validateSearchPath(absDir); err != nil {
 		return "", err
@@ -68,10 +68,10 @@ func (t *SearchTool) Run(input string) (string, error) {
 
 	info, err := os.Stat(absDir)
 	if err != nil {
-		return "", fmt.Errorf("diretorio nao encontrado: %w", err)
+		return "", fmt.Errorf("directory not found: %w", err)
 	}
 	if !info.IsDir() {
-		return "", fmt.Errorf("path nao e diretorio: %s", absDir)
+		return "", fmt.Errorf("path is not a directory: %s", absDir)
 	}
 
 	isRegex := regexMeta.MatchString(req.Pattern)
@@ -79,7 +79,7 @@ func (t *SearchTool) Run(input string) (string, error) {
 	if isRegex {
 		re, err = regexp.Compile(req.Pattern)
 		if err != nil {
-			return "", fmt.Errorf("regex invalido: %w", err)
+			return "", fmt.Errorf("invalid regex: %w", err)
 		}
 	}
 
@@ -130,7 +130,7 @@ func (t *SearchTool) Run(input string) (string, error) {
 				relPath, _ := filepath.Rel(absDir, path)
 				entry := fmt.Sprintf("%s:%d: %s\n", relPath, lineNum, line)
 				if out.Len()+len(entry) > maxSearchOutput {
-					out.WriteString("...(output truncado)\n")
+					out.WriteString("...(output truncated)\n")
 					count = maxSearchResults
 					return nil
 				}
@@ -142,10 +142,10 @@ func (t *SearchTool) Run(input string) (string, error) {
 	})
 
 	if count == 0 {
-		return "nenhum resultado encontrado", nil
+		return "no results found", nil
 	}
 
-	return fmt.Sprintf("%d resultados:\n%s", count, out.String()), nil
+	return fmt.Sprintf("%d results:\n%s", count, out.String()), nil
 }
 
 func validateSearchPath(absPath string) error {
@@ -153,7 +153,7 @@ func validateSearchPath(absPath string) error {
 	clean := filepath.Clean(absPath)
 	for _, b := range blocked {
 		if clean == b {
-			return fmt.Errorf("path bloqueado: %s", clean)
+			return fmt.Errorf("blocked path: %s", clean)
 		}
 	}
 	return nil

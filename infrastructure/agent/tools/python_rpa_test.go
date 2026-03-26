@@ -8,8 +8,8 @@ import (
 func TestPythonRPA_EmptyCode(t *testing.T) {
 	tool := NewPythonRPATool(t.TempDir(), nil)
 	_, err := tool.Run("")
-	if err == nil || !strings.Contains(err.Error(), "vazio") {
-		t.Fatalf("expected 'vazio' error, got %v", err)
+	if err == nil || !strings.Contains(err.Error(), "empty") {
+		t.Fatalf("expected 'empty' error, got %v", err)
 	}
 }
 

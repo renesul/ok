@@ -57,7 +57,7 @@ func (m *ConfirmationManager) Respond(id string, approved bool) error {
 	conf, exists := m.pending[id]
 	if !exists {
 		m.mu.Unlock()
-		return fmt.Errorf("confirmacao nao encontrada ou expirada: %s", id)
+		return fmt.Errorf("confirmation not found or expired: %s", id)
 	}
 	delete(m.pending, id)
 	m.mu.Unlock()

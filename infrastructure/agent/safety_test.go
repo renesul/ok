@@ -55,8 +55,8 @@ func TestSafetyGate_HTTP_BlocksLocalhost(t *testing.T) {
 		if err == nil {
 			t.Errorf("expected block for %q", url)
 		}
-		if err != nil && !strings.Contains(err.Error(), "bloqueado") {
-			t.Errorf("url %q: error = %q, want 'bloqueado'", url, err.Error())
+		if err != nil && !strings.Contains(err.Error(), "blocked") {
+			t.Errorf("url %q: error = %q, want 'blocked'", url, err.Error())
 		}
 	}
 }

@@ -61,11 +61,11 @@ func (t *BrowserTool) Run(input string) (string, error) {
 func (t *BrowserTool) RunWithContext(ctx context.Context, input string) (string, error) {
 	var req browserInput
 	if err := json.Unmarshal([]byte(input), &req); err != nil {
-		return "", fmt.Errorf(`input deve ser JSON: {"url":"https://example.com"}`)
+		return "", fmt.Errorf(`input must be JSON: {"url":"https://example.com"}`)
 	}
 
 	if req.URL == "" {
-		return "", fmt.Errorf("url obrigatorio")
+		return "", fmt.Errorf("url required")
 	}
 
 	if err := validateURL(req.URL); err != nil {
@@ -79,7 +79,7 @@ func (t *BrowserTool) RunWithContext(ctx context.Context, input string) (string,
 
 	// Fallback HTTP — actions nao suportadas sem browser
 	if len(req.Actions) > 0 {
-		return "", fmt.Errorf("actions requerem Chrome/Chromium instalado (headless browser nao encontrado)")
+		return "", fmt.Errorf("actions require Chrome/Chromium installed (headless browser not found)")
 	}
 
 	text, err := fetchWithHTTP(ctx, req.URL)
@@ -112,16 +112,16 @@ func (t *BrowserTool) runWithBrowser(ctx context.Context, req browserInput, chro
 
 	page, pageErr := browser.Page(proto.TargetCreateTarget{URL: ""})
 	if pageErr != nil {
-		return "", fmt.Errorf("criar pagina: %w", pageErr)
+		return "", fmt.Errorf("create page: %w", pageErr)
 	}
 	defer page.Close()
 
 	if navErr := page.Context(execCtx).Navigate(req.URL); navErr != nil {
-		return "", fmt.Errorf("navegar: %w", navErr)
+		return "", fmt.Errorf("navigate: %w", navErr)
 	}
 
 	if loadErr := page.Context(execCtx).WaitLoad(); loadErr != nil {
-		return "", fmt.Errorf("aguardar carregamento: %w", loadErr)
+		return "", fmt.Errorf("wait for load: %w", loadErr)
 	}
 
 	// Execute actions if any
@@ -146,12 +146,12 @@ func (t *BrowserTool) runWithBrowser(ctx context.Context, req browserInput, chro
 	// Default: return body text
 	body, elemErr := page.Element("body")
 	if elemErr != nil {
-		return "", fmt.Errorf("elemento body: %w", elemErr)
+		return "", fmt.Errorf("body element: %w", elemErr)
 	}
 
 	text, textErr := body.Text()
 	if textErr != nil {
-		return "", fmt.Errorf("extrair texto: %w", textErr)
+		return "", fmt.Errorf("extract text: %w", textErr)
 	}
 
 	return truncateWords(strings.TrimSpace(text), maxBrowserWords), nil
@@ -161,14 +161,14 @@ func (t *BrowserTool) executeAction(ctx context.Context, page *rod.Page, action 
 	switch action.Type {
 	case "wait":
 		if action.Selector == "" {
-			return "", fmt.Errorf("selector obrigatorio para wait")
+			return "", fmt.Errorf("selector required for wait")
 		}
 		_, err := page.Element(action.Selector)
 		return "", err
 
 	case "click":
 		if action.Selector == "" {
-			return "", fmt.Errorf("selector obrigatorio para click")
+			return "", fmt.Errorf("selector required for click")
 		}
 		el, err := page.Element(action.Selector)
 		if err != nil {
@@ -178,7 +178,7 @@ func (t *BrowserTool) executeAction(ctx context.Context, page *rod.Page, action 
 
 	case "fill":
 		if action.Selector == "" {
-			return "", fmt.Errorf("selector obrigatorio para fill")
+			return "", fmt.Errorf("selector required for fill")
 		}
 		el, err := page.Element(action.Selector)
 		if err != nil {
@@ -188,13 +188,13 @@ func (t *BrowserTool) executeAction(ctx context.Context, page *rod.Page, action 
 
 	case "js":
 		if action.Script == "" {
-			return "", fmt.Errorf("script obrigatorio para js")
+			return "", fmt.Errorf("script required for js")
 		}
 		blocked := []string{"fetch(", "XMLHttpRequest", "document.cookie", "localStorage", "sessionStorage", "eval(", "Function("}
 		scriptLower := strings.ToLower(action.Script)
 		for _, b := range blocked {
 			if strings.Contains(scriptLower, strings.ToLower(b)) {
-				return "", fmt.Errorf("script bloqueado: contem '%s'", b)
+				return "", fmt.Errorf("script blocked: contains '%s'", b)
 			}
 		}
 		res, err := page.Eval(action.Script)
@@ -216,7 +216,7 @@ func (t *BrowserTool) executeAction(ctx context.Context, page *rod.Page, action 
 
 	case "text":
 		if action.Selector == "" {
-			return "", fmt.Errorf("selector obrigatorio para text")
+			return "", fmt.Errorf("selector required for text")
 		}
 		el, err := page.Element(action.Selector)
 		if err != nil {
@@ -244,7 +244,7 @@ func (t *BrowserTool) executeAction(ctx context.Context, page *rod.Page, action 
 		return description, nil
 
 	default:
-		return "", fmt.Errorf("action type desconhecido: %s", action.Type)
+		return "", fmt.Errorf("unknown action type: %s", action.Type)
 	}
 }
 
@@ -259,7 +259,7 @@ func fetchWithHTTP(ctx context.Context, targetURL string) (string, error) {
 
 	req, err := http.NewRequestWithContext(reqCtx, "GET", targetURL, nil)
 	if err != nil {
-		return "", fmt.Errorf("criar request: %w", err)
+		return "", fmt.Errorf("create request: %w", err)
 	}
 	req.Header.Set("User-Agent", "Mozilla/5.0 (compatible; OK-Agent/1.0)")
 
@@ -271,7 +271,7 @@ func fetchWithHTTP(ctx context.Context, targetURL string) (string, error) {
 
 	body, err := io.ReadAll(io.LimitReader(resp.Body, 1024*1024))
 	if err != nil {
-		return "", fmt.Errorf("ler body: %w", err)
+		return "", fmt.Errorf("read body: %w", err)
 	}
 
 	text := htmlTagsRe.ReplaceAllString(string(body), " ")
@@ -289,28 +289,28 @@ func truncateWords(text string, maxWords int) string {
 
 func validateURL(rawURL string) error {
 	if !strings.HasPrefix(rawURL, "http://") && !strings.HasPrefix(rawURL, "https://") {
-		return fmt.Errorf("url deve comecar com http:// ou https://")
+		return fmt.Errorf("url must start with http:// or https://")
 	}
 
 	parsed, err := url.Parse(rawURL)
 	if err != nil {
-		return fmt.Errorf("url invalida: %w", err)
+		return fmt.Errorf("invalid url: %w", err)
 	}
 
 	host := parsed.Hostname()
 
 	if host == "localhost" || host == "127.0.0.1" || host == "0.0.0.0" || host == "::1" {
-		return fmt.Errorf("url interna bloqueada: %s", host)
+		return fmt.Errorf("internal url blocked: %s", host)
 	}
 
 	ips, lookupErr := net.LookupIP(host)
 	if lookupErr != nil {
-		return fmt.Errorf("resolucao DNS falhou (ssrf prevention): %w", lookupErr)
+		return fmt.Errorf("DNS resolution failed (ssrf prevention): %w", lookupErr)
 	}
 
 	for _, ip := range ips {
 		if ip.IsPrivate() || ip.IsLoopback() || ip.IsLinkLocalUnicast() {
-			return fmt.Errorf("url interna bloqueada via resolucao DNS: %s -> %s", host, ip.String())
+			return fmt.Errorf("internal url blocked via DNS resolution: %s -> %s", host, ip.String())
 		}
 	}
 

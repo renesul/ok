@@ -30,8 +30,8 @@ func TestSchedule_Success(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if !strings.Contains(result, "agendado") || !strings.Contains(result, "backup") {
-		t.Fatalf("expected success message with 'agendado' and 'backup', got %q", result)
+	if !strings.Contains(result, "scheduled") || !strings.Contains(result, "backup") {
+		t.Fatalf("expected success message with 'scheduled' and 'backup', got %q", result)
 	}
 	if repo.lastJob == nil {
 		t.Fatal("expected job to be persisted")

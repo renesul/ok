@@ -23,8 +23,8 @@ func TestShellTool_Tier1Blocked(t *testing.T) {
 		if err == nil {
 			t.Errorf("expected Tier 1 block for %q", cmd)
 		}
-		if err != nil && !strings.Contains(err.Error(), "bloqueado") {
-			t.Errorf("cmd %q: error = %q, want 'bloqueado'", cmd, err.Error())
+		if err != nil && !strings.Contains(err.Error(), "blocked") {
+			t.Errorf("cmd %q: error = %q, want 'blocked'", cmd, err.Error())
 		}
 	}
 }
@@ -45,8 +45,8 @@ func TestShellTool_Tier2RequiresConfirmation(t *testing.T) {
 		if err == nil {
 			t.Errorf("expected Tier 2 confirmation error for %q", cmd)
 		}
-		if err != nil && !strings.Contains(err.Error(), "confirmacao") {
-			t.Errorf("cmd %q: error = %q, want 'confirmacao'", cmd, err.Error())
+		if err != nil && !strings.Contains(err.Error(), "confirmation") {
+			t.Errorf("cmd %q: error = %q, want 'confirmation'", cmd, err.Error())
 		}
 	}
 }
@@ -84,7 +84,7 @@ func TestShellTool_EmptyInput(t *testing.T) {
 func TestShellTool_Tier1_ForkBomb(t *testing.T) {
 	tool := NewShellTool()
 	_, err := tool.Run(":(){ :|:& };:")
-	if err == nil || !strings.Contains(err.Error(), "bloqueado") {
+	if err == nil || !strings.Contains(err.Error(), "blocked") {
 		t.Fatalf("expected fork bomb blocked, got %v", err)
 	}
 }
@@ -92,7 +92,7 @@ func TestShellTool_Tier1_ForkBomb(t *testing.T) {
 func TestShellTool_Tier1_DevNvmeWrite(t *testing.T) {
 	tool := NewShellTool()
 	_, err := tool.Run("> /dev/nvme0n1")
-	if err == nil || !strings.Contains(err.Error(), "bloqueado") {
+	if err == nil || !strings.Contains(err.Error(), "blocked") {
 		t.Fatalf("expected /dev/nvme write blocked, got %v", err)
 	}
 }
@@ -100,7 +100,7 @@ func TestShellTool_Tier1_DevNvmeWrite(t *testing.T) {
 func TestShellTool_Tier1_DevSdaWrite(t *testing.T) {
 	tool := NewShellTool()
 	_, err := tool.Run("> /dev/sda1")
-	if err == nil || !strings.Contains(err.Error(), "bloqueado") {
+	if err == nil || !strings.Contains(err.Error(), "blocked") {
 		t.Fatalf("expected /dev/sda1 write blocked, got %v", err)
 	}
 }
@@ -108,7 +108,7 @@ func TestShellTool_Tier1_DevSdaWrite(t *testing.T) {
 func TestShellTool_Tier2_ChainedSudo(t *testing.T) {
 	tool := NewShellTool()
 	_, err := tool.Run("echo hello && sudo rm /tmp/x")
-	if err == nil || !strings.Contains(err.Error(), "confirmacao") {
+	if err == nil || !strings.Contains(err.Error(), "confirmation") {
 		t.Fatalf("expected chained sudo to require confirmation, got %v", err)
 	}
 }
@@ -116,7 +116,7 @@ func TestShellTool_Tier2_ChainedSudo(t *testing.T) {
 func TestShellTool_Tier2_PipeSudo(t *testing.T) {
 	tool := NewShellTool()
 	_, err := tool.Run("echo pass | sudo -S apt install")
-	if err == nil || !strings.Contains(err.Error(), "confirmacao") {
+	if err == nil || !strings.Contains(err.Error(), "confirmation") {
 		t.Fatalf("expected piped sudo to require confirmation, got %v", err)
 	}
 }
@@ -166,10 +166,10 @@ func TestShellTool_Timeout(t *testing.T) {
 }
 
 func TestShellTool_WithConfirmation_NoManager(t *testing.T) {
-	// Sem ConfirmationManager, Tier 2 rejeita direto
+	// Without ConfirmationManager, Tier 2 rejects directly
 	tool := NewShellTool()
 	_, err := tool.Run("sudo echo test")
-	if err == nil || !strings.Contains(err.Error(), "confirmacao") {
-		t.Fatalf("expected confirmacao error without manager, got %v", err)
+	if err == nil || !strings.Contains(err.Error(), "confirmation") {
+		t.Fatalf("expected confirmation error without manager, got %v", err)
 	}
 }

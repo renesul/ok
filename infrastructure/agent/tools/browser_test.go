@@ -35,8 +35,8 @@ func TestBrowserTool_LocalhostBlocked(t *testing.T) {
 		if err == nil {
 			t.Errorf("expected block for %s", input)
 		}
-		if err != nil && !strings.Contains(err.Error(), "bloqueada") {
-			t.Errorf("error = %q, want 'bloqueada'", err.Error())
+		if err != nil && !strings.Contains(err.Error(), "blocked") {
+			t.Errorf("error = %q, want 'blocked'", err.Error())
 		}
 	}
 }
@@ -80,7 +80,7 @@ func TestBrowserTool_JSBlocked(t *testing.T) {
 		if err == nil {
 			t.Errorf("expected block for %s", input)
 		}
-		if err != nil && !strings.Contains(err.Error(), "bloqueado") && !strings.Contains(err.Error(), "Chrome") {
+		if err != nil && !strings.Contains(err.Error(), "blocked") && !strings.Contains(err.Error(), "Chrome") {
 			t.Errorf("unexpected error: %q", err.Error())
 		}
 	}

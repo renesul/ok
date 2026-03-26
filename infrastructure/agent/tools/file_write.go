@@ -31,14 +31,14 @@ type fileWriteInput struct {
 func (t *FileWriteTool) Run(input string) (string, error) {
 	var req fileWriteInput
 	if err := json.Unmarshal([]byte(input), &req); err != nil {
-		return "", fmt.Errorf("input deve ser JSON {path, content}: %w", err)
+		return "", fmt.Errorf("input must be JSON {path, content}: %w", err)
 	}
 
 	if req.Path == "" {
-		return "", fmt.Errorf("path vazio")
+		return "", fmt.Errorf("empty path")
 	}
 	if len(req.Content) > maxWriteSize {
-		return "", fmt.Errorf("conteudo muito grande (max %d bytes)", maxWriteSize)
+		return "", fmt.Errorf("content too large (max %d bytes)", maxWriteSize)
 	}
 
 	safe, err := safePath(t.baseDir, req.Path)
@@ -48,12 +48,12 @@ func (t *FileWriteTool) Run(input string) (string, error) {
 
 	dir := filepath.Dir(safe)
 	if err := os.MkdirAll(dir, 0755); err != nil {
-		return "", fmt.Errorf("criar diretorio: %w", err)
+		return "", fmt.Errorf("create directory: %w", err)
 	}
 
 	if err := os.WriteFile(safe, []byte(req.Content), 0644); err != nil {
-		return "", fmt.Errorf("escrever arquivo: %w", err)
+		return "", fmt.Errorf("write file: %w", err)
 	}
 
-	return "arquivo escrito: " + req.Path, nil
+	return "file written: " + req.Path, nil
 }

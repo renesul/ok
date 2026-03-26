@@ -74,7 +74,7 @@ func (e *DefaultExecutor) ExecuteWithContext(ctx context.Context, plan domain.Pl
 	if err != nil {
 		e.log.Debug("execution failed", zap.String("tool", toolName), zap.Error(err))
 		e.auditRecord(toolName, plan.Input, err.Error(), "safe", true)
-		return "", fmt.Errorf("tool '%s' falhou: %w", toolName, err)
+		return "", fmt.Errorf("tool '%s' failed: %w", toolName, err)
 	}
 
 	e.log.Debug("execution ok", zap.String("tool", toolName), zap.Int("result_len", len(result)))

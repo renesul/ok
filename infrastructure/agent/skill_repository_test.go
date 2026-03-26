@@ -67,8 +67,8 @@ func TestFileSkillRepository_GetNotFound(t *testing.T) {
 	dir := setupSkillsDir(t)
 	repo := NewFileSkillRepository(dir)
 	_, err := repo.Get("nonexistent")
-	if err == nil || !strings.Contains(err.Error(), "nao encontrada") {
-		t.Fatalf("expected 'nao encontrada' error, got %v", err)
+	if err == nil || !strings.Contains(err.Error(), "not found") {
+		t.Fatalf("expected 'not found' error, got %v", err)
 	}
 }
 

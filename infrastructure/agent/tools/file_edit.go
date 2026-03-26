@@ -39,7 +39,7 @@ func (t *FileEditTool) RunWithContext(ctx context.Context, input string) (string
 	}
 
 	if err := json.Unmarshal([]byte(input), &req); err != nil {
-		return "", fmt.Errorf("input deve ser JSON: {\"file\":\"/path\", \"start_line\":1, \"end_line\":5, \"replacement\":\"novo codigo\"}")
+		return "", fmt.Errorf("input must be JSON: {\"file\":\"/path\", \"start_line\":1, \"end_line\":5, \"replacement\":\"new code\"}")
 	}
 
 	// Aceitar replacement ou content (prioridade para replacement)
@@ -48,13 +48,13 @@ func (t *FileEditTool) RunWithContext(ctx context.Context, input string) (string
 	}
 
 	if req.File == "" {
-		return "", fmt.Errorf("file obrigatorio")
+		return "", fmt.Errorf("file required")
 	}
 	if req.StartLine < 1 {
-		return "", fmt.Errorf("start_line deve ser >= 1")
+		return "", fmt.Errorf("start_line must be >= 1")
 	}
 	if req.EndLine < req.StartLine {
-		return "", fmt.Errorf("end_line deve ser >= start_line")
+		return "", fmt.Errorf("end_line must be >= start_line")
 	}
 
 	if err := validateEditPath(req.File); err != nil {
@@ -63,14 +63,14 @@ func (t *FileEditTool) RunWithContext(ctx context.Context, input string) (string
 
 	data, err := os.ReadFile(req.File)
 	if err != nil {
-		return "", fmt.Errorf("ler arquivo: %w", err)
+		return "", fmt.Errorf("read file: %w", err)
 	}
 
 	lines := strings.Split(string(data), "\n")
 	totalLines := len(lines)
 
 	if req.StartLine > totalLines {
-		return "", fmt.Errorf("start_line %d excede total de linhas (%d)", req.StartLine, totalLines)
+		return "", fmt.Errorf("start_line %d exceeds total lines (%d)", req.StartLine, totalLines)
 	}
 	if req.EndLine > totalLines {
 		req.EndLine = totalLines
@@ -79,11 +79,11 @@ func (t *FileEditTool) RunWithContext(ctx context.Context, input string) (string
 	// Confirmacao HIL — mostrar metadata + conteudo da edicao
 	if t.confirmManager != nil {
 		preview := previewEditContent(req.Content)
-		summary := fmt.Sprintf("file_edit %s linhas %d-%d (%d linhas afetadas):\n%s", req.File, req.StartLine, req.EndLine, req.EndLine-req.StartLine+1, preview)
+		summary := fmt.Sprintf("file_edit %s lines %d-%d (%d lines affected):\n%s", req.File, req.StartLine, req.EndLine, req.EndLine-req.StartLine+1, preview)
 		conf := t.confirmManager.Request("file_edit", summary)
 		approved, waitErr := t.confirmManager.WaitForResponse(conf)
 		if waitErr != nil || !approved {
-			return "", fmt.Errorf("edicao nao aprovada")
+			return "", fmt.Errorf("edit not approved")
 		}
 	}
 
@@ -95,10 +95,10 @@ func (t *FileEditTool) RunWithContext(ctx context.Context, input string) (string
 	result = append(result, lines[req.EndLine:]...)
 
 	if err := os.WriteFile(req.File, []byte(strings.Join(result, "\n")), 0644); err != nil {
-		return "", fmt.Errorf("escrever arquivo: %w", err)
+		return "", fmt.Errorf("write file: %w", err)
 	}
 
-	return fmt.Sprintf("editado: %s (linhas %d-%d substituidas, total %d linhas)", req.File, req.StartLine, req.EndLine, len(result)), nil
+	return fmt.Sprintf("edited: %s (lines %d-%d replaced, total %d lines)", req.File, req.StartLine, req.EndLine, len(result)), nil
 }
 
 func previewEditContent(s string) string {
@@ -106,18 +106,18 @@ func previewEditContent(s string) string {
 		return s
 	}
 	omitted := strconv.Itoa(len(s) - 400)
-	return s[:200] + "\n... (" + omitted + " chars omitidos) ...\n" + s[len(s)-200:]
+	return s[:200] + "\n... (" + omitted + " chars omitted) ...\n" + s[len(s)-200:]
 }
 
 func validateEditPath(file string) error {
 	abs, err := filepath.Abs(file)
 	if err != nil {
-		return fmt.Errorf("resolver path: %w", err)
+		return fmt.Errorf("resolve path: %w", err)
 	}
 	blocked := []string{"/etc", "/boot", "/proc", "/sys", "/dev", "/var/run"}
 	for _, b := range blocked {
 		if strings.HasPrefix(abs, b+"/") || abs == b {
-			return fmt.Errorf("edicao bloqueada em path do sistema: %s", b)
+			return fmt.Errorf("edit blocked on system path: %s", b)
 		}
 	}
 	return nil

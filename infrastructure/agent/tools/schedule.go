@@ -36,14 +36,14 @@ func (t *ScheduleTaskTool) RunWithContext(ctx context.Context, input string) (st
 	}
 
 	if err := json.Unmarshal([]byte(input), &req); err != nil {
-		return "", fmt.Errorf("input deve ser JSON: {\"name\":\"...\", \"input\":\"...\", \"interval_minutes\":60}")
+		return "", fmt.Errorf("input must be JSON: {\"name\":\"...\", \"input\":\"...\", \"interval_minutes\":60}")
 	}
 
 	if req.Name == "" {
-		return "", fmt.Errorf("name obrigatorio")
+		return "", fmt.Errorf("name required")
 	}
 	if req.Input == "" {
-		return "", fmt.Errorf("input obrigatorio")
+		return "", fmt.Errorf("input required")
 	}
 	if req.IntervalMinutes <= 0 {
 		req.IntervalMinutes = defaultIntervalMinutes
@@ -62,8 +62,8 @@ func (t *ScheduleTaskTool) RunWithContext(ctx context.Context, input string) (st
 	}
 
 	if err := t.jobRepo.Create(ctx, job); err != nil {
-		return "", fmt.Errorf("criar job: %w", err)
+		return "", fmt.Errorf("create job: %w", err)
 	}
 
-	return fmt.Sprintf("Job agendado: '%s' a cada %d minutos (id: %s)", req.Name, req.IntervalMinutes, job.ID), nil
+	return fmt.Sprintf("Job scheduled: '%s' every %d minutes (id: %s)", req.Name, req.IntervalMinutes, job.ID), nil
 }

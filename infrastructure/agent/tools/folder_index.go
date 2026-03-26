@@ -41,11 +41,11 @@ func (t *IndexFolderTool) Run(input string) (string, error) {
 	}
 
 	if err := json.Unmarshal([]byte(input), &req); err != nil {
-		return "", fmt.Errorf("input deve ser JSON: {\"path\":\"/caminho\", \"pattern\":\"*.go\", \"max_depth\":3}")
+		return "", fmt.Errorf("input must be JSON: {\"path\":\"/directory\", \"pattern\":\"*.go\", \"max_depth\":3}")
 	}
 
 	if req.Path == "" {
-		return "", fmt.Errorf("path obrigatorio")
+		return "", fmt.Errorf("path required")
 	}
 	if req.Pattern == "" {
 		req.Pattern = "*"
@@ -60,7 +60,7 @@ func (t *IndexFolderTool) Run(input string) (string, error) {
 	}
 	absPath, err := filepath.Abs(dir)
 	if err != nil {
-		return "", fmt.Errorf("resolver path: %w", err)
+		return "", fmt.Errorf("resolve path: %w", err)
 	}
 
 	if err := validatePath(absPath); err != nil {
@@ -69,10 +69,10 @@ func (t *IndexFolderTool) Run(input string) (string, error) {
 
 	info, err := os.Stat(absPath)
 	if err != nil {
-		return "", fmt.Errorf("path nao encontrado: %w", err)
+		return "", fmt.Errorf("path not found: %w", err)
 	}
 	if !info.IsDir() {
-		return "", fmt.Errorf("path nao e um diretorio: %s", absPath)
+		return "", fmt.Errorf("path is not a directory: %s", absPath)
 	}
 
 	return indexDirectory(absPath, req.Pattern, req.MaxDepth)
@@ -82,7 +82,7 @@ func validatePath(absPath string) error {
 	clean := filepath.Clean(absPath)
 	for _, blocked := range blockedPaths {
 		if clean == blocked {
-			return fmt.Errorf("path bloqueado: %s", clean)
+			return fmt.Errorf("blocked path: %s", clean)
 		}
 	}
 	return nil
@@ -174,7 +174,7 @@ func indexDirectory(root, pattern string, maxDepth int) (string, error) {
 
 	for _, entry := range entries {
 		if out.Len() > maxOutputSize {
-			fmt.Fprintf(&out, "\n... output truncado (%s limite)\n", formatSize(maxOutputSize))
+			fmt.Fprintf(&out, "\n... output truncated (%s limit)\n", formatSize(maxOutputSize))
 			break
 		}
 

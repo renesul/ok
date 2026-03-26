@@ -32,8 +32,8 @@ func TestPlanner_LimitReached(t *testing.T) {
 	ctx := domain.NewAgentContext(3)
 	ctx.Steps = 3 // already at limit
 	_, err := p.Plan(domain.Decision{Tool: "echo", Input: "hi"}, ctx)
-	if err == nil || !strings.Contains(err.Error(), "limite") {
-		t.Fatalf("expected limite error, got %v", err)
+	if err == nil || !strings.Contains(err.Error(), "limit") {
+		t.Fatalf("expected limit error, got %v", err)
 	}
 }
 
@@ -41,8 +41,8 @@ func TestPlanner_UnknownTool(t *testing.T) {
 	p := newTestPlanner()
 	ctx := domain.NewAgentContext(10)
 	_, err := p.Plan(domain.Decision{Tool: "nonexistent", Input: "x"}, ctx)
-	if err == nil || !strings.Contains(err.Error(), "nao encontrada") {
-		t.Fatalf("expected 'nao encontrada' error, got %v", err)
+	if err == nil || !strings.Contains(err.Error(), "not found") {
+		t.Fatalf("expected 'not found' error, got %v", err)
 	}
 }
 
@@ -51,8 +51,8 @@ func TestPlanner_EmptyInput(t *testing.T) {
 	p := newTestPlanner(tool)
 	ctx := domain.NewAgentContext(10)
 	_, err := p.Plan(domain.Decision{Tool: "shell", Input: ""}, ctx)
-	if err == nil || !strings.Contains(err.Error(), "input vazio") {
-		t.Fatalf("expected 'input vazio' error, got %v", err)
+	if err == nil || !strings.Contains(err.Error(), "empty input") {
+		t.Fatalf("expected 'empty input' error, got %v", err)
 	}
 }
 
@@ -117,7 +117,7 @@ func TestPlanner_EmptyToolName(t *testing.T) {
 	p := newTestPlanner()
 	ctx := domain.NewAgentContext(10)
 	_, err := p.Plan(domain.Decision{Tool: "", Input: "x"}, ctx)
-	if err == nil || !strings.Contains(err.Error(), "nao encontrada") {
-		t.Fatalf("expected 'nao encontrada' error for empty tool name, got %v", err)
+	if err == nil || !strings.Contains(err.Error(), "not found") {
+		t.Fatalf("expected 'not found' error for empty tool name, got %v", err)
 	}
 }

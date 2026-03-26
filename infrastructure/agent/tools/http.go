@@ -36,7 +36,7 @@ func (t *HTTPTool) Safety() domain.ToolSafety          { return domain.ToolRestr
 
 func (t *HTTPTool) Run(input string) (string, error) {
 	if input == "" {
-		return "", fmt.Errorf("input vazio")
+		return "", fmt.Errorf("empty input")
 	}
 
 	var req httpRequest
@@ -47,7 +47,7 @@ func (t *HTTPTool) Run(input string) (string, error) {
 	}
 
 	if req.URL == "" {
-		return "", fmt.Errorf("url vazia")
+		return "", fmt.Errorf("empty url")
 	}
 
 	if req.Method == "" {
@@ -63,7 +63,7 @@ func (t *HTTPTool) Run(input string) (string, error) {
 
 	httpReq, err := http.NewRequest(method, req.URL, bodyReader)
 	if err != nil {
-		return "", fmt.Errorf("criar request: %w", err)
+		return "", fmt.Errorf("create request: %w", err)
 	}
 
 	for k, v := range req.Headers {
@@ -82,7 +82,7 @@ func (t *HTTPTool) Run(input string) (string, error) {
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return "", fmt.Errorf("ler body: %w", err)
+		return "", fmt.Errorf("read body: %w", err)
 	}
 
 	result := string(body)

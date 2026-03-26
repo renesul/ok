@@ -8,8 +8,8 @@ import (
 func TestSqlInspector_EmptyQuery(t *testing.T) {
 	tool := NewSqlInspectorTool(nil)
 	_, err := tool.Run("")
-	if err == nil || !strings.Contains(err.Error(), "vazia") {
-		t.Fatalf("expected 'vazia' error, got %v", err)
+	if err == nil || !strings.Contains(err.Error(), "empty") {
+		t.Fatalf("expected 'empty' error, got %v", err)
 	}
 }
 
@@ -28,8 +28,8 @@ func TestSqlInspector_BlocksDestructive(t *testing.T) {
 	}
 	for _, q := range blocked {
 		_, err := tool.Run(q)
-		if err == nil || !strings.Contains(err.Error(), "bloqueada") {
-			t.Errorf("expected 'bloqueada' for %q, got %v", q, err)
+		if err == nil || !strings.Contains(err.Error(), "blocked") {
+			t.Errorf("expected 'blocked' for %q, got %v", q, err)
 		}
 	}
 }
@@ -37,7 +37,7 @@ func TestSqlInspector_BlocksDestructive(t *testing.T) {
 func TestSqlInspector_BlocksCaseInsensitive(t *testing.T) {
 	tool := NewSqlInspectorTool(nil)
 	_, err := tool.Run("update USERS set name='x'")
-	if err == nil || !strings.Contains(err.Error(), "bloqueada") {
+	if err == nil || !strings.Contains(err.Error(), "blocked") {
 		t.Fatalf("expected case-insensitive block, got %v", err)
 	}
 }

@@ -29,7 +29,7 @@ func (m *mockSkillRepo) Get(name string) (*domain.Skill, error) {
 
 type skillNotFoundError struct{ name string }
 
-func (e *skillNotFoundError) Error() string { return "skill '" + e.name + "' nao encontrada" }
+func (e *skillNotFoundError) Error() string { return "skill '" + e.name + "' not found" }
 
 func newMockSkillRepo() *mockSkillRepo {
 	return &mockSkillRepo{
@@ -57,16 +57,16 @@ func TestSkillLoader_Success(t *testing.T) {
 func TestSkillLoader_NotFound(t *testing.T) {
 	tool := NewSkillLoaderTool(newMockSkillRepo())
 	_, err := tool.Run("nonexistent")
-	if err == nil || !strings.Contains(err.Error(), "nao encontrada") {
-		t.Fatalf("expected 'nao encontrada' error, got %v", err)
+	if err == nil || !strings.Contains(err.Error(), "not found") {
+		t.Fatalf("expected 'not found' error, got %v", err)
 	}
 }
 
 func TestSkillLoader_EmptyInput(t *testing.T) {
 	tool := NewSkillLoaderTool(newMockSkillRepo())
 	_, err := tool.Run("")
-	if err == nil || !strings.Contains(err.Error(), "obrigatorio") {
-		t.Fatalf("expected 'obrigatorio' error, got %v", err)
+	if err == nil || !strings.Contains(err.Error(), "required") {
+		t.Fatalf("expected 'required' error, got %v", err)
 	}
 }
 

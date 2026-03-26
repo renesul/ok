@@ -25,7 +25,7 @@ func (t *TimestampTool) Run(input string) (string, error) {
 	if strings.HasPrefix(input, "unix:") {
 		ts, err := strconv.ParseInt(strings.TrimPrefix(input, "unix:"), 10, 64)
 		if err != nil {
-			return "", fmt.Errorf("unix timestamp invalido: %w", err)
+			return "", fmt.Errorf("invalid unix timestamp: %w", err)
 		}
 		return time.Unix(ts, 0).Format(time.RFC3339), nil
 	}
@@ -45,7 +45,7 @@ func (t *TimestampTool) Run(input string) (string, error) {
 				return fmt.Sprintf("%s (unix: %d)", t.Format(time.RFC3339), t.Unix()), nil
 			}
 		}
-		return "", fmt.Errorf("formato de data nao reconhecido: %s", dateStr)
+		return "", fmt.Errorf("unrecognized date format: %s", dateStr)
 	}
 
 	if input == "unix" {

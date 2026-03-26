@@ -82,7 +82,7 @@ func TestTimestamp_ParseRFC3339(t *testing.T) {
 func TestTimestamp_ParseInvalid(t *testing.T) {
 	tool := &TimestampTool{}
 	_, err := tool.Run("parse:not-a-date")
-	if err == nil || !strings.Contains(err.Error(), "formato") {
-		t.Fatalf("expected 'formato' error, got %v", err)
+	if err == nil || !strings.Contains(err.Error(), "format") {
+		t.Fatalf("expected 'format' error, got %v", err)
 	}
 }

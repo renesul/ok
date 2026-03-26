@@ -81,7 +81,7 @@ func (h *HistoryRecorder) ReflectAndLearn(ctx context.Context, state *domain.Exe
 		}
 
 		if reflection.Action == "error" || reflection.Action == "replan" {
-			failureMemory := fmt.Sprintf("reflexao:%s falhou em '%s' - %s",
+			failureMemory := fmt.Sprintf("reflection:%s failed on '%s' - %s",
 				step.Tool, step.Input, reflection.Reason)
 			if err := h.memory.SaveChunkedInTx(tx, domain.MemoryEntry{Content: failureMemory}); err != nil {
 				return fmt.Errorf("save failure memory: %w", err)

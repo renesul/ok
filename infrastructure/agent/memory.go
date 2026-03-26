@@ -475,7 +475,7 @@ func ShouldStore(input, output string) bool {
 	}
 	// Filtrar apenas outputs que sao erros de tools (prefixo), nao conteudo que menciona erros
 	lowerOutput := strings.ToLower(output)
-	errorPrefixes := []string{"error:", "erro:", "timeout:", "comando falhou:", "execution error:"}
+	errorPrefixes := []string{"error:", "erro:", "timeout:", "command failed:", "execution error:"}
 	for _, prefix := range errorPrefixes {
 		if strings.HasPrefix(lowerOutput, prefix) {
 			return false

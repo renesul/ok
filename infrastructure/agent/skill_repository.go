@@ -23,7 +23,7 @@ func NewFileSkillRepository(sandboxDir string) *FileSkillRepository {
 func (r *FileSkillRepository) List() ([]domain.Skill, error) {
 	entries, err := os.ReadDir(r.skillsDir)
 	if err != nil {
-		return nil, fmt.Errorf("listar skills: %w", err)
+		return nil, fmt.Errorf("list skills: %w", err)
 	}
 
 	var skills []domain.Skill
@@ -44,12 +44,12 @@ func (r *FileSkillRepository) List() ([]domain.Skill, error) {
 func (r *FileSkillRepository) Get(name string) (*domain.Skill, error) {
 	name = strings.TrimSpace(strings.ToLower(name))
 	if name == "" {
-		return nil, fmt.Errorf("nome da skill vazio")
+		return nil, fmt.Errorf("empty skill name")
 	}
 
 	path := filepath.Join(r.skillsDir, name+".md")
 	if _, err := os.Stat(path); os.IsNotExist(err) {
-		return nil, fmt.Errorf("skill '%s' nao encontrada", name)
+		return nil, fmt.Errorf("skill '%s' not found", name)
 	}
 
 	return parseSkillFile(path)
@@ -58,18 +58,18 @@ func (r *FileSkillRepository) Get(name string) (*domain.Skill, error) {
 func parseSkillFile(path string) (*domain.Skill, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
-		return nil, fmt.Errorf("ler skill: %w", err)
+		return nil, fmt.Errorf("read skill: %w", err)
 	}
 
 	content := string(data)
 	if !strings.HasPrefix(content, "---") {
-		return nil, fmt.Errorf("frontmatter ausente em %s", path)
+		return nil, fmt.Errorf("missing frontmatter in %s", path)
 	}
 
 	// Split: ["", frontmatter, content...]
 	parts := strings.SplitN(content, "---", 3)
 	if len(parts) < 3 {
-		return nil, fmt.Errorf("frontmatter incompleto em %s", path)
+		return nil, fmt.Errorf("incomplete frontmatter in %s", path)
 	}
 
 	frontmatter := parts[1]

@@ -17,7 +17,7 @@ func (t *MathTool) Safety() domain.ToolSafety          { return domain.ToolSafe 
 
 func (t *MathTool) Run(input string) (string, error) {
 	if input == "" {
-		return "", fmt.Errorf("expressao vazia")
+		return "", fmt.Errorf("empty expression")
 	}
 
 	input = strings.ReplaceAll(input, " ", "")
@@ -25,7 +25,7 @@ func (t *MathTool) Run(input string) (string, error) {
 	// Validate: only digits, operators, dots, parens
 	for _, c := range input {
 		if !unicode.IsDigit(c) && c != '+' && c != '-' && c != '*' && c != '/' && c != '.' && c != '(' && c != ')' {
-			return "", fmt.Errorf("caractere invalido: %c", c)
+			return "", fmt.Errorf("invalid character: %c", c)
 		}
 	}
 
@@ -81,7 +81,7 @@ func (p *parser) parseTerm() float64 {
 			result *= right
 		} else {
 			if right == 0 {
-				p.err = fmt.Errorf("divisao por zero")
+				p.err = fmt.Errorf("division by zero")
 				return 0
 			}
 			result /= right
@@ -92,7 +92,7 @@ func (p *parser) parseTerm() float64 {
 
 func (p *parser) parseFactor() float64 {
 	if p.pos >= len(p.input) {
-		p.err = fmt.Errorf("expressao incompleta")
+		p.err = fmt.Errorf("incomplete expression")
 		return 0
 	}
 
@@ -114,13 +114,13 @@ func (p *parser) parseFactor() float64 {
 	}
 
 	if start == p.pos {
-		p.err = fmt.Errorf("numero esperado na posicao %d", p.pos)
+		p.err = fmt.Errorf("number expected at position %d", p.pos)
 		return 0
 	}
 
 	val, err := strconv.ParseFloat(p.input[start:p.pos], 64)
 	if err != nil {
-		p.err = fmt.Errorf("numero invalido: %s", p.input[start:p.pos])
+		p.err = fmt.Errorf("invalid number: %s", p.input[start:p.pos])
 		return 0
 	}
 	return val

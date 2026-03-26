@@ -101,8 +101,8 @@ func TestIndexFolderBlockedPath(t *testing.T) {
 	if err == nil {
 		t.Error("expected error for blocked path /etc")
 	}
-	if !strings.Contains(err.Error(), "bloqueado") {
-		t.Errorf("expected 'bloqueado' in error, got: %s", err.Error())
+	if !strings.Contains(err.Error(), "blocked") {
+		t.Errorf("expected 'blocked' in error, got: %s", err.Error())
 	}
 }
 
