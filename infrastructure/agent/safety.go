@@ -41,7 +41,7 @@ func (g *SafetyGate) Check(tool domain.Tool, input string) error {
 
 	case domain.ToolDangerous:
 		g.log.Debug("dangerous tool requires confirmation", zap.String("tool", tool.Name()))
-		return fmt.Errorf("%w: %s quer executar: %s", ErrRequiresConfirmation, tool.Name(), TruncateWithEllipsis(input, 100))
+		return fmt.Errorf("%w: %s wants to execute: %s", ErrRequiresConfirmation, tool.Name(), TruncateWithEllipsis(input, 100))
 	}
 
 	return nil

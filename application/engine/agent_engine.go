@@ -250,9 +250,9 @@ func (e *AgentEngine) RunLoop(ctx context.Context, input string, emitter Emitter
 	if lastOutput != "" {
 		emitter.EmitMessage(lastOutput)
 	} else if budgetReason != "" {
-		emitter.EmitMessage("execucao interrompida: " + budgetReason)
+		emitter.EmitMessage("execution interrupted: " + budgetReason)
 	} else {
-		emitter.EmitMessage("execucao concluida")
+		emitter.EmitMessage("execution completed")
 	}
 
 	e.historyRecorder.SaveResults(state, input, lastOutput, execStart)

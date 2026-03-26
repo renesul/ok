@@ -63,7 +63,7 @@ func (m *ConfirmationManager) Respond(id string, approved bool) error {
 	m.mu.Unlock()
 
 	if time.Since(conf.CreatedAt) > confirmationTTL {
-		return fmt.Errorf("confirmacao expirada")
+		return fmt.Errorf("confirmation expired")
 	}
 
 	conf.Done <- approved
@@ -82,7 +82,7 @@ func (m *ConfirmationManager) WaitForResponse(conf *PendingConfirmation) (bool, 
 		m.mu.Lock()
 		delete(m.pending, conf.ID)
 		m.mu.Unlock()
-		return false, fmt.Errorf("confirmacao expirou apos %s", confirmationTTL)
+		return false, fmt.Errorf("confirmation expired after %s", confirmationTTL)
 	}
 }
 
