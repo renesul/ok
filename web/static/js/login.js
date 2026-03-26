@@ -3,7 +3,7 @@ document.getElementById('loginForm').addEventListener('submit', function (event)
 
   var form = event.target;
   var password = form.password.value;
-  var errorElement = document.getElementById('errorMessage');
+  var errorElement = document.getElementById('errorBox');
 
   errorElement.classList.remove('visible');
 

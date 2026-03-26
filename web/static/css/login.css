@@ -38,8 +38,9 @@ body {
   .error-msg {
     color: var(--color-error); font-size: 13px; font-weight: 500;
     background: #fee2e2; padding: 10px; border-radius: var(--radius-sm);
-    margin-bottom: 16px;
+    margin-bottom: 16px; display: none;
   }
+  .error-msg.visible { display: block; }
   
   /* Background Elements */
   .bg-shape {
