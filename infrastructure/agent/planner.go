@@ -68,3 +68,24 @@ func (p *DefaultPlanner) ToolDescriptions() string {
 	}
 	return strings.Join(descs, "\n")
 }
+
+func (p *DefaultPlanner) ToolSchemas() []domain.ToolSchema {
+	var schemas []domain.ToolSchema
+	for _, tool := range p.tools {
+		schemas = append(schemas, domain.ToolSchema{
+			Name:        tool.Name(),
+			Description: tool.Description(),
+			Parameters: map[string]interface{}{
+				"type": "object",
+				"properties": map[string]interface{}{
+					"input": map[string]interface{}{
+						"type":        "string",
+						"description": "input for the tool",
+					},
+				},
+				"required": []string{"input"},
+			},
+		})
+	}
+	return schemas
+}

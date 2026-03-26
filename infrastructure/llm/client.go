@@ -375,6 +375,98 @@ func (c *Client) Decide(ctx context.Context, config ClientConfig, systemPrompt, 
 	}, nil
 }
 
+func (c *Client) DecideWithTools(ctx context.Context, config ClientConfig, systemPrompt, userPrompt string, tools []domain.ToolSchema) (domain.Decision, error) {
+	url := strings.TrimRight(config.BaseURL, "/") + "/chat/completions"
+
+	messages := []Message{
+		{Role: "system", Content: c.scrubText(systemPrompt)},
+		{Role: "user", Content: c.scrubText(userPrompt)},
+	}
+
+	var apiTools []map[string]interface{}
+	for _, t := range tools {
+		apiTools = append(apiTools, map[string]interface{}{
+			"type": "function",
+			"function": map[string]interface{}{
+				"name":        t.Name,
+				"description": t.Description,
+				"parameters":  t.Parameters,
+			},
+		})
+	}
+
+	body := map[string]interface{}{
+		"model":       config.Model,
+		"messages":    messages,
+		"tools":       apiTools,
+		"tool_choice": "auto",
+		"temperature": 0.2,
+		"max_tokens":  500,
+		"stream":      false,
+	}
+
+	jsonBody, _ := json.Marshal(body)
+
+	req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewReader(jsonBody))
+	if err != nil {
+		return domain.Decision{}, fmt.Errorf("create request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+config.APIKey)
+
+	c.log.Debug("llm decide (native tools)", zap.String("model", config.Model), zap.Int("tools", len(tools)))
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return domain.Decision{}, fmt.Errorf("decide request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		respBody, _ := io.ReadAll(resp.Body)
+		return domain.Decision{}, fmt.Errorf("decide error %d: %s", resp.StatusCode, string(respBody))
+	}
+
+	var result chatCompletionResponse
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return domain.Decision{}, fmt.Errorf("decode response: %w", err)
+	}
+
+	if len(result.Choices) == 0 {
+		return domain.Decision{Done: true}, nil
+	}
+
+	msg := result.Choices[0].Message
+
+	// Tool call response
+	if len(msg.ToolCalls) > 0 {
+		tc := msg.ToolCalls[0]
+		input := tc.Function.Arguments
+		// Try to extract "input" field from arguments JSON
+		var args map[string]interface{}
+		if json.Unmarshal([]byte(input), &args) == nil {
+			if v, ok := args["input"]; ok {
+				if s, ok := v.(string); ok {
+					input = s
+				} else {
+					// input is JSON object — serialize
+					b, _ := json.Marshal(v)
+					input = string(b)
+				}
+			}
+		}
+		return domain.Decision{
+			Tool:  tc.Function.Name,
+			Input: input,
+			Done:  false,
+		}, nil
+	}
+
+	// Direct text response (no tool)
+	content := strings.TrimSpace(msg.Content)
+	return domain.Decision{Input: content, Done: true}, nil
+}
+
 func (c *Client) CreatePlanStreaming(ctx context.Context, config ClientConfig, systemPrompt, goal string, onToken StreamCallback) (domain.ExecutionPlan, error) {
 	messages := []Message{
 		{Role: "system", Content: c.scrubText(systemPrompt)},
@@ -526,7 +618,19 @@ type chatChoice struct {
 }
 
 type chatMessage struct {
-	Content string `json:"content"`
+	Content   string     `json:"content"`
+	ToolCalls []toolCall `json:"tool_calls,omitempty"`
+}
+
+type toolCall struct {
+	ID       string       `json:"id"`
+	Type     string       `json:"type"`
+	Function toolCallFunc `json:"function"`
+}
+
+type toolCallFunc struct {
+	Name      string `json:"name"`
+	Arguments string `json:"arguments"`
 }
 
 type streamChunk struct {

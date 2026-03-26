@@ -34,6 +34,7 @@ type Config struct {
 	TelegramOwnerID      int64  `mapstructure:"TELEGRAM_OWNER_ID"`
 	DiscordBotToken      string `mapstructure:"DISCORD_BOT_TOKEN"`
 	DiscordOwnerID       string `mapstructure:"DISCORD_OWNER_ID"`
+	UseNativeTools       bool   `mapstructure:"USE_NATIVE_TOOLS"`
 }
 
 func Load() (*Config, error) {
@@ -73,6 +74,7 @@ func LoadFrom(envFile string) (*Config, error) {
 	viper.SetDefault("TELEGRAM_OWNER_ID", 0)
 	viper.SetDefault("DISCORD_BOT_TOKEN", "")
 	viper.SetDefault("DISCORD_OWNER_ID", "")
+	viper.SetDefault("USE_NATIVE_TOOLS", true)
 
 	// .env is optional — env vars take precedence
 	if err := viper.ReadInConfig(); err != nil {

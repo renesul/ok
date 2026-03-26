@@ -41,11 +41,19 @@ type StreamingTool interface {
 	SetStreamCallback(cb StreamCallback)
 }
 
+// ToolSchema describes a tool for function calling APIs
+type ToolSchema struct {
+	Name        string                 `json:"name"`
+	Description string                 `json:"description"`
+	Parameters  map[string]interface{} `json:"parameters"`
+}
+
 // Planner — valida decisoes do LLM antes da execucao
 type Planner interface {
 	Plan(decision Decision, ctx *AgentContext) (Plan, error)
 	RegisterTool(tool Tool)
 	ToolDescriptions() string
+	ToolSchemas() []ToolSchema
 	Tools() map[string]Tool
 }
 

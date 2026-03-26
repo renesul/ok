@@ -116,7 +116,7 @@ func TestMain(m *testing.M) {
 		Model:   testCfg.LLMFastModel,
 	}
 
-	agentService := application.NewAgentService(testDB, llmClient, llmConfig, llmFastConfig, planner, agentExecutor, agentMemory, execRepo, agentConfigRepo, nil, log)
+	agentService := application.NewAgentService(testDB, llmClient, llmConfig, llmFastConfig, planner, agentExecutor, agentMemory, execRepo, agentConfigRepo, nil, false, log)
 
 	llmConfigured := testCfg.LLMBaseURL != "" && testCfg.LLMAPIKey != "" && testCfg.LLMModel != ""
 	chatService := application.NewChatService(conversationRepository, messageRepository, embeddingService, agentService, llmConfigured, log)

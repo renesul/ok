@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"path/filepath"
+	"sync"
 	"time"
 
 	chromem "github.com/philippgille/chromem-go"
@@ -12,23 +13,48 @@ import (
 	"go.uber.org/zap"
 )
 
+type embeddingCacheEntry struct {
+	vector    []float32
+	createdAt time.Time
+}
+
+const embeddingCacheTTL = 5 * time.Minute
+
 const collectionName = "memory"
 
 type VectorStore struct {
-	db         *chromem.DB
-	collection *chromem.Collection
-	log        *zap.Logger
+	db             *chromem.DB
+	collection     *chromem.Collection
+	log            *zap.Logger
+	embedCache     map[string]embeddingCacheEntry
+	embedCacheMu   sync.RWMutex
 }
 
 func NewVectorStore(dataDir string, embedClient *embedding.Client, log *zap.Logger) (*VectorStore, error) {
 	dbPath := filepath.Join(dataDir, "chromem")
 	logger := log.Named("vectorstore")
 
+	vs := &VectorStore{
+		log:        logger,
+		embedCache: make(map[string]embeddingCacheEntry),
+	}
+
 	embedFunc := chromem.EmbeddingFunc(func(ctx context.Context, text string) ([]float32, error) {
+		vs.embedCacheMu.RLock()
+		if cached, ok := vs.embedCache[text]; ok && time.Since(cached.createdAt) < embeddingCacheTTL {
+			vs.embedCacheMu.RUnlock()
+			return cached.vector, nil
+		}
+		vs.embedCacheMu.RUnlock()
+
 		vectors, err := embedClient.Embed(ctx, []string{text})
 		if err != nil || len(vectors) == 0 {
 			return nil, fmt.Errorf("embed: %w", err)
 		}
+		vs.embedCacheMu.Lock()
+		vs.embedCache[text] = embeddingCacheEntry{vector: vectors[0], createdAt: time.Now()}
+		vs.embedCacheMu.Unlock()
+
 		return vectors[0], nil
 	})
 
@@ -42,13 +68,11 @@ func NewVectorStore(dataDir string, embedClient *embedding.Client, log *zap.Logg
 		return nil, fmt.Errorf("create collection: %w", err)
 	}
 
+	vs.db = db
+	vs.collection = collection
 	logger.Debug("vectorstore ready", zap.String("path", dbPath))
 
-	return &VectorStore{
-		db:         db,
-		collection: collection,
-		log:        logger,
-	}, nil
+	return vs, nil
 }
 
 func (vs *VectorStore) Save(id, content, category string) {

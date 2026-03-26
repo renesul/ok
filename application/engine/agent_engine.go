@@ -25,6 +25,7 @@ type AgentEngine struct {
 	planner           domain.Planner
 	executor          domain.Executor
 	limits            domain.AgentLimits
+	useNativeTools    bool
 	buildSystemPrompt func() string
 	log               *zap.Logger
 
@@ -43,6 +44,7 @@ func NewAgentEngine(
 	memory *agentpkg.SQLiteMemory,
 	execRepo *agentpkg.ExecutionRepository,
 	limits domain.AgentLimits,
+	useNativeTools bool,
 	buildSystemPrompt func() string,
 	log *zap.Logger,
 ) *AgentEngine {
@@ -53,6 +55,7 @@ func NewAgentEngine(
 		planner:           planner,
 		executor:          executor,
 		limits:            limits,
+		useNativeTools:    useNativeTools,
 		buildSystemPrompt: buildSystemPrompt,
 		log:               log.Named("engine"),
 
@@ -99,7 +102,12 @@ func (e *AgentEngine) RunLoop(ctx context.Context, input string, emitter Emitter
 	if decideConfig.BaseURL == "" || len(input) > maxFastInputLen {
 		decideConfig = e.llmConfig
 	}
-	decision, err := e.llmClient.Decide(ctx, decideConfig, systemPrompt, agentpkg.BuildContext(state))
+	var decision domain.Decision
+	if e.useNativeTools {
+		decision, err = e.llmClient.DecideWithTools(ctx, decideConfig, systemPrompt, agentpkg.BuildContext(state), e.planner.ToolSchemas())
+	} else {
+		decision, err = e.llmClient.Decide(ctx, decideConfig, systemPrompt, agentpkg.BuildContext(state))
+	}
 	if err != nil {
 		emitter.EmitMessage("error: " + err.Error())
 		emitter.EmitDone()

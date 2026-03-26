@@ -1,106 +1,150 @@
 # OK
 
-Assistente pessoal de IA autonomo. Um binario Go, zero dependencias externas.
+A single Go binary that turns any LLM into an autonomous personal assistant.
 
-Conecta LLMs a qualquer plataforma de mensagem. Executa tarefas no seu computador com 19 ferramentas — do terminal ao browser — com 3 camadas de seguranca.
-
----
-
-## Como funciona
-
-Voce manda uma mensagem. O agente decide sozinho o caminho:
-
-1. **Resposta direta** — conversa normal, sem ferramentas
-2. **Execucao unica** — uma ferramenta, um resultado
-3. **Plano autonomo** — multiplas ferramentas em sequencia (OBSERVE → PLAN → ACT → REFLECT)
-
-Tudo em tempo real via WebSocket. O workspace `/agent` e o monitor central — mostra o processamento de qualquer canal (chat web, WhatsApp, Telegram, Discord).
+28 tools. 5 channels. 3 security tiers. Zero external dependencies at runtime.
 
 ---
 
-## Stack
+## How It Works
 
-| Componente | Tecnologia |
-|-----------|------------|
-| Linguagem | Go (CGO_ENABLED=0, binario unico) |
-| Banco | SQLite WAL mode (modernc, pure Go) |
-| HTTP | Fiber |
-| DB Layer | database/sql puro (sem ORM) |
-| Config | Viper |
-| Logging | Zap (estruturado) |
-| Vector | chromem-go (busca semantica) |
-| Frontend | HTML + CSS + JS vanilla (zero frameworks) |
+You send a message. The agent decides the path:
+
+1. **Direct answer** — plain conversation, no tools involved
+2. **Single execution** — one tool, one result
+3. **Autonomous plan** — multiple tools in sequence: OBSERVE, PLAN, ACT, REFLECT
+
+Everything streams in real time over WebSocket. The `/agent` workspace is the central monitor — it shows processing from every channel simultaneously.
 
 ---
 
-## Ferramentas (19)
+## Channels
 
-| Nivel | Ferramentas |
-|-------|------------|
-| **safe** | echo, math, timestamp, json_parse, base64, text_extract, file_read, search, schedule, learn_rule |
-| **restricted** | http, file_write, folder_index, browser, delegate, web_search |
-| **dangerous** | shell, file_edit, repl |
+| Channel | Integration |
+|---------|-------------|
+| **Web** | Chat + live workspace |
+| **WhatsApp** | whatsmeow adapter |
+| **Telegram** | telegram-bot-api |
+| **Discord** | discordgo |
+| **CLI** | Interactive terminal |
 
-Cada ferramenta perigosa passa por: **Safety Gate** → **Rate Limiter** → **Confirmation HIL** → **Audit Log**
-
----
-
-## Seguranca
-
-- **SecretScrubber** — remove chaves AWS, OpenAI, JWT, RSA, Bearer, GitHub, Slack antes de enviar ao LLM
-- **Shell 3 Tiers** — Tier 1 bloqueio total (rm -rf /, dd, mkfs, fork bombs), Tier 2 requer confirmacao (sudo, chmod, kill), Tier 3 execucao normal
-- **Path Traversal** — sandbox enforced em file_read/file_write, system paths bloqueados em file_edit
-- **SSRF Protection** — http tool bloqueia localhost, IPs privados (10.x, 192.168.x, 172.16.x)
-- **Rate Limiting** — shell 5/min, http 20/min, file_write 10/min
-- **Panic Recovery** — defer recover() em todos os adapters
-- **Timeouts** — 3min adapters, 5min WebSocket
-- **Zip Bomb** — import limitado a 100MB
+All channels feed the workspace via global event broadcast.
 
 ---
 
-## Canais
+## Tools (28)
 
-| Canal | Status |
-|-------|--------|
-| Web (chat + workspace) | Integrado |
-| WhatsApp | Integrado (whatsmeow) |
-| Telegram | Integrado (telegram-bot-api) |
-| Discord | Integrado (discordgo) |
-| CLI | Integrado |
+**Safe** — execute immediately
 
-Todos os canais alimentam o workspace `/agent` em tempo real via global event broadcast.
+`echo` `math` `timestamp` `json_parse` `base64` `text_extract` `file_read` `search` `schedule` `learn_rule` `skill_loader`
+
+**Restricted** — input validated, sandboxed
+
+`http` `file_write` `folder_index` `browser` `delegate` `web_search` `skill_creator` `config_manager` `gcal_manager` `gmail_read` `gmail_send` `sql_inspector` `python_rpa`
+
+**Dangerous** — requires human confirmation with preview
+
+`shell` `file_edit` `repl` `docker_replicator`
+
+Every dangerous tool passes through: Safety Gate → Rate Limiter → Confirmation → Audit Log.
 
 ---
 
-## Rodar
+## Skills System
+
+Expandable at runtime via `.md` files. Teach the agent new capabilities without writing code.
+
+- **skill_loader** — loads skill definitions on demand
+- **skill_creator** — generates new skills from conversation context
+- **Auto-learn / Auto-forget** — the agent creates and removes rules based on your feedback
+
+---
+
+## Browser
+
+Headless browser with 7 action types:
+
+`click` `fill` `js` `screenshot` `text` `analyze` `wait`
+
+Panic recovery on every action. Runs sandboxed inside the restricted tier.
+
+---
+
+## LLM Configuration
+
+Three independent LLM slots, each with its own provider:
+
+| Slot | Purpose |
+|------|---------|
+| **Primary** | Planning, reflection, complex reasoning |
+| **Fast** | Quick decisions, direct answers, triage |
+| **Vision** | Image analysis, screenshots |
+
+Set `USE_NATIVE_TOOLS=true` to enable native function calling instead of JSON-based tool dispatch.
+
+---
+
+## Security
+
+**SecretScrubber** — strips AWS keys, OpenAI tokens, JWTs, RSA keys, Bearer tokens, GitHub/Slack secrets before anything reaches the LLM.
+
+**Shell — 3 tiers:**
+- **Tier 1** (blocked): `rm -rf /`, `dd if=/dev`, `mkfs`, fork bombs, writes to `/dev /etc /proc /sys`
+- **Tier 2** (confirmation required): `sudo`, `rm -rf`, `chmod`, `chown`, `kill`, `shutdown`
+- **Tier 3** (allowed): pipes, redirects, subshells
+
+**Network** — `http` tool blocks localhost, private IPs (10.x, 192.168.x, 172.16.x).
+
+**Rate limits** — shell 5/min, http 20/min, file_write 10/min.
+
+**Defenses** — panic recovery on all adapters, 3min/5min timeouts, 100MB zip bomb protection.
+
+---
+
+## Quick Start
 
 ```bash
-# Servidor web
+# Web server
 go run cmd/ok/main.go
 
-# CLI interativo
+# Interactive CLI
 go run cmd/cli/main.go
 ```
 
-Configuracao via `data/.env`:
+### Required (`data/.env`)
 
 ```env
 LLM_BASE_URL=https://api.openai.com/v1
 LLM_API_KEY=sk-...
 LLM_MODEL=gpt-4.1-mini
-AUTH_PASSWORD=sua-senha
+AUTH_PASSWORD=your-password
 ```
 
-Opcional:
+### Optional
+
 ```env
+# Fast LLM
 LLM_FAST_BASE_URL=https://api.openai.com/v1
 LLM_FAST_API_KEY=sk-...
 LLM_FAST_MODEL=gpt-4.1-nano
+
+# Vision LLM
+VISION_BASE_URL=https://api.openai.com/v1
+VISION_API_KEY=sk-...
+VISION_MODEL=gpt-4.1-mini
+
+# Embeddings
 EMBED_PROVIDER=openai
 EMBED_BASE_URL=https://api.openai.com/v1
 EMBED_API_KEY=sk-...
 EMBED_MODEL=text-embedding-3-small
+
+# Native function calling
+USE_NATIVE_TOOLS=true
+
+# Adapters
 WHATSAPP_OWNER_NUMBER=5511999999999
+WHATSAPP_DB_PATH=data/whatsapp.db
 TELEGRAM_BOT_TOKEN=...
 TELEGRAM_OWNER_ID=123456789
 DISCORD_BOT_TOKEN=...
@@ -109,132 +153,146 @@ DISCORD_OWNER_ID=...
 
 ---
 
-## Testes
+## Tests
 
-346 testes em 15 pacotes. 100 cenarios E2E stress com LLM real.
+500+ tests across 18 packages. 122 stress scenarios with real LLMs.
 
 ```bash
-# Testes unitarios (nao precisam de LLM)
+# Unit tests (no LLM needed)
 go test ./domain/... ./application/... ./adapters/... ./infrastructure/... ./interfaces/... -count=1
 
-# Testes de integracao (precisam de SQLite)
+# Integration tests (needs SQLite)
 go test ./tests/integration/... -count=1
 
-# Stress E2E completo (precisa de LLM configurado)
+# Full E2E stress (needs configured LLM)
 go test ./tests/integration/... -run TestStressE2E -timeout=25m -count=1
 ```
 
-### Baterias E2E
+### E2E Batteries (18)
 
-| Bateria | Cenarios | Requer LLM |
-|---------|----------|------------|
-| FullBattery | 15 | Sim |
-| ToolChaining | 8 | Sim |
-| Security | 10 | Sim |
-| Resilience | 10 | Sim |
-| DirectMode | 8 | Sim |
-| Memory | 8 | Sim |
-| FTS5 | 5 | Nao |
-| ChatFlow | 6 | Sim |
-| Concurrent | 2 | Sim |
-| Offline | 10 | Nao |
-| Delegate | 1 | Sim |
+| Battery | Scenarios | Requires |
+|---------|-----------|----------|
+| FullBattery | 15 | LLM |
+| ToolChaining | 8 | LLM |
+| Security | 10 | LLM |
+| Resilience | 10 | LLM |
+| DirectMode | 8 | LLM |
+| Memory | 8 | LLM |
+| FTS5 | 5 | — |
+| ChatFlow | 6 | LLM |
+| Concurrent | 2 | LLM |
+| Offline | 13 | — |
+| Delegate | 1 | LLM |
 | SemanticSearch | 1 | Embedding |
-| ConcurrentImports | 1 | Nao |
-| SchedulerCRUD | 8 | Nao |
-| Confirmation | 4 | Sim |
+| ConcurrentImports | 1 | — |
+| SchedulerCRUD | 8 | — |
+| Confirmation | 4 | LLM |
+| SkillBattery | 8 | LLM |
+| BrowserActions | 8 | LLM |
+| ConfigTool | 6 | — |
 
 ---
 
 ## API
 
-### Autenticacao
+### Auth
 ```
-POST /api/auth/login        → { password }
+POST /api/auth/login         { password }
 POST /api/auth/logout
 ```
 
-### Conversas
+### Conversations
 ```
 GET    /api/conversations
-GET    /api/conversations/search?q=texto
-POST   /api/conversations          → { title }
+POST   /api/conversations                { title }
+GET    /api/conversations/search?q=term
 GET    /api/conversations/:id/messages
-POST   /api/conversations/:id/messages → { content } (SSE streaming)
+POST   /api/conversations/:id/messages   { content }  → SSE stream
 DELETE /api/conversations/:id
 ```
 
-### Agente
+### Agent
 ```
-POST /api/agent/run              → { input } (sincrono)
-POST /api/agent/stream           → { input } (SSE streaming)
+POST /api/agent/run                      { input }    → sync
+POST /api/agent/stream                   { input }    → SSE stream
 GET  /api/agent/status
+GET  /api/agent/tools
+GET  /api/agent/skills
 GET  /api/agent/executions
 GET  /api/agent/executions/:id
 GET  /api/agent/metrics
 GET  /api/agent/limits
-PUT  /api/agent/limits           → { max_steps, max_attempts, timeout_ms }
+PUT  /api/agent/limits                   { max_steps, max_attempts, timeout_ms }
 GET  /api/agent/config/:key
-PUT  /api/agent/config/:key      → { value }
-POST /api/agent/confirm/:id      → { approved }
+PUT  /api/agent/config/:key              { value }
+POST /api/agent/confirm/:id              { approved }
 POST /api/agent/cancel
 ```
 
 ### Scheduler
 ```
 GET    /api/scheduler/jobs
-POST   /api/scheduler/jobs       → { name, task_type, input, interval_seconds }
-PUT    /api/scheduler/jobs/:id   → { enabled, interval_seconds }
+POST   /api/scheduler/jobs               { name, task_type, input, interval_seconds }
+PUT    /api/scheduler/jobs/:id           { enabled, interval_seconds }
 DELETE /api/scheduler/jobs/:id
-```
-
-### WebSocket
-```
-GET /ws/agent                    → bidirectional, JSON messages
-    → { type: "input", content: "..." }
-    → { type: "confirm", id: "...", approved: true }
-    → { type: "cancel" }
-    ← { type: "hydration", running, phase, terminal_history }
-    ← { type: "phase", content: "observe" }
-    ← { type: "step", name, tool, status, elapsed_ms }
-    ← { type: "stream", tool, content }
-    ← { type: "message", content }
-    ← { type: "done" }
 ```
 
 ### Import
 ```
-POST /api/import/chatgpt         → multipart/form-data (zip file)
+POST /api/import/chatgpt                 multipart/form-data (zip, sharded)
+```
+
+### WebSocket
+```
+GET /ws/agent                            bidirectional, JSON
+```
+
+### Health
+```
+GET /health
 ```
 
 ---
 
-## Arquitetura
+## Architecture
 
 ```
 cmd/
-  ok/          → servidor web
-  cli/         → terminal interativo
-domain/        → entidades e interfaces
-application/   → services e engine do agente
-  engine/      → loop OBSERVE/PLAN/ACT/REFLECT
+  ok/              web server
+  cli/             interactive terminal
+domain/            entities and interfaces
+application/       services + agent engine
+  engine/          OBSERVE / PLAN / ACT / REFLECT loop
 infrastructure/
-  agent/       → planner, executor, safety, memory, tools (19)
-  database/    → SQLite puro (database/sql)
-  llm/         → client OpenAI-compatible
-  embedding/   → client OpenAI/Ollama
-  scheduler/   → background job runner
-  security/    → SecretScrubber
-  repository/  → conversation, message, session
-  bootstrap/   → wiring de dependencias
+  agent/           planner, executor, safety, memory, tools (28)
+  database/        pure SQLite (database/sql)
+  llm/             OpenAI-compatible client
+  embedding/       OpenAI / Ollama embeddings
+  scheduler/       background job runner
+  security/        SecretScrubber
+  repository/      conversation, message, session
+  bootstrap/       dependency wiring
 interfaces/
-  http/        → server Fiber, handlers, middlewares
-adapters/      → WhatsApp, Telegram, Discord, CLI
-web/           → templates HTML, CSS, JS vanilla
+  http/            Fiber server, handlers, middlewares
+adapters/          WhatsApp, Telegram, Discord, CLI
+web/               HTML templates, CSS, vanilla JS
 ```
+
+### Stack
+
+| Layer | Technology |
+|-------|------------|
+| Language | Go (CGO_ENABLED=0, single binary) |
+| Database | SQLite WAL mode (modernc, pure Go) |
+| HTTP | Fiber |
+| DB access | database/sql (no ORM) |
+| Config | Viper |
+| Logging | Zap (structured) |
+| Vector search | chromem-go (in-memory semantic search) |
+| Frontend | HTML + CSS + JS vanilla (zero frameworks) |
 
 ---
 
-## Licenca
+## License
 
 MIT

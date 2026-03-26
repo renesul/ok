@@ -101,6 +101,7 @@ func (p *mockPlanner) RegisterTool(tool domain.Tool) {
 }
 
 func (p *mockPlanner) ToolDescriptions() string { return "mock tools" }
+func (p *mockPlanner) ToolSchemas() []domain.ToolSchema { return nil }
 func (p *mockPlanner) Tools() map[string]domain.Tool {
 	return p.tools
 }
@@ -158,6 +159,7 @@ func newTestEngine(serverURL string, planner domain.Planner, executor domain.Exe
 		nil, // memory — nil skips memory operations
 		nil, // execRepo — nil skips execution record
 		limits,
+		false, // useNativeTools — disabled in tests
 		func() string { return "system prompt" },
 		zap.NewNop(),
 	)

@@ -219,6 +219,6 @@ func newTestAgentServiceFull(t *testing.T) *AgentService {
 		db, llm.NewClient(zap.NewNop()),
 		llm.ClientConfig{}, llm.ClientConfig{},
 		planner, executor, mem, execRepo, configRepo, nil,
-		zap.NewNop(),
+		false, zap.NewNop(),
 	)
 }

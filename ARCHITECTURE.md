@@ -35,7 +35,7 @@
 |   +----------------------------------------------+                       |
 |   |         INFRASTRUCTURE LAYER                 |                       |
 |   |                                              |                       |
-|   |   LLM Client    Embedding Client             |                       |
+|   |   LLM Client    Embedding Client  Vision LLM |                       |
 |   |   Planner        Executor (+ SafetyGate)     |                       |
 |   |   Memory         VectorStore                 |                       |
 |   |   ConfigRepo     ExecutionRepo               |                       |
@@ -43,7 +43,7 @@
 |   |   RateLimiter    ConfirmationManager         |                       |
 |   |   FileWatcher    Scheduler                   |                       |
 |   |   SecretScrubber (security)                  |                       |
-|   |   Tools (19, PTY via creack/pty)             |                       |
+|   |   Tools (28, PTY via creack/pty)             |                       |
 |   +--------------------+-------------------------+                       |
 |                        |                                                 |
 |                        v                                                 |
@@ -145,6 +145,8 @@
   |    PUT  /api/agent/limits ................ definir limites    |
   |    GET  /api/agent/config/:key ........... ler config         |
   |    PUT  /api/agent/config/:key ........... salvar config      |
+  |    GET  /api/agent/tools ................ lista de tools      |
+  |    GET  /api/agent/skills ............... lista de skills     |
   |                                                               |
   |  Config                                                       |
   |    GET  /api/config ...................... config publica      |
@@ -197,7 +199,7 @@
 
 ---
 
-## Tools do Agent (19)
+## Tools do Agent (28)
 
 ```
   SAFE (execucao direta)
@@ -208,10 +210,10 @@
   | timestamp| | text_    | | file_    | | search   |
   +----------+ | extract  | | read     | +----------+
                +----------+ +----------+ +----------+
-               +----------+              | schedule |
-               | learn_   |              +----------+
-               | rule     |
-               +----------+
+               +----------+ +----------+ | schedule |
+               | learn_   | | skill_   | +----------+
+               | rule     | | loader   |
+               +----------+ +----------+
 
   RESTRICTED (validar input)
   +------------------+ +------------------+ +------------------+
@@ -220,13 +222,23 @@
   +------------------+ | localhost/IPs    | +------------------+
                        | 10s timeout      | +------------------+
                        +------------------+ | browser          |
-                                            | go-rod headless  |
-                                            +------------------+
-                                            +------------------+
-                                            | delegate         |
-                                            | spawna sub-engine|
-                                            | max 3 por exec   |
-                                            +------------------+
+  +------------------+ +------------------+ | 7 action types:  |
+  | delegate         | | web_search       | | wait, click,     |
+  | spawna sub-engine| | DuckDuckGo       | | fill, js,        |
+  | max 3 por exec   | | zero API key     | | screenshot, text,|
+  +------------------+ +------------------+ | analyze (vision) |
+  +------------------+ +------------------+ +------------------+
+  | skill_creator    | | config_manager   |
+  | creates .md files| | agent config r/w | +------------------+
+  +------------------+ +------------------+ | gcal_manager     |
+  +------------------+ +------------------+ | Google Calendar  |
+  | gmail_read       | | gmail_send       | +------------------+
+  | Gmail read       | | Gmail send       | +------------------+
+  +------------------+ +------------------+ | sql_inspector    |
+  +------------------+                      | read-only SQL    |
+  | python_rpa       |                      +------------------+
+  | Python scripts   |
+  +------------------+
 
   DANGEROUS (exige confirmacao com preview head+tail)
   +------------------+ +------------------+ +------------------+
@@ -234,6 +246,11 @@
   | 3 tiers segur.   | | confirmacao req  | | confirmacao req  |
   | 10s timeout      | |                  | |                  |
   +------------------+ +------------------+ +------------------+
+  +------------------+
+  | docker_          |
+  | replicator       |
+  | Docker containers|
+  +------------------+
 ```
 
 ---
@@ -478,6 +495,7 @@ ok/
 |   |   +-- watcher.go .............. FileWatcher (re-indexa no save)
 |   |   +-- feedback.go ............. FeedbackRepository
 |   |   +-- config_repository.go .... ConfigRepository (key-value)
+|   |   +-- skill_repository.go .... FileSkillRepository (skills .md)
 |   |   +-- prompts.go .............. BuildPlanningPrompt, Reflection
 |   |   +-- truncate.go ............. TruncateUTF8, TruncateWithEllipsis
 |   |   +-- tools/
@@ -488,7 +506,12 @@ ok/
 |   |       +-- search.go, folder_index.go
 |   |       +-- schedule.go, learn_rule.go, delegate.go
 |   |       +-- web_search.go
-|   |       +-- (19 tools, cada uma com Safety())
+|   |       +-- skill_loader.go, skill_creator.go
+|   |       +-- config_manager.go, gcal_manager.go
+|   |       +-- gmail_read.go, gmail_send.go
+|   |       +-- sql_inspector.go, python_rpa.go
+|   |       +-- docker_replicator.go
+|   |       +-- (28 tools, cada uma com Safety())
 |   +-- security/
 |   |   +-- scrubber.go ............ SecretScrubber (regex redact)
 |   +-- llm/

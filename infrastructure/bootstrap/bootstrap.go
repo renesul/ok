@@ -116,14 +116,14 @@ func NewAgent(db *sql.DB, cfg *config.Config, log *zap.Logger) *Components {
 		db, llmClient, llmHeavy, llmFast,
 		planner, executor, agentMemory,
 		execRepo, agentConfigRepo, skillRepo,
-		log,
+		cfg.UseNativeTools, log,
 	)
 
 	subEngineRunner := func(ctx context.Context, input string) ([]string, error) {
 		subEngine := engine.NewAgentEngine(
 			db, llmClient, llmHeavy, llmFast,
 			subPlanner, executor, agentMemory, execRepo,
-			agentService.GetLimits(), agentService.BuildSystemPrompt, log,
+			agentService.GetLimits(), cfg.UseNativeTools, agentService.BuildSystemPrompt, log,
 		)
 		emitter := engine.NewBufferEmitter()
 		if err := subEngine.RunLoop(ctx, input, emitter); err != nil {

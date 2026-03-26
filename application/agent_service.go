@@ -36,6 +36,7 @@ type AgentService struct {
 	globalEventHandler func(domain.AgentEvent)
 	globalMu           sync.RWMutex
 	skillRepo          domain.SkillRepository
+	useNativeTools     bool
 	log                *zap.Logger
 }
 
@@ -50,6 +51,7 @@ func NewAgentService(
 	execRepo *agentpkg.ExecutionRepository,
 	configRepo *agentpkg.ConfigRepository,
 	skillRepo domain.SkillRepository,
+	useNativeTools bool,
 	log *zap.Logger,
 ) *AgentService {
 	s := &AgentService{
@@ -63,6 +65,7 @@ func NewAgentService(
 		execRepo:       execRepo,
 		configRepo:     configRepo,
 		skillRepo:      skillRepo,
+		useNativeTools: useNativeTools,
 		log:            log.Named("service.agent"),
 	}
 	s.loadTemplates()
@@ -91,9 +94,6 @@ func (s *AgentService) Run(ctx context.Context, input string) (domain.AgentRespo
 	if !s.autoForgetRule(input) {
 		s.autoLearnRule(input)
 	}
-	s.promptMu.Lock()
-	s.cachedPrompt = ""
-	s.promptMu.Unlock()
 	eng := s.buildEngine()
 	buf := engine.NewBufferEmitter()
 	emitter := engine.NewCallbackEmitter(func(e domain.AgentEvent) {
@@ -111,9 +111,6 @@ func (s *AgentService) RunStream(ctx context.Context, input string, onEvent doma
 	if !s.autoForgetRule(input) {
 		s.autoLearnRule(input)
 	}
-	s.promptMu.Lock()
-	s.cachedPrompt = ""
-	s.promptMu.Unlock()
 	emit := func(e domain.AgentEvent) {
 		if onEvent != nil {
 			onEvent(e)
@@ -154,6 +151,7 @@ func (s *AgentService) autoForgetRule(input string) bool {
 				s.log.Debug("auto-forget rule failed", zap.Error(err))
 			} else if deleted > 0 {
 				s.log.Debug("auto-forgot rules", zap.Int64("deleted", deleted), zap.String("keyword", keyword))
+				s.invalidatePromptCache()
 			}
 			return true
 		}
@@ -175,17 +173,24 @@ func (s *AgentService) autoLearnRule(input string) {
 				s.log.Debug("auto-learn rule failed", zap.Error(err))
 			} else {
 				s.log.Debug("auto-learned rule from input", zap.String("input", input))
+				s.invalidatePromptCache()
 			}
 			return
 		}
 	}
 }
 
+func (s *AgentService) invalidatePromptCache() {
+	s.promptMu.Lock()
+	s.cachedPrompt = ""
+	s.promptMu.Unlock()
+}
+
 func (s *AgentService) buildEngine() *engine.AgentEngine {
 	return engine.NewAgentEngine(
 		s.db, s.llmClient, s.llmHeavyConfig, s.llmFastConfig, s.planner, s.executor,
 		s.memory, s.execRepo,
-		s.limits, s.BuildSystemPrompt, s.log,
+		s.limits, s.useNativeTools, s.BuildSystemPrompt, s.log,
 	)
 }
 
@@ -217,9 +222,7 @@ func (s *AgentService) loadTemplates() {
 
 func (s *AgentService) ReloadSoul() {
 	s.loadTemplates()
-	s.promptMu.Lock()
-	s.cachedPrompt = ""
-	s.promptMu.Unlock()
+	s.invalidatePromptCache()
 }
 
 func (s *AgentService) ListSkills() []map[string]string {
