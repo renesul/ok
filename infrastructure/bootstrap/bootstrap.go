@@ -76,6 +76,7 @@ func NewAgent(db *sql.DB, cfg *config.Config, log *zap.Logger) *Components {
 	executor := agent.NewDefaultExecutor(log)
 	auditLog := agent.NewAuditLog(db, log)
 	executor.SetAuditLog(auditLog)
+	executor.SetConfirmManager(confirmManager)
 
 	execRepo := agent.NewExecutionRepository(db, log)
 	agentConfigRepo := agent.NewConfigRepository(db, log)

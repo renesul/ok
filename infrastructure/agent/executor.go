@@ -2,6 +2,7 @@ package agent
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/renesul/ok/domain"
@@ -9,10 +10,11 @@ import (
 )
 
 type DefaultExecutor struct {
-	safetyGate  *SafetyGate
-	auditLog    *AuditLog
-	rateLimiter *RateLimiter
-	log         *zap.Logger
+	safetyGate     *SafetyGate
+	auditLog       *AuditLog
+	rateLimiter    *RateLimiter
+	confirmManager *ConfirmationManager
+	log            *zap.Logger
 }
 
 func NewDefaultExecutor(log *zap.Logger) *DefaultExecutor {
@@ -31,6 +33,11 @@ func (e *DefaultExecutor) SetSafetyGate(gate *SafetyGate) {
 // SetAuditLog configura o audit log
 func (e *DefaultExecutor) SetAuditLog(audit *AuditLog) {
 	e.auditLog = audit
+}
+
+// SetConfirmManager configura o confirmation manager para tools perigosas
+func (e *DefaultExecutor) SetConfirmManager(cm *ConfirmationManager) {
+	e.confirmManager = cm
 }
 
 func (e *DefaultExecutor) Execute(plan domain.Plan) (string, error) {
@@ -52,13 +59,21 @@ func (e *DefaultExecutor) ExecuteWithContext(ctx context.Context, plan domain.Pl
 	// Safety check
 	if e.safetyGate != nil {
 		if err := e.safetyGate.Check(plan.Tool, plan.Input); err != nil {
-			e.log.Debug("safety blocked", zap.String("tool", toolName), zap.Error(err))
-			safety := "safe"
-			if e.safetyGate != nil {
-				safety = string(e.safetyGate.GetToolSafety(plan.Tool))
+			if errors.Is(err, ErrRequiresConfirmation) && e.confirmManager != nil {
+				e.log.Debug("requesting confirmation", zap.String("tool", toolName))
+				conf := e.confirmManager.Request(toolName, plan.Input)
+				approved, waitErr := e.confirmManager.WaitForResponse(conf)
+				if waitErr != nil || !approved {
+					e.auditRecord(toolName, plan.Input, "", "dangerous", false)
+					return "", fmt.Errorf("execution not approved: %s", toolName)
+				}
+				e.log.Debug("execution approved", zap.String("tool", toolName))
+			} else {
+				e.log.Debug("safety blocked", zap.String("tool", toolName), zap.Error(err))
+				safety := string(e.safetyGate.GetToolSafety(plan.Tool))
+				e.auditRecord(toolName, plan.Input, "", safety, false)
+				return "", err
 			}
-			e.auditRecord(toolName, plan.Input, "", safety, false)
-			return "", err
 		}
 	}
 

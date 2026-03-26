@@ -141,6 +141,17 @@ func run() error {
 
 	// Global event handler: broadcasts ALL agent events to WebSocket clients
 	hub := wsHandler.Hub()
+
+	// Wire confirmation requests to WebSocket broadcast
+	if comp.ConfirmManager != nil {
+		comp.ConfirmManager.SetOnRequest(func(id, tool, input string) {
+			event := domain.AgentEvent{Type: "confirm", Name: id, Tool: tool, Content: input}
+			data, err := json.Marshal(event)
+			if err == nil {
+				hub.Broadcast(data)
+			}
+		})
+	}
 	comp.AgentService.SetGlobalEventHandler(func(event domain.AgentEvent) {
 		// Update hub state for hydration
 		switch event.Type {

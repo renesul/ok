@@ -3,14 +3,18 @@ package handler
 import (
 	"context"
 	"encoding/json"
+	"strings"
 	"sync"
 	"time"
 
 	"github.com/gofiber/websocket/v2"
 	"github.com/renesul/ok/application"
+	"github.com/renesul/ok/domain"
 	agent "github.com/renesul/ok/infrastructure/agent"
 	"go.uber.org/zap"
 )
+
+const maxWSHistory = 20
 
 type WSHub struct {
 	mu              sync.RWMutex
@@ -68,6 +72,11 @@ func (h *WSHub) HydrationState() map[string]interface{} {
 	}
 }
 
+type wsTurn struct {
+	Role    string
+	Content string
+}
+
 type WSHandler struct {
 	agentService   *application.AgentService
 	confirmManager *agent.ConfirmationManager
@@ -75,6 +84,8 @@ type WSHandler struct {
 	log            *zap.Logger
 	cancelMu       sync.Mutex
 	cancelFunc     context.CancelFunc
+	historyMu      sync.Mutex
+	history        []wsTurn
 }
 
 func NewWSHandler(agentService *application.AgentService, confirmManager *agent.ConfirmationManager, log *zap.Logger) *WSHandler {
@@ -148,6 +159,31 @@ func (h *WSHandler) Handle(c *websocket.Conn) {
 	}
 }
 
+func (h *WSHandler) buildAgentInput(input string) string {
+	h.historyMu.Lock()
+	defer h.historyMu.Unlock()
+
+	if len(h.history) == 0 {
+		return input
+	}
+
+	var parts []string
+	for _, turn := range h.history {
+		parts = append(parts, turn.Role+": "+turn.Content)
+	}
+	return "Conversation history:\n" + strings.Join(parts, "\n") + "\n\nCurrent message: " + input
+}
+
+func (h *WSHandler) appendHistory(role, content string) {
+	h.historyMu.Lock()
+	defer h.historyMu.Unlock()
+
+	h.history = append(h.history, wsTurn{Role: role, Content: content})
+	if len(h.history) > maxWSHistory*2 {
+		h.history = h.history[len(h.history)-maxWSHistory*2:]
+	}
+}
+
 func (h *WSHandler) runAgent(input string) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
 	h.cancelMu.Lock()
@@ -159,6 +195,19 @@ func (h *WSHandler) runAgent(input string) {
 		h.cancelMu.Unlock()
 	}()
 
+	agentInput := h.buildAgentInput(input)
+	h.appendHistory("user", input)
+
 	h.hub.SetRunning(true)
-	h.agentService.RunStream(ctx, input, nil)
+
+	var response strings.Builder
+	h.agentService.RunStream(ctx, agentInput, func(e domain.AgentEvent) {
+		if e.Type == "message" && e.Content != "" {
+			response.WriteString(e.Content)
+		}
+	})
+
+	if response.Len() > 0 {
+		h.appendHistory("assistant", response.String())
+	}
 }

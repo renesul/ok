@@ -54,9 +54,9 @@ func NewServer(
 		return c.Redirect("/agent")
 
 	})
-	app.Get("/chat", auth, chatHandler.ChatPage)
-	app.Get("/chat/:id", auth, chatHandler.ChatPage)
 	app.Get("/agent", auth, authHandler.AgentPage)
+	app.Get("/chat", auth, func(c *fiber.Ctx) error { return c.Redirect("/agent") })
+	app.Get("/chat/:id", auth, func(c *fiber.Ctx) error { return c.Redirect("/agent?c=" + c.Params("id")) })
 	app.Get("/profile", auth, authHandler.ProfilePage)
 	app.Get("/profile/*", auth, authHandler.ProfilePage)
 

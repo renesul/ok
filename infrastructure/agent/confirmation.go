@@ -19,10 +19,14 @@ type PendingConfirmation struct {
 	Done      chan bool
 }
 
+// ConfirmationCallback is called when a new confirmation is requested
+type ConfirmationCallback func(id, tool, input string)
+
 // ConfirmationManager gerencia confirmacoes pendentes de tools perigosas
 type ConfirmationManager struct {
-	mu       sync.Mutex
-	pending  map[string]*PendingConfirmation
+	mu        sync.Mutex
+	pending   map[string]*PendingConfirmation
+	onRequest ConfirmationCallback
 }
 
 // NewConfirmationManager cria um gerenciador de confirmacoes
@@ -32,12 +36,16 @@ func NewConfirmationManager() *ConfirmationManager {
 	}
 }
 
+// SetOnRequest sets a callback that fires when a tool requests confirmation
+func (m *ConfirmationManager) SetOnRequest(cb ConfirmationCallback) {
+	m.mu.Lock()
+	m.onRequest = cb
+	m.mu.Unlock()
+}
+
 // Request cria uma confirmacao pendente e retorna o ID
 func (m *ConfirmationManager) Request(tool, input string) *PendingConfirmation {
 	m.mu.Lock()
-	defer m.mu.Unlock()
-
-	// Limpar expiradas
 	m.cleanExpired()
 
 	conf := &PendingConfirmation{
@@ -48,6 +56,13 @@ func (m *ConfirmationManager) Request(tool, input string) *PendingConfirmation {
 		Done:      make(chan bool, 1),
 	}
 	m.pending[conf.ID] = conf
+	cb := m.onRequest
+	m.mu.Unlock()
+
+	if cb != nil {
+		cb(conf.ID, tool, input)
+	}
+
 	return conf
 }
 

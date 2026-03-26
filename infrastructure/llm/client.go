@@ -462,8 +462,20 @@ func (c *Client) DecideWithTools(ctx context.Context, config ClientConfig, syste
 		}, nil
 	}
 
-	// Direct text response (no tool)
+	// Direct text response (no tool) — fallback parse if LLM returned JSON text instead of tool_calls
 	content := strings.TrimSpace(msg.Content)
+	var fallback struct {
+		Tool  string          `json:"tool"`
+		Input json.RawMessage `json:"input"`
+		Done  bool            `json:"done"`
+	}
+	if json.Unmarshal([]byte(content), &fallback) == nil && (fallback.Tool != "" || fallback.Done) {
+		var inputStr string
+		if json.Unmarshal(fallback.Input, &inputStr) != nil {
+			inputStr = string(fallback.Input)
+		}
+		return domain.Decision{Tool: fallback.Tool, Input: inputStr, Done: fallback.Done}, nil
+	}
 	return domain.Decision{Input: content, Done: true}, nil
 }
 

@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>OK — Workspace</title>
   <link rel="stylesheet" href="/static/css/theme.css">
-  <link rel="stylesheet" href="/static/css/agent.css">
+  <link rel="stylesheet" href="/static/css/workspace.css">
   <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
@@ -22,40 +22,80 @@
       </div>
       <div class="header-right">
         <button class="btn-stop glass-btn" id="stopBtn" type="button" style="display:none">STOP</button>
-        <a href="/chat" class="header-link glass-btn">Chat</a>
-        <a href="/profile" class="header-link glass-btn">Profile</a>
+        <a href="/profile" class="header-link glass-btn">Settings</a>
       </div>
     </header>
 
     <div class="workspace-body">
 
-      <!-- LEFT PANEL: Interactive Chat -->
-      <section class="panel panel-left" id="panelLeft">
-        <div class="panel-header glass-header">
-          <span class="panel-title">Agent Feed</span>
+      <!-- LEFT SIDEBAR: Conversations -->
+      <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+          <span class="sidebar-logo">OK</span>
+          <button class="new-chat-btn" id="newChatButton" aria-label="New conversation" type="button">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+          </button>
+          <button class="sidebar-close" id="sidebarClose" aria-label="Close menu" type="button">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+          </button>
         </div>
-        <div class="panel-content" id="chatPanel">
-            <div class="chat-greeting">
-                <h2>Welcome to OK.</h2>
-                <p>All AI and Terminal output will be rendered directly here.</p>
-            </div>
+
+        <div class="sidebar-search">
+          <input class="search-input" type="text" id="searchInput" placeholder="Search conversations..." autocomplete="off">
         </div>
-        <div class="chat-input-area">
+
+        <nav class="sidebar-nav">
+          <div class="conversation-list" id="conversationList"></div>
+        </nav>
+
+        <div class="sidebar-footer">
+          <a href="/profile" class="sidebar-link">Settings</a>
+          <button class="sidebar-link" id="logoutButton" type="button">Logout</button>
+        </div>
+      </aside>
+
+      <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+      <!-- MAIN CONTENT: Unified Feed -->
+      <main class="main-content">
+        <header class="chat-header">
+          <button class="menu-toggle" id="menuToggle" aria-label="Open menu" type="button">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
+          </button>
+          <h1 class="chat-title" id="chatTitle">OK</h1>
+        </header>
+
+        <div class="chat-messages" id="chatMessages">
+          <div class="chat-empty" id="chatEmpty">
+            <div class="chat-empty-logo">OK</div>
+            <p class="chat-empty-text">Send a message to get started</p>
+          </div>
+
+          <div class="health-report" id="healthReport" style="display: none">
+            <div class="health-report-title">Service status</div>
+            <div class="health-items" id="healthItems"></div>
+            <button class="health-dismiss" id="healthDismiss" type="button">Close</button>
+          </div>
+        </div>
+
+        <div class="agent-feed" id="chatPanel" style="display:none"></div>
+
+        <div class="chat-input-area" id="chatInputArea">
           <form class="chat-form" id="agentForm">
-            <input class="chat-input" id="agentInput" type="text" placeholder="Send a command or goal..." autocomplete="off">
-            <button class="chat-send" id="agentSend" type="submit" disabled>
+            <textarea class="chat-input" id="agentInput" placeholder="Send a command or message..." rows="1" autocomplete="off"></textarea>
+            <button class="chat-send" id="agentSend" type="submit" disabled aria-label="Send">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4z"/></svg>
             </button>
           </form>
         </div>
-      </section>
+      </main>
 
-      <div class="resizer" id="resizer2"></div>
+      <div class="resizer" id="resizer"></div>
 
-      <!-- RIGHT PANEL: Tools and State -->
-      <section class="panel panel-right glass-panel" id="panelRight">
+      <!-- RIGHT PANEL: Telemetry -->
+      <section class="panel-right glass-panel" id="panelRight">
         <div class="panel-header glass-header">
-          <span class="panel-title">Telemetry & State</span>
+          <span class="panel-title">Telemetry</span>
         </div>
         <div class="panel-content panel-scroll">
 
@@ -79,7 +119,7 @@
 
     </div>
 
-    <!-- MODAL HIL -->
+    <!-- MODAL: HIL Security Approval -->
     <div class="modal-overlay" id="confirmModal" style="display:none">
       <div class="modal-box glass-modal">
         <div class="modal-header">
@@ -98,6 +138,6 @@
 
   </div>
 
-  <script src="/static/js/agent.js"></script>
+  <script src="/static/js/workspace.js"></script>
 </body>
 </html>
